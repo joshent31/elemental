@@ -1,0 +1,15 @@
+{
+ "doctype": "DocType",
+ "name": "Material Issue Item",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {"fieldname": "raw_material", "label": "Raw Material (Item)", "fieldtype": "Link", "options": "Item", "reqd": 1, "in_list_view": 1, "columns": 4},
+  {"fieldname": "issued_qty", "label": "Issued Qty", "fieldtype": "Float", "reqd": 1, "in_list_view": 1, "columns": 2},
+  {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "fetch_from": "raw_material.stock_uom", "in_list_view": 1, "columns": 2},
+  {"fieldname": "returned_qty", "label": "Returned Qty (unused, sent back)", "fieldtype": "Float", "default": "0", "in_list_view": 1, "columns": 2}
+ ]
+}

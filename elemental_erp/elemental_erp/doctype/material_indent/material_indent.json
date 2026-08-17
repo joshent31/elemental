@@ -1,0 +1,211 @@
+{
+ "doctype": "DocType",
+ "name": "Material Indent",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "autoname": "naming_series:",
+ "is_submittable": 1,
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "label": "Series",
+   "fieldtype": "Select",
+   "options": "IND-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "job",
+   "label": "Job",
+   "fieldtype": "Link",
+   "options": "Job",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "department",
+   "label": "Requesting Department",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "raised_by",
+   "label": "Raised By",
+   "fieldtype": "Select",
+   "options": "Costing (BOM)\nDepartment Request",
+   "default": "Department Request",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2,
+   "description": "Costing (BOM) = pulled from the Job's Finished Good BOM. Department Request = a department (e.g. Packaging, Paints) raising its own indent for items outside the BOM \u2014 both roll up together into the Job's total indent value."
+  },
+  {
+   "fieldname": "indent_date",
+   "label": "Indent Date",
+   "fieldtype": "Date",
+   "default": "Today",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Select",
+   "options": "Pending\nApproved\nSent to Purchase\nPartially Issued\nIssued",
+   "default": "Pending",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "section_break_mi1",
+   "label": "Items",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "items",
+   "label": "Items",
+   "fieldtype": "Table",
+   "options": "Material Indent Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_indent_value",
+   "label": "Total Indent Value (est.)",
+   "fieldtype": "Currency",
+   "read_only": 1,
+   "description": "Sum of qty \u00d7 rate across all items \u2014 rate is entered per line, not pulled automatically (see README)."
+  },
+  {
+   "fieldname": "purchase_order",
+   "label": "Linked Purchase Order",
+   "fieldtype": "Link",
+   "options": "Purchase Order",
+   "description": "Set once Purchase raises a PO for the shortfall qty (flow note #3)"
+  },
+  {
+   "fieldname": "covered_finished_goods",
+   "label": "Covers Finished Goods (internal)",
+   "fieldtype": "Small Text",
+   "hidden": 1,
+   "read_only": 1,
+   "description": "JSON list of Finished Good codes this Indent's BOM-pull covered \u2014 set automatically by \"Pull Items from Job BOM\"; on submit, those Job FG Item rows are marked indent_raised so the next BOM pull only includes items not yet covered."
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "report": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1
+  },
+  {
+   "role": "Purchase User",
+   "read": 1,
+   "write": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Costing User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Costing HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental Production User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Production HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental Packaging User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Packaging HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental Purchase User",
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Purchase HOD",
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "print": 1,
+   "cancel": 1,
+   "delete": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

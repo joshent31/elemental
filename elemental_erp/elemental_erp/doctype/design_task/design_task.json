@@ -1,0 +1,170 @@
+{
+ "doctype": "DocType",
+ "name": "Design Task",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "autoname": "format:DSG-{job}-{finished_good}",
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "image_field": "qr_image",
+ "fields": [
+  {
+   "fieldname": "job",
+   "label": "Job",
+   "fieldtype": "Link",
+   "options": "Job",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "finished_good",
+   "label": "Finished Good",
+   "fieldtype": "Link",
+   "options": "Finished Good",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Select",
+   "options": "Not Started\nIn Progress\nCompleted\nCancelled",
+   "default": "Not Started",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "column_break_dsg1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assigned_designer",
+   "label": "Assigned Designer",
+   "fieldtype": "Link",
+   "options": "Employee",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "qr_value",
+   "label": "QR Value (unique)",
+   "fieldtype": "Data",
+   "unique": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "qr_image",
+   "label": "QR Image",
+   "fieldtype": "Attach Image",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_dsgtime",
+   "label": "Time & Cost",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "start_time",
+   "label": "Design Started",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "end_time",
+   "label": "Design Completed",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dsg2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hours_spent",
+   "label": "Hours Spent",
+   "fieldtype": "Float",
+   "read_only": 1
+  },
+  {
+   "fieldname": "design_cost",
+   "label": "Design Cost (est.)",
+   "fieldtype": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_dsgfiles",
+   "label": "2D / 3D Design Files",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "design_files",
+   "label": "Design Files",
+   "fieldtype": "Table",
+   "options": "Design File"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "write": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Design User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Design HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental Sales HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Costing HOD",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Production User",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Production HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

@@ -1,0 +1,132 @@
+{
+ "doctype": "DocType",
+ "name": "QC Inspection",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "autoname": "format:QC-{job}-{finished_good}",
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "image_field": "qr_image",
+ "fields": [
+  {
+   "fieldname": "job",
+   "label": "Job",
+   "fieldtype": "Link",
+   "options": "Job",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "finished_good",
+   "label": "Finished Good",
+   "fieldtype": "Link",
+   "options": "Finished Good",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Select",
+   "options": "Pending\nPassed\nFailed\nCancelled",
+   "default": "Pending",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2,
+   "description": "Packaging is blocked for this Finished Good until this is Passed. Re-scanning after a Fail simply updates this record \u2014 there is no separate rework workflow."
+  },
+  {
+   "fieldname": "column_break_qc1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "inspector",
+   "label": "Inspector",
+   "fieldtype": "Link",
+   "options": "Employee",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "inspected_on",
+   "label": "Inspected On",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qr_value",
+   "label": "QR Value (unique)",
+   "fieldtype": "Data",
+   "unique": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "qr_image",
+   "label": "QR Image",
+   "fieldtype": "Attach Image",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "label": "Remarks",
+   "fieldtype": "Small Text"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "write": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental QC User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental QC HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental Production HOD",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Packaging User",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Packaging HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

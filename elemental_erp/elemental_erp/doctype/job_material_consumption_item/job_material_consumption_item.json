@@ -1,0 +1,17 @@
+{
+ "doctype": "DocType",
+ "name": "Job Material Consumption Item",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {"fieldname": "raw_material", "label": "Raw Material (Item)", "fieldtype": "Link", "options": "Item", "read_only": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "read_only": 1, "in_list_view": 1, "columns": 1},
+  {"fieldname": "total_issued_qty", "label": "Total Issued to Job (all depts)", "fieldtype": "Float", "read_only": 1, "in_list_view": 1, "columns": 2},
+  {"fieldname": "actual_consumed_qty", "label": "Actual Consumed Qty", "fieldtype": "Float", "in_list_view": 1, "columns": 2,
+   "description": "Costing team enters what was ACTUALLY used against this Job \u2014 only this qty is booked as consumption, not the full issued/indent qty"},
+  {"fieldname": "variance_qty", "label": "Variance (Issued - Consumed)", "fieldtype": "Float", "read_only": 1, "in_list_view": 1, "columns": 2}
+ ]
+}

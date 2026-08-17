@@ -1,0 +1,24 @@
+{
+ "doctype": "DocType",
+ "name": "Material Indent Item",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {"fieldname": "raw_material", "label": "Raw Material (Item)", "fieldtype": "Link", "options": "Item", "reqd": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "required_qty", "label": "Required Qty", "fieldtype": "Float", "reqd": 1, "in_list_view": 1, "columns": 1},
+  {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "fetch_from": "raw_material.stock_uom", "in_list_view": 1, "columns": 1},
+  {"fieldname": "total_bin_qty", "label": "Total in Store (Bin)", "fieldtype": "Float", "read_only": 1, "in_list_view": 1, "columns": 1,
+   "description": "Raw stock qty in the Bin, before excluding what other running Jobs have already claimed"},
+  {"fieldname": "reserved_other_jobs", "label": "Reserved by Other Running Jobs", "fieldtype": "Float", "read_only": 1, "in_list_view": 1, "columns": 1,
+   "description": "Sum of this material on submitted Indents for OTHER Jobs that are not yet Closed/Cancelled"},
+  {"fieldname": "available_qty", "label": "Available for THIS Job", "fieldtype": "Float", "read_only": 1, "in_list_view": 1, "columns": 1,
+   "description": "total_bin_qty minus reserved_other_jobs \u2014 what's genuinely free for this Job"},
+  {"fieldname": "shortfall_qty", "label": "Shortfall (to Purchase)", "fieldtype": "Float", "read_only": 1, "in_list_view": 1, "columns": 1},
+  {"fieldname": "rate", "label": "Rate (est.)", "fieldtype": "Currency", "in_list_view": 1, "columns": 1,
+   "description": "Entered manually \u2014 not pulled from a price list. Used only to estimate indent value for the Job profitability check."},
+  {"fieldname": "amount", "label": "Amount", "fieldtype": "Currency", "read_only": 1, "in_list_view": 1, "columns": 1}
+ ]
+}

@@ -1,0 +1,15 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+recursive-include elemental_erp *.css
+recursive-include elemental_erp *.csv
+recursive-include elemental_erp *.html
+recursive-include elemental_erp *.ico
+recursive-include elemental_erp *.js
+recursive-include elemental_erp *.json
+recursive-include elemental_erp *.md
+recursive-include elemental_erp *.png
+recursive-include elemental_erp *.py
+recursive-include elemental_erp *.svg
+recursive-include elemental_erp *.txt
+recursive-exclude elemental_erp *.pyc

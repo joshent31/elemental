@@ -1,0 +1,158 @@
+{
+ "doctype": "Workspace",
+ "name": "Elemental Fixtures",
+ "label": "Elemental Fixtures",
+ "module": "Elemental ERP",
+ "public": 1,
+ "is_standard": 1,
+ "icon": "octicon octicon-package",
+ "content": "[{\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Quotation\", \"col\": 4}}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h5\\\"><b>Mobile Apps</b></span>\", \"col\": 12}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production Scan Menu (Mobile App)\", \"col\": 6}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Gate Check-in/Out (Mobile App)\", \"col\": 6}}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Elemental Fixtures \\u2014 Job Tracking</b></span>\", \"col\": 12}}, {\"type\": \"paragraph\", \"data\": {\"text\": \"Job creation through Design/Purchase/Production/Packaging/Dispatch, tracked by QR code per part per process.\", \"col\": 12}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Job\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Finished Good\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"QR Code Master\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Material Indent\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production Entry\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Packaging Entry\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Dispatch Entry\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Department Transfer\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Job Department Status\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Material Issue\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Job Material Consumption\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Packing Box\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Design Task\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Data Entry Task\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"QC Inspection\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Employee Checkin\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Attendance\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Job Consumption Report\", \"col\": 3}}]",
+ "shortcuts": [
+  {
+   "label": "Job",
+   "link_to": "Job",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Green"
+  },
+  {
+   "label": "Finished Good",
+   "link_to": "Finished Good",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Blue"
+  },
+  {
+   "label": "QR Code Master",
+   "link_to": "QR Code Master",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Orange"
+  },
+  {
+   "label": "Material Indent",
+   "link_to": "Material Indent",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Yellow"
+  },
+  {
+   "label": "Production Entry",
+   "link_to": "Production Entry",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Purple"
+  },
+  {
+   "label": "Packaging Entry",
+   "link_to": "Packaging Entry",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Cyan"
+  },
+  {
+   "label": "Dispatch Entry",
+   "link_to": "Dispatch Entry",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Red"
+  },
+  {
+   "label": "Job Consumption Report",
+   "link_to": "Job Consumption Report",
+   "type": "Report",
+   "doc_view": "",
+   "color": "Grey"
+  },
+  {
+   "label": "Department Transfer",
+   "link_to": "Department Transfer",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Pink"
+  },
+  {
+   "label": "Job Department Status",
+   "link_to": "Job Department Status",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Grey"
+  },
+  {
+   "label": "Material Issue",
+   "link_to": "Material Issue",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Blue"
+  },
+  {
+   "label": "Job Material Consumption",
+   "link_to": "Job Material Consumption",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Orange"
+  },
+  {
+   "label": "Packing Box",
+   "link_to": "Packing Box",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Cyan"
+  },
+  {
+   "label": "Design Task",
+   "link_to": "Design Task",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Purple"
+  },
+  {
+   "label": "Data Entry Task",
+   "link_to": "Data Entry Task",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Yellow"
+  },
+  {
+   "label": "QC Inspection",
+   "link_to": "QC Inspection",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Red"
+  },
+  {
+   "label": "Employee Checkin",
+   "link_to": "Employee Checkin",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Blue"
+  },
+  {
+   "label": "Attendance",
+   "link_to": "Attendance",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Purple"
+  },
+  {
+   "label": "Production Scan Menu (Mobile App)",
+   "url": "/scan-menu",
+   "type": "URL",
+   "color": "Blue"
+  },
+  {
+   "label": "Gate Check-in/Out (Mobile App)",
+   "url": "/gate-scan",
+   "type": "URL",
+   "color": "Green"
+  },
+  {
+   "label": "Quotation",
+   "link_to": "Quotation (Elemental)",
+   "type": "DocType",
+   "doc_view": "List",
+   "color": "Green"
+  }
+ ],
+ "links": []
+}

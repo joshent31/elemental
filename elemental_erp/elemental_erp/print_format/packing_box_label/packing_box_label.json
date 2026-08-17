@@ -1,0 +1,10 @@
+{
+ "doctype": "Print Format",
+ "name": "Packing Box Label",
+ "doc_type": "Packing Box",
+ "module": "Elemental ERP",
+ "print_format_type": "Jinja",
+ "standard": "Yes",
+ "disabled": 0,
+ "html": "<div style=\"width:100%; padding: 10px; font-family: sans-serif; text-align:center;\">\n  <h2 style=\"margin-bottom:2px;\">Elemental Fixtures</h2>\n  <p style=\"color:#666; margin-top:0;\">Job: {{ doc.job }}</p>\n  <div style=\"font-size:36px; font-weight:bold; margin:10px 0;\">\n    BOX {{ doc.box_no }} / {{ doc.total_boxes }}\n  </div>\n  <hr>\n  {% if doc.box_qr_image %}\n  <img src=\"{{ doc.box_qr_image }}\" style=\"width:200px; height:200px;\">\n  {% endif %}\n  <p style=\"font-size:12px; color:#666; margin-top:8px;\">\n    Scan at dispatch to load, and again on site to confirm receipt / installation.\n  </p>\n</div>"
+}

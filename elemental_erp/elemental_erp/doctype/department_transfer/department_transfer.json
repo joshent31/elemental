@@ -1,0 +1,221 @@
+{
+ "doctype": "DocType",
+ "name": "Department Transfer",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "autoname": "naming_series:",
+ "is_submittable": 0,
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "label": "Series",
+   "fieldtype": "Select",
+   "options": "TRF-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "job",
+   "label": "Job",
+   "fieldtype": "Link",
+   "options": "Job",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "qr_code_master",
+   "label": "Part QR (Job x Subpart x Process)",
+   "fieldtype": "Link",
+   "options": "QR Code Master",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "subpart_label",
+   "label": "Part",
+   "fieldtype": "Data",
+   "fetch_from": "qr_code_master.subpart_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dt1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "from_department",
+   "label": "From Department",
+   "fieldtype": "Link",
+   "options": "Department",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "to_department",
+   "label": "To Department",
+   "fieldtype": "Link",
+   "options": "Department",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Select",
+   "options": "Pending Dispatch\nIn Transit\nReceived\nQty Mismatch\nCancelled",
+   "default": "Pending Dispatch",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "section_break_qty",
+   "label": "Quantities",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "transfer_qty",
+   "label": "Qty Sent",
+   "fieldtype": "Float",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "column_break_dt2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "received_qty",
+   "label": "Qty Received",
+   "fieldtype": "Float",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "qty_diff",
+   "label": "Difference (Sent - Received)",
+   "fieldtype": "Float",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_transferqr",
+   "label": "Transfer Document QR",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "transfer_qr_value",
+   "label": "Transfer QR Value (unique)",
+   "fieldtype": "Data",
+   "unique": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "transfer_qr_image",
+   "label": "Transfer QR Image",
+   "fieldtype": "Attach Image",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dt3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "dispatched_by",
+   "label": "Dispatched By",
+   "fieldtype": "Link",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "dispatched_on",
+   "label": "Dispatched On",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "received_by",
+   "label": "Received By",
+   "fieldtype": "Link",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "received_on",
+   "label": "Received On",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "label": "Remarks",
+   "fieldtype": "Small Text"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Production User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Production HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental Packaging User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Packaging HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

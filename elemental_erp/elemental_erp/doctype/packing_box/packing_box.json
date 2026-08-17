@@ -1,0 +1,183 @@
+{
+ "doctype": "DocType",
+ "name": "Packing Box",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "autoname": "hash",
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "image_field": "box_qr_image",
+ "fields": [
+  {
+   "fieldname": "job",
+   "label": "Job",
+   "fieldtype": "Link",
+   "options": "Job",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "box_no",
+   "label": "Box No.",
+   "fieldtype": "Int",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "total_boxes",
+   "label": "of Total Boxes",
+   "fieldtype": "Int",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Select",
+   "options": "Label Created\nPacked\nDispatched\nReceived at Site\nInstalled\nCancelled",
+   "default": "Label Created",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "column_break_pb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "box_qr_value",
+   "label": "Box QR Value (unique)",
+   "fieldtype": "Data",
+   "unique": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "box_qr_image",
+   "label": "Box QR Image",
+   "fieldtype": "Attach Image",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_pbstatus",
+   "label": "Dispatch / Site Status",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "dispatch_entry",
+   "label": "Dispatch Entry",
+   "fieldtype": "Link",
+   "options": "Dispatch Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "dispatched_on",
+   "label": "Dispatched On",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pb2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "received_at_site_on",
+   "label": "Received at Site On",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "received_by",
+   "label": "Received By",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pb3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "installed_on",
+   "label": "Installed On",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "installed_by",
+   "label": "Installed By",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_pbcontents",
+   "label": "Sub-Parts / Finished Goods Mapped Into This Box",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "contents",
+   "label": "Contents",
+   "fieldtype": "Table",
+   "options": "Packing Box Content"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Packaging User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Packaging HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental Dispatch User",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Dispatch HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  }
+ ],
+ "sort_field": "box_no",
+ "sort_order": "ASC"
+}

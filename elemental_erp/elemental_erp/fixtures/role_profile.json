@@ -1,0 +1,202 @@
+[
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Sales User",
+  "role_profile": "Elemental - Sales User",
+  "roles": [
+   {
+    "role": "Elemental Sales User"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Sales HOD",
+  "role_profile": "Elemental - Sales HOD",
+  "roles": [
+   {
+    "role": "Elemental Sales HOD"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Design User",
+  "role_profile": "Elemental - Design User",
+  "roles": [
+   {
+    "role": "Elemental Design User"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Design HOD",
+  "role_profile": "Elemental - Design HOD",
+  "roles": [
+   {
+    "role": "Elemental Design HOD"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Data Entry User",
+  "role_profile": "Elemental - Data Entry User",
+  "roles": [
+   {
+    "role": "Elemental Data Entry User"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Data Entry HOD",
+  "role_profile": "Elemental - Data Entry HOD",
+  "roles": [
+   {
+    "role": "Elemental Data Entry HOD"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Costing User",
+  "role_profile": "Elemental - Costing User",
+  "roles": [
+   {
+    "role": "Elemental Costing User"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Costing HOD",
+  "role_profile": "Elemental - Costing HOD",
+  "roles": [
+   {
+    "role": "Elemental Costing HOD"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Purchase User",
+  "role_profile": "Elemental - Purchase User",
+  "roles": [
+   {
+    "role": "Elemental Purchase User"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Purchase HOD",
+  "role_profile": "Elemental - Purchase HOD",
+  "roles": [
+   {
+    "role": "Elemental Purchase HOD"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Production User",
+  "role_profile": "Elemental - Production User",
+  "roles": [
+   {
+    "role": "Elemental Production User"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Production HOD",
+  "role_profile": "Elemental - Production HOD",
+  "roles": [
+   {
+    "role": "Elemental Production HOD"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - QC User",
+  "role_profile": "Elemental - QC User",
+  "roles": [
+   {
+    "role": "Elemental QC User"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - QC HOD",
+  "role_profile": "Elemental - QC HOD",
+  "roles": [
+   {
+    "role": "Elemental QC HOD"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Packaging User",
+  "role_profile": "Elemental - Packaging User",
+  "roles": [
+   {
+    "role": "Elemental Packaging User"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Packaging HOD",
+  "role_profile": "Elemental - Packaging HOD",
+  "roles": [
+   {
+    "role": "Elemental Packaging HOD"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Dispatch User",
+  "role_profile": "Elemental - Dispatch User",
+  "roles": [
+   {
+    "role": "Elemental Dispatch User"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - Dispatch HOD",
+  "role_profile": "Elemental - Dispatch HOD",
+  "roles": [
+   {
+    "role": "Elemental Dispatch HOD"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - HR Gate User",
+  "role_profile": "Elemental - HR Gate User",
+  "roles": [
+   {
+    "role": "Elemental HR Gate User"
+   }
+  ]
+ },
+ {
+  "doctype": "Role Profile",
+  "name": "Elemental - HR Gate HOD",
+  "role_profile": "Elemental - HR Gate HOD",
+  "roles": [
+   {
+    "role": "Elemental HR Gate HOD"
+   }
+  ]
+ }
+]

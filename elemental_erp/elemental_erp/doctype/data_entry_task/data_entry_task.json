@@ -1,0 +1,144 @@
+{
+ "doctype": "DocType",
+ "name": "Data Entry Task",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "autoname": "format:DE-{job}",
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "fields": [
+  {
+   "fieldname": "job",
+   "label": "Job",
+   "fieldtype": "Link",
+   "options": "Job",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "diagram_excel",
+   "label": "Diagram / BOQ Excel",
+   "fieldtype": "Data",
+   "fetch_from": "job.diagram_excel",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Select",
+   "options": "Pending\nIn Progress\nCompleted\nCancelled",
+   "default": "Pending",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "column_break_de1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assigned_to",
+   "label": "Assigned To",
+   "fieldtype": "Link",
+   "options": "User",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "fg_records_created",
+   "label": "Finished Good / Subpart records created in system",
+   "fieldtype": "Check",
+   "read_only": 1,
+   "description": "Confirms the Excel + diagram was actually turned into Finished Good / FG Subpart records \u2014 the traceability step"
+  },
+  {
+   "fieldname": "section_break_de2",
+   "label": "Time & Cost",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "started_on",
+   "label": "Started On",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_on",
+   "label": "Completed On",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_de3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hours_spent",
+   "label": "Hours Spent",
+   "fieldtype": "Float"
+  },
+  {
+   "fieldname": "data_entry_cost",
+   "label": "Cost (est.)",
+   "fieldtype": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "label": "Remarks",
+   "fieldtype": "Small Text"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "write": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Data Entry User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Data Entry HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental Sales User",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Sales HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

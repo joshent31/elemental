@@ -1,0 +1,50 @@
+[
+ {
+  "doctype": "Custom Field",
+  "name": "Sales Invoice-elemental_job",
+  "dt": "Sales Invoice",
+  "fieldname": "elemental_job",
+  "label": "Elemental Job",
+  "fieldtype": "Link",
+  "options": "Job",
+  "insert_after": "customer",
+  "in_list_view": 1,
+  "in_standard_filter": 1,
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Employee-elemental_qr_section",
+  "dt": "Employee",
+  "fieldname": "elemental_qr_section",
+  "label": "Gate QR Code",
+  "fieldtype": "Section Break",
+  "insert_after": "status",
+  "collapsible": 1,
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Employee-employee_qr_value",
+  "dt": "Employee",
+  "fieldname": "employee_qr_value",
+  "label": "Employee QR Value (unique)",
+  "fieldtype": "Data",
+  "insert_after": "elemental_qr_section",
+  "unique": 1,
+  "read_only": 1,
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Employee-employee_qr_image",
+  "dt": "Employee",
+  "fieldname": "employee_qr_image",
+  "label": "Employee QR Image",
+  "fieldtype": "Attach Image",
+  "insert_after": "employee_qr_value",
+  "read_only": 1,
+  "description": "Auto-generated when the Employee record is created \u2014 scan at the gate to check in/out.",
+  "module": "Elemental ERP"
+ }
+]

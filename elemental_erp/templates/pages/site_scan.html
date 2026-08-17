@@ -1,0 +1,108 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
+  <h3>Site - Receive &amp; Confirm Installation</h3>
+  <p style="color:#666; font-size: 13px;">Scan the box label QR when it arrives on site, and again
+     once it has been installed. No login required - this runs at the customer's site.</p>
+
+  <div id="scanner-site" style="width:100%; margin-bottom: 12px;"></div>
+  <button id="start-scan-site" class="btn btn-primary btn-block">Scan Box QR</button>
+
+  <div id="site-result" style="display:none; margin-top:16px;">
+    <div class="alert alert-info" id="site-box-info"></div>
+    <label>Your Name</label>
+    <input type="text" id="site-name" class="form-control" style="margin-bottom:10px;">
+    <button id="confirm-received-btn" class="btn btn-secondary btn-block" style="margin-bottom:8px;">Confirm Received at Site</button>
+    <button id="confirm-installed-btn" class="btn btn-success btn-block">Confirm Installed</button>
+  </div>
+
+  <div id="site-done" style="display:none; margin-top:16px;" class="alert alert-success"></div>
+  <div id="close-job-box" style="display:none; margin-top:16px; padding:12px; border:1px solid #ddd; border-radius:6px;">
+    <p style="font-size:13px;">All boxes for this Job are now installed.</p>
+    <label>Your Name</label>
+    <input type="text" id="close-job-name" class="form-control" style="margin-bottom:10px;">
+    <button id="close-job-btn" class="btn btn-warning btn-block">Confirm Job Fully Installed &amp; Complete</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+let boxQrValue = "{{ prefill_box }}";
+let currentJob = null;
+const scanner = new Html5Qrcode("scanner-site");
+
+function loadBox() {
+	frappe.call({
+		method: "elemental_erp.api.lookup_box",
+		args: { box_qr_value: boxQrValue },
+		callback: function (r) {
+			if (r.message) {
+				const b = r.message;
+				currentJob = b.job;
+				document.getElementById("site-box-info").innerHTML =
+					`Job: <b>${b.job}</b><br>Box <b>${b.box_no}</b> of <b>${b.total_boxes}</b><br>Current Status: <b>${b.status}</b>`;
+				document.getElementById("site-result").style.display = "block";
+				document.getElementById("close-job-box").style.display = "none";
+			}
+		},
+	});
+}
+
+document.getElementById("start-scan-site").onclick = function () {
+	scanner.start(
+		{ facingMode: "environment" },
+		{ fps: 10, qrbox: 220 },
+		(decodedText) => {
+			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
+			boxQrValue = decodedText.includes("box=") ? decodedText.split("box=")[1] : value;
+			scanner.stop();
+			loadBox();
+		}
+	);
+};
+
+if (boxQrValue) { loadBox(); }
+
+document.getElementById("confirm-received-btn").onclick = function () {
+	frappe.call({
+		method: "elemental_erp.api.scan_box_received",
+		args: { box_qr_value: boxQrValue, received_by: document.getElementById("site-name").value },
+		callback: function () {
+			const box = document.getElementById("site-done");
+			box.style.display = "block";
+			box.innerText = "Marked Received at Site.";
+		},
+	});
+};
+
+document.getElementById("confirm-installed-btn").onclick = function () {
+	frappe.call({
+		method: "elemental_erp.api.scan_box_installed",
+		args: { box_qr_value: boxQrValue, installed_by: document.getElementById("site-name").value },
+		callback: function (r) {
+			const box = document.getElementById("site-done");
+			box.style.display = "block";
+			box.innerText = "Marked Installed. Thank you!";
+			// offer the final Job-close step every time - the button call
+			// itself checks whether every box is actually done
+			document.getElementById("close-job-box").style.display = "block";
+		},
+	});
+};
+
+document.getElementById("close-job-btn").onclick = function () {
+	frappe.call({
+		method: "elemental_erp.api.confirm_job_installation_complete",
+		args: { job: currentJob, confirmed_by: document.getElementById("close-job-name").value },
+		callback: function () {
+			document.getElementById("close-job-box").innerHTML =
+				'<div class="alert alert-success">Job confirmed complete and closed.</div>';
+		},
+		error: function () {
+			alert("Not every box on this Job is marked Installed yet - cannot close the Job.");
+		},
+	});
+};
+</script>
+{% endblock %}

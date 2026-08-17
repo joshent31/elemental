@@ -1,0 +1,22 @@
+{
+ "doctype": "DocType",
+ "name": "FG Subpart",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {"fieldname": "part_code", "label": "Part Code", "fieldtype": "Data", "reqd": 1, "in_list_view": 1, "columns": 2},
+  {"fieldname": "subpart_name", "label": "Subpart / Description", "fieldtype": "Data", "reqd": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "ref_image", "label": "Ref Image", "fieldtype": "Attach Image"},
+  {"fieldname": "qty_per_fg", "label": "Qty per FG", "fieldtype": "Float", "default": "1", "in_list_view": 1, "columns": 1},
+  {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "default": "Nos", "in_list_view": 1, "columns": 1},
+  {"fieldname": "processes", "label": "Process Flow", "fieldtype": "MultiSelectPills",
+   "options": "Metal\nWood\nElectrical\nPowdercoating\nPaint\nUS Assembly\nPacking",
+   "in_list_view": 1, "columns": 3,
+   "description": "Ordered process steps this subpart goes through (matches PROCESS column on the BOQ sheet)"},
+  {"fieldname": "part_qr_value", "label": "Part QR Value", "fieldtype": "Data", "read_only": 1,
+   "description": "Auto-set from QR Code Master once the parent Job is submitted"}
+ ]
+}

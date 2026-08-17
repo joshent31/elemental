@@ -1,0 +1,16 @@
+{
+ "doctype": "Report",
+ "name": "Job Consumption Report",
+ "report_name": "Job Consumption Report",
+ "report_type": "Script Report",
+ "module": "Elemental ERP",
+ "is_standard": "Yes",
+ "ref_doctype": "Job",
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Elemental Sales HOD"},
+  {"role": "Elemental Costing User"},
+  {"role": "Elemental Costing HOD"},
+  {"role": "Elemental Purchase HOD"}
+ ]
+}

@@ -1,0 +1,115 @@
+[
+ {
+  "doctype": "Notification",
+  "name": "Job Ready For Dispatch",
+  "subject": "Job {{ doc.name }} is ready for dispatch",
+  "document_type": "Job",
+  "event": "Value Change",
+  "value_changed": "status",
+  "condition": "doc.status == 'In Packaging'",
+  "channel": "System Notification",
+  "enabled": 1,
+  "module": "Elemental ERP",
+  "recipients": [
+   {"receiver_by_role": "Manufacturing User"}
+  ]
+ },
+ {
+  "doctype": "Notification",
+  "name": "Material Indent Pending Approval",
+  "subject": "Material Indent {{ doc.name }} needs approval for Job {{ doc.job }}",
+  "document_type": "Material Indent",
+  "event": "New",
+  "condition": "doc.status == 'Pending'",
+  "channel": "System Notification",
+  "enabled": 1,
+  "module": "Elemental ERP",
+  "recipients": [
+   {"receiver_by_role": "Purchase User"}
+  ]
+ },
+ {
+  "doctype": "Notification",
+  "name": "Job Material Consumption Ready for Costing",
+  "subject": "Job {{ doc.job }}: material consumption draft ready for costing review",
+  "document_type": "Job Material Consumption",
+  "event": "New",
+  "condition": "doc.status == 'Draft'",
+  "channel": "System Notification",
+  "enabled": 1,
+  "module": "Elemental ERP",
+  "recipients": [
+   {"receiver_by_role": "Purchase User"}
+  ]
+ },
+ {
+  "doctype": "Notification",
+  "name": "Design Task Assigned",
+  "subject": "New Design Task for Job {{ doc.job }} \u2014 {{ doc.finished_good }}",
+  "document_type": "Design Task",
+  "event": "New",
+  "channel": "System Notification",
+  "enabled": 1,
+  "module": "Elemental ERP",
+  "recipients": [
+   {"receiver_by_role": "Manufacturing User"}
+  ]
+ },
+ {
+  "doctype": "Notification",
+  "name": "Data Entry Task Pending",
+  "subject": "Job {{ doc.job }}: BOQ Data Entry task is pending",
+  "document_type": "Data Entry Task",
+  "event": "New",
+  "channel": "System Notification",
+  "enabled": 1,
+  "module": "Elemental ERP",
+  "recipients": [
+   {"receiver_by_role": "Manufacturing User"}
+  ]
+ },
+ {
+  "doctype": "Notification",
+  "name": "QC Inspection Pending",
+  "subject": "Job {{ doc.job }}: QC Inspection pending for {{ doc.finished_good }} before packaging",
+  "document_type": "QC Inspection",
+  "event": "New",
+  "channel": "System Notification",
+  "enabled": 1,
+  "module": "Elemental ERP",
+  "recipients": [
+   {"receiver_by_role": "Manufacturing User"}
+  ]
+ },
+ {
+  "doctype": "Notification",
+  "name": "QC Inspection Failed",
+  "subject": "Job {{ doc.job }}: QC FAILED for {{ doc.finished_good }} \u2014 packaging blocked",
+  "document_type": "QC Inspection",
+  "event": "Value Change",
+  "value_changed": "status",
+  "condition": "doc.status == 'Failed'",
+  "channel": "System Notification",
+  "enabled": 1,
+  "module": "Elemental ERP",
+  "recipients": [
+   {"receiver_by_role": "Manufacturing User"}
+  ]
+ },
+ {
+  "doctype": "Notification",
+  "name": "Quotation Approved Ready For Job",
+  "subject": "Quotation {{ doc.name }} approved by customer \u2014 ready to create the Job",
+  "document_type": "Quotation (Elemental)",
+  "event": "Value Change",
+  "value_changed": "status",
+  "condition": "doc.status == 'Approved by Customer'",
+  "channel": "System Notification",
+  "enabled": 1,
+  "module": "Elemental ERP",
+  "recipients": [
+   {"receiver_by_role": "Elemental Sales User"},
+   {"receiver_by_role": "Elemental Sales HOD"}
+  ]
+ }
+]

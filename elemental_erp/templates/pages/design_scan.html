@@ -1,0 +1,85 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
+  <h3>Design - Start / Complete Drawing</h3>
+  <p style="color:#666; font-size: 13px;">Scan the Job/FG's Design QR to start the clock on a
+     drawing, and scan it again once the 2D/3D design is done - time and cost are calculated
+     from the gap between the two.</p>
+
+  <label>Designer</label>
+  <select id="designer-select" class="form-control" style="margin-bottom:14px;">
+    <option value="">-- select designer --</option>
+    {% for e in employees %}
+    <option value="{{ e.name }}">{{ e.employee_name }}</option>
+    {% endfor %}
+  </select>
+
+  <div id="scanner-design" style="width:100%; margin-bottom: 12px;"></div>
+  <button id="start-scan-design" class="btn btn-primary btn-block">Scan Design QR</button>
+
+  <div id="design-result" style="display:none; margin-top:16px;">
+    <div class="alert alert-info" id="design-info"></div>
+    <button id="start-design-btn" class="btn btn-secondary btn-block" style="margin-bottom:8px;">Start Design</button>
+    <button id="complete-design-btn" class="btn btn-success btn-block">Complete Design</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+let designQrValue = "{{ prefill_qr }}";
+const scanner = new Html5Qrcode("scanner-design");
+
+function renderTask(t) {
+	document.getElementById("design-info").innerHTML =
+		`Job: <b>${t.job}</b><br>Finished Good: <b>${t.finished_good}</b><br>` +
+		`Status: <b>${t.status}</b><br>` +
+		`Designer: <b>${t.assigned_designer || "(not set)"}</b><br>` +
+		(t.hours_spent ? `Hours: <b>${t.hours_spent}</b> | Cost: <b>${t.design_cost || 0}</b>` : "");
+	document.getElementById("design-result").style.display = "block";
+	document.getElementById("start-design-btn").disabled = t.status !== "Not Started";
+	document.getElementById("complete-design-btn").disabled = t.status !== "In Progress";
+}
+
+function loadTask() {
+	frappe.call({
+		method: "elemental_erp.api.lookup_design_task",
+		args: { qr_value: designQrValue },
+		callback: (r) => { if (r.message) renderTask(r.message); },
+	});
+}
+
+document.getElementById("start-scan-design").onclick = function () {
+	scanner.start(
+		{ facingMode: "environment" },
+		{ fps: 10, qrbox: 220 },
+		(decodedText) => {
+			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
+			designQrValue = decodedText.includes("qr=") ? decodedText.split("qr=")[1] : value;
+			scanner.stop();
+			loadTask();
+		}
+	);
+};
+
+if (designQrValue) { loadTask(); }
+
+document.getElementById("start-design-btn").onclick = function () {
+	const designer = document.getElementById("designer-select").value;
+	if (!designer) { alert("Select a designer first"); return; }
+	frappe.call({
+		method: "elemental_erp.api.start_design",
+		args: { qr_value: designQrValue, designer: designer },
+		callback: (r) => { if (r.message) renderTask(r.message); },
+	});
+};
+
+document.getElementById("complete-design-btn").onclick = function () {
+	frappe.call({
+		method: "elemental_erp.api.complete_design",
+		args: { qr_value: designQrValue },
+		callback: (r) => { if (r.message) renderTask(r.message); },
+	});
+};
+</script>
+{% endblock %}

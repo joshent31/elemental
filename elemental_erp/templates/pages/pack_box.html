@@ -1,0 +1,113 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
+  <h3>Pack Box - Map Parts to Label</h3>
+  <p style="color:#666; font-size: 13px;">Scan (or arrive via) the box label's QR, then scan each
+     part/FG going into this box and enter qty. Repeat for everything in the box.</p>
+
+  <div id="scanner-box" style="width:100%; margin-bottom: 12px;"></div>
+  <button id="start-scan-box" class="btn btn-primary btn-block">Scan Box Label QR</button>
+
+  <div id="box-result" style="display:none; margin-top:16px;">
+    <div class="alert alert-info" id="box-info"></div>
+
+    <h5>Contents so far</h5>
+    <ul id="box-contents" style="font-size:13px;"></ul>
+
+    <div id="scanner-part" style="width:100%; margin:10px 0;"></div>
+    <button id="start-scan-part" class="btn btn-secondary btn-block">Scan Part / FG QR to Add</button>
+
+    <div id="part-qty-row" style="display:none; margin-top:10px;">
+      <div class="alert alert-info" id="part-info"></div>
+      <label>Qty Packed</label>
+      <input type="number" id="part-qty" class="form-control" style="margin-bottom:10px;" min="0" step="any">
+      <button id="add-part-btn" class="btn btn-success btn-block">Add to Box</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+let boxQrValue = "{{ prefill_box }}";
+let scannedPartQr = null;
+const boxScanner = new Html5Qrcode("scanner-box");
+const partScanner = new Html5Qrcode("scanner-part");
+
+function refreshBox() {
+	frappe.call({
+		method: "elemental_erp.api.lookup_box",
+		args: { box_qr_value: boxQrValue },
+		callback: function (r) {
+			if (r.message) {
+				const b = r.message;
+				document.getElementById("box-info").innerHTML =
+					`Job: <b>${b.job}</b><br>Box <b>${b.box_no}</b> of <b>${b.total_boxes}</b><br>Status: <b>${b.status}</b>`;
+				const list = document.getElementById("box-contents");
+				list.innerHTML = "";
+				(b.contents || []).forEach((c) => {
+					const li = document.createElement("li");
+					li.innerText = `${c.subpart_label} \u00d7 ${c.packed_qty}`;
+					list.appendChild(li);
+				});
+				document.getElementById("box-result").style.display = "block";
+			}
+		},
+	});
+}
+
+document.getElementById("start-scan-box").onclick = function () {
+	boxScanner.start(
+		{ facingMode: "environment" },
+		{ fps: 10, qrbox: 220 },
+		(decodedText) => {
+			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
+			boxQrValue = decodedText.includes("box=") ? decodedText.split("box=")[1] : value;
+			boxScanner.stop();
+			refreshBox();
+		}
+	);
+};
+
+if (boxQrValue) { refreshBox(); }
+
+document.getElementById("start-scan-part").onclick = function () {
+	partScanner.start(
+		{ facingMode: "environment" },
+		{ fps: 10, qrbox: 220 },
+		(decodedText) => {
+			const value = decodedText.split("/").filter(Boolean).pop();
+			scannedPartQr = value;
+			partScanner.stop();
+			frappe.call({
+				method: "elemental_erp.api.lookup_part_qr",
+				args: { qr_value: value },
+				callback: function (r) {
+					if (r.message) {
+						const p = r.message;
+						document.getElementById("part-info").innerHTML =
+							`Part: <b>${p.subpart_name}</b> (${p.subpart_code})<br>Process: ${p.process}`;
+						document.getElementById("part-qty-row").style.display = "block";
+					}
+				},
+			});
+		}
+	);
+};
+
+document.getElementById("add-part-btn").onclick = function () {
+	frappe.call({
+		method: "elemental_erp.api.map_part_to_box",
+		args: {
+			box_qr_value: boxQrValue,
+			part_qr_value: scannedPartQr,
+			qty: document.getElementById("part-qty").value,
+		},
+		callback: function () {
+			document.getElementById("part-qty-row").style.display = "none";
+			refreshBox();
+		},
+	});
+};
+</script>
+{% endblock %}

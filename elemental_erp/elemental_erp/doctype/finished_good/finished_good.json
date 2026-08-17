@@ -1,0 +1,198 @@
+{
+ "doctype": "DocType",
+ "name": "Finished Good",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "autoname": "field:fg_code",
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "track_changes": 1,
+ "image_field": "fg_image",
+ "fields": [
+  {
+   "fieldname": "fg_code",
+   "label": "FG Code",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "columns": 2,
+   "description": "e.g. 2373921, 252602644-STD-C-TYPE-SHELF"
+  },
+  {
+   "fieldname": "fg_name",
+   "label": "FG Details / Name",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "brand",
+   "label": "Brand",
+   "fieldtype": "Link",
+   "options": "Brand (Elemental)",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "fg_image",
+   "label": "FG Image",
+   "fieldtype": "Attach Image"
+  },
+  {
+   "fieldname": "column_break_fg1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_uom",
+   "label": "Default UOM",
+   "fieldtype": "Link",
+   "options": "UOM",
+   "default": "Nos"
+  },
+  {
+   "fieldname": "erpnext_item",
+   "label": "Linked ERPNext Item",
+   "fieldtype": "Link",
+   "options": "Item",
+   "description": "Optional: map to an existing stock Item if this FG is already in the ERP (per flow note #2 - Indent/Purchase)"
+  },
+  {
+   "fieldname": "assembly_required",
+   "label": "Requires Assembly",
+   "fieldtype": "Check",
+   "default": "1"
+  },
+  {
+   "fieldname": "section_break_subparts",
+   "label": "Sub-Parts / Assembly Sub-Parts",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "subparts",
+   "label": "Subparts",
+   "fieldtype": "Table",
+   "options": "FG Subpart"
+  },
+  {
+   "fieldname": "section_break_bom",
+   "label": "Raw Material BOM (per 1 unit of this FG)",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "bom_items",
+   "label": "BOM Items",
+   "fieldtype": "Table",
+   "options": "FG BOM Item",
+   "description": "Drives auto-generated Material Indent lines \u2014 qty here \u00d7 Job Qty = required qty on the Indent"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1
+  },
+  {
+   "role": "Purchase User",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Data Entry User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Data Entry HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental Costing User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Costing HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental Design User",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Design HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Production User",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Production HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Packaging User",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Packaging HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Purchase User",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Purchase HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

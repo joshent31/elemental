@@ -1,0 +1,14 @@
+{
+ "doctype": "DocType",
+ "name": "Design File",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {"fieldname": "file_type", "label": "Type", "fieldtype": "Select", "options": "2D Drawing\n3D Model\nReference Image\nOther", "in_list_view": 1, "columns": 2},
+  {"fieldname": "attachment", "label": "File", "fieldtype": "Attach", "reqd": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "description", "label": "Description", "fieldtype": "Data", "in_list_view": 1, "columns": 3}
+ ]
+}

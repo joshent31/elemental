@@ -1,0 +1,111 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
+  <h3>Send to Department</h3>
+  <p style="color:#666; font-size: 13px;">Departments are not in any fixed order - pick where
+     you're sending FROM, scan the part, choose where it's going TO, enter qty, confirm.</p>
+
+  <label>Step 1 - Sending FROM which department?</label>
+  <select id="from-dept" class="form-control" style="margin-bottom:14px;">
+    <option value="">-- select department --</option>
+    {% for d in departments %}
+    <option value="{{ d.name }}">{{ d.name }}</option>
+    {% endfor %}
+  </select>
+
+  <div id="scanner-out" style="width:100%; margin-bottom: 12px;"></div>
+  <button id="start-scan-out" class="btn btn-primary btn-block" disabled>Step 2 - Scan Part QR</button>
+  <p id="scan-hint" style="font-size:12px; color:#999;">Select a department above to enable scanning.</p>
+
+  <div id="scan-result-out" style="display:none; margin-top: 16px;">
+    <div class="alert alert-info" id="part-info"></div>
+
+    <label>Step 3 - Sending TO which department?</label>
+    <select id="to-dept" class="form-control" style="margin-bottom:10px;">
+      <option value="">-- select department --</option>
+      {% for d in departments %}
+      <option value="{{ d.name }}">{{ d.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Step 4 - Qty to Transfer</label>
+    <input type="number" id="qty-out" class="form-control" style="margin-bottom:10px;" min="0" step="any">
+
+    <label>Remarks (optional)</label>
+    <input type="text" id="remarks-out" class="form-control" style="margin-bottom:10px;">
+
+    <button id="submit-transfer" class="btn btn-success btn-block">Confirm &amp; Create Transfer</button>
+  </div>
+
+  <div id="transfer-done" style="display:none; margin-top:16px;" class="alert alert-success">
+    Transfer created: <b id="transfer-name"></b><br>
+    <a id="print-link" target="_blank" class="btn btn-secondary btn-block" style="margin-top:8px;">Print Transfer Slip</a>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+let scannedQrValue = null;
+const scanner = new Html5Qrcode("scanner-out");
+
+const fromDeptEl = document.getElementById("from-dept");
+const startBtn = document.getElementById("start-scan-out");
+const scanHint = document.getElementById("scan-hint");
+
+fromDeptEl.onchange = function () {
+	startBtn.disabled = !fromDeptEl.value;
+	scanHint.style.display = fromDeptEl.value ? "none" : "block";
+};
+
+startBtn.onclick = function () {
+	if (!fromDeptEl.value) return;
+	scanner.start(
+		{ facingMode: "environment" },
+		{ fps: 10, qrbox: 220 },
+		(decodedText) => {
+			const value = decodedText.split("/").filter(Boolean).pop();
+			scannedQrValue = value;
+			scanner.stop();
+			frappe.call({
+				method: "elemental_erp.api.lookup_part_qr",
+				args: { qr_value: value },
+				callback: function (r) {
+					if (r.message) {
+						const p = r.message;
+						document.getElementById("part-info").innerHTML =
+							`Job: <b>${p.job}</b><br>Part: <b>${p.subpart_name}</b> (${p.subpart_code})<br>` +
+							`Process: <b>${p.process}</b><br>Progress: ${p.completed_qty}/${p.total_qty}<br>` +
+							`From: <b>${fromDeptEl.value}</b>`;
+						document.getElementById("scan-result-out").style.display = "block";
+					}
+				},
+			});
+		}
+	);
+};
+
+document.getElementById("submit-transfer").onclick = function () {
+	const toDept = document.getElementById("to-dept").value;
+	if (!toDept) { alert("Select a To Department"); return; }
+	frappe.call({
+		method: "elemental_erp.api.create_transfer",
+		args: {
+			qr_value: scannedQrValue,
+			from_department: fromDeptEl.value,
+			to_department: toDept,
+			transfer_qty: document.getElementById("qty-out").value,
+			remarks: document.getElementById("remarks-out").value,
+		},
+		callback: function (r) {
+			if (r.message) {
+				document.getElementById("transfer-name").innerText = r.message.transfer_name;
+				document.getElementById("print-link").href = r.message.print_url;
+				document.getElementById("scan-result-out").style.display = "none";
+				document.getElementById("transfer-done").style.display = "block";
+			}
+		},
+	});
+};
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+{
+ "doctype": "Print Format",
+ "name": "Department Transfer Slip",
+ "doc_type": "Department Transfer",
+ "module": "Elemental ERP",
+ "print_format_type": "Jinja",
+ "standard": "Yes",
+ "disabled": 0,
+ "html": "<div style=\"width:100%; padding: 10px; font-family: sans-serif;\">\n  <h2 style=\"text-align:center; margin-bottom:4px;\">Elemental Fixtures \u2014 Transfer Slip</h2>\n  <p style=\"text-align:center; color:#666; margin-top:0;\">{{ doc.name }}</p>\n  <hr>\n  <table style=\"width:100%; font-size:14px;\">\n    <tr><td style=\"padding:4px 0;\"><b>Job</b></td><td>{{ doc.job }}</td></tr>\n    <tr><td style=\"padding:4px 0;\"><b>Part</b></td><td>{{ doc.subpart_label or '' }}</td></tr>\n    <tr><td style=\"padding:4px 0;\"><b>From Department</b></td><td>{{ doc.from_department }}</td></tr>\n    <tr><td style=\"padding:4px 0;\"><b>To Department</b></td><td>{{ doc.to_department }}</td></tr>\n    <tr><td style=\"padding:4px 0;\"><b>Qty Sent</b></td><td style=\"font-size:20px;\"><b>{{ doc.transfer_qty }}</b></td></tr>\n    <tr><td style=\"padding:4px 0;\"><b>Dispatched By</b></td><td>{{ doc.dispatched_by }}</td></tr>\n    <tr><td style=\"padding:4px 0;\"><b>Dispatched On</b></td><td>{{ doc.dispatched_on }}</td></tr>\n    <tr><td style=\"padding:4px 0;\"><b>Remarks</b></td><td>{{ doc.remarks or '' }}</td></tr>\n  </table>\n  <hr>\n  <div style=\"text-align:center; margin-top:10px;\">\n    {% if doc.transfer_qr_image %}\n    <img src=\"{{ doc.transfer_qr_image }}\" style=\"width:180px; height:180px;\">\n    <p style=\"font-size:12px; color:#666;\">Scan at receiving department to confirm qty received</p>\n    {% endif %}\n  </div>\n</div>"
+}

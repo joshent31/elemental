@@ -1,0 +1,84 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
+  <h3>QC - Inspect Before Packaging</h3>
+  <p style="color:#666; font-size: 13px;">Scan the Job/FG's QC QR. Packaging is blocked for
+     this Finished Good until it's marked Passed here. If it fails, fix the issue and scan
+     again - a new result simply overwrites this one.</p>
+
+  <label>Inspector</label>
+  <select id="inspector-select" class="form-control" style="margin-bottom:14px;">
+    <option value="">-- select inspector --</option>
+    {% for e in employees %}
+    <option value="{{ e.name }}">{{ e.employee_name }}</option>
+    {% endfor %}
+  </select>
+
+  <div id="scanner-qc" style="width:100%; margin-bottom: 12px;"></div>
+  <button id="start-scan-qc" class="btn btn-primary btn-block">Scan QC QR</button>
+
+  <div id="qc-result" style="display:none; margin-top:16px;">
+    <div class="alert alert-info" id="qc-info"></div>
+    <label>Remarks (optional)</label>
+    <input type="text" id="qc-remarks" class="form-control" style="margin-bottom:10px;">
+    <button id="qc-fail-btn" class="btn btn-danger btn-block" style="margin-bottom:8px;">Fail</button>
+    <button id="qc-pass-btn" class="btn btn-success btn-block">Pass</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+let qcQrValue = "{{ prefill_qr }}";
+const scanner = new Html5Qrcode("scanner-qc");
+
+function renderInsp(t) {
+	document.getElementById("qc-info").innerHTML =
+		`Job: <b>${t.job}</b><br>Finished Good: <b>${t.finished_good}</b><br>` +
+		`Current Status: <b>${t.status}</b>` +
+		(t.inspector ? `<br>Last Inspector: <b>${t.inspector}</b>` : "");
+	document.getElementById("qc-result").style.display = "block";
+}
+
+function loadInsp() {
+	frappe.call({
+		method: "elemental_erp.api.lookup_qc_inspection",
+		args: { qr_value: qcQrValue },
+		callback: (r) => { if (r.message) renderInsp(r.message); },
+	});
+}
+
+document.getElementById("start-scan-qc").onclick = function () {
+	scanner.start(
+		{ facingMode: "environment" },
+		{ fps: 10, qrbox: 220 },
+		(decodedText) => {
+			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
+			qcQrValue = decodedText.includes("qr=") ? decodedText.split("qr=")[1] : value;
+			scanner.stop();
+			loadInsp();
+		}
+	);
+};
+
+if (qcQrValue) { loadInsp(); }
+
+function submitResult(result) {
+	const inspector = document.getElementById("inspector-select").value;
+	if (!inspector) { alert("Select an inspector first"); return; }
+	frappe.call({
+		method: "elemental_erp.api.record_qc_result",
+		args: {
+			qr_value: qcQrValue,
+			result: result,
+			inspector: inspector,
+			remarks: document.getElementById("qc-remarks").value,
+		},
+		callback: (r) => { if (r.message) renderInsp(r.message); },
+	});
+}
+
+document.getElementById("qc-pass-btn").onclick = () => submitResult("Pass");
+document.getElementById("qc-fail-btn").onclick = () => submitResult("Fail");
+</script>
+{% endblock %}

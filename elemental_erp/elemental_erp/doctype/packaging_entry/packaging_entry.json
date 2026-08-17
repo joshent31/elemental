@@ -1,0 +1,136 @@
+{
+ "doctype": "DocType",
+ "name": "Packaging Entry",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "autoname": "naming_series:",
+ "is_submittable": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "label": "Series",
+   "fieldtype": "Select",
+   "options": "PKG-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "job",
+   "label": "Job",
+   "fieldtype": "Link",
+   "options": "Job",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "qr_code_master",
+   "label": "QR Code (Part x Process)",
+   "fieldtype": "Link",
+   "options": "QR Code Master",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "packed_qty",
+   "label": "Packed Qty",
+   "fieldtype": "Float",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "packaging_date",
+   "label": "Packaging Date",
+   "fieldtype": "Date",
+   "default": "Today",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "carton_no",
+   "label": "Carton No.",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "employee",
+   "label": "Employee",
+   "fieldtype": "Link",
+   "options": "Employee",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "hours_spent",
+   "label": "Hours Spent",
+   "fieldtype": "Float"
+  },
+  {
+   "fieldname": "packaging_cost",
+   "label": "Cost (est.)",
+   "fieldtype": "Currency",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "report": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Packaging User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Packaging HOD",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "cancel": 1,
+   "delete": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "email": 1
+  },
+  {
+   "role": "Elemental QC HOD",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Dispatch User",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Dispatch HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

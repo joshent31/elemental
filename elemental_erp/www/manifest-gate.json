@@ -1,0 +1,14 @@
+{
+ "name": "Elemental Gate Check-in",
+ "short_name": "Elemental Gate",
+ "start_url": "/gate-scan",
+ "scope": "/",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#1a2942",
+ "theme_color": "#1a2942",
+ "icons": [
+  {"src": "/assets/elemental_erp/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+  {"src": "/assets/elemental_erp/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+ ]
+}

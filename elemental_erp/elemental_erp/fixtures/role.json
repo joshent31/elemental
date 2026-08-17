@@ -1,0 +1,142 @@
+[
+ {
+  "doctype": "Role",
+  "name": "Elemental Sales User",
+  "role_name": "Elemental Sales User",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Sales HOD",
+  "role_name": "Elemental Sales HOD",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Design User",
+  "role_name": "Elemental Design User",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Design HOD",
+  "role_name": "Elemental Design HOD",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Data Entry User",
+  "role_name": "Elemental Data Entry User",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Data Entry HOD",
+  "role_name": "Elemental Data Entry HOD",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Costing User",
+  "role_name": "Elemental Costing User",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Costing HOD",
+  "role_name": "Elemental Costing HOD",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Purchase User",
+  "role_name": "Elemental Purchase User",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Purchase HOD",
+  "role_name": "Elemental Purchase HOD",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Production User",
+  "role_name": "Elemental Production User",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Production HOD",
+  "role_name": "Elemental Production HOD",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental QC User",
+  "role_name": "Elemental QC User",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental QC HOD",
+  "role_name": "Elemental QC HOD",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Packaging User",
+  "role_name": "Elemental Packaging User",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Packaging HOD",
+  "role_name": "Elemental Packaging HOD",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Dispatch User",
+  "role_name": "Elemental Dispatch User",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental Dispatch HOD",
+  "role_name": "Elemental Dispatch HOD",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental HR Gate User",
+  "role_name": "Elemental HR Gate User",
+  "desk_access": 1,
+  "disabled": 0
+ },
+ {
+  "doctype": "Role",
+  "name": "Elemental HR Gate HOD",
+  "role_name": "Elemental HR Gate HOD",
+  "desk_access": 1,
+  "disabled": 0
+ }
+]

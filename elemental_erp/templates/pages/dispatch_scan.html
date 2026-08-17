@@ -1,0 +1,98 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
+  <h3>Dispatch - Load Vehicle</h3>
+  <p style="color:#666; font-size: 13px;">Enter the Job and vehicle, then scan each box's QR as
+     it's loaded. Shows how many boxes are packed and ready vs. how many have actually been
+     scanned onto the vehicle so far.</p>
+
+  <label>Job</label>
+  <input type="text" id="job-id" class="form-control" style="margin-bottom:10px;" placeholder="JOB-2026-00001">
+  <label>Vehicle No.</label>
+  <input type="text" id="vehicle-no" class="form-control" style="margin-bottom:10px;">
+  <button id="start-dispatch-btn" class="btn btn-primary btn-block">Start / Resume Dispatch</button>
+
+  <div id="progress-panel" style="display:none; margin-top:16px; padding:14px; border:1px solid #dee2e6; border-radius:6px; background:#f8f9fa;">
+    <table style="width:100%; font-size:14px; text-align:center;">
+      <tr>
+        <td><b id="progress-packed">0</b><br><span style="font-size:11px; color:#666;">Packed</span></td>
+        <td><b id="progress-loaded">0</b><br><span style="font-size:11px; color:#666;">Scanned / Loaded</span></td>
+        <td><b id="progress-total">0</b><br><span style="font-size:11px; color:#666;">Total Boxes</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div id="scan-area" style="display:none; margin-top:16px;">
+    <div class="alert alert-success" id="progress-info"></div>
+    <div id="scanner-dispatch" style="width:100%; margin-bottom: 12px;"></div>
+    <button id="start-scan-dispatch" class="btn btn-secondary btn-block">Scan Next Box</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+let dispatchEntry = null;
+let currentJob = null;
+const scanner = new Html5Qrcode("scanner-dispatch");
+
+function renderProgress(p) {
+	document.getElementById("progress-packed").innerText = p.packed;
+	document.getElementById("progress-loaded").innerText = p.dispatched !== undefined ? p.dispatched : p.loaded;
+	document.getElementById("progress-total").innerText = p.total;
+	document.getElementById("progress-panel").style.display = "block";
+}
+
+document.getElementById("start-dispatch-btn").onclick = function () {
+	currentJob = document.getElementById("job-id").value;
+	frappe.call({
+		method: "elemental_erp.api.get_or_create_dispatch_entry",
+		args: { job: currentJob, vehicle_no: document.getElementById("vehicle-no").value },
+		callback: function (r) {
+			if (r.message) {
+				dispatchEntry = r.message;
+				document.getElementById("progress-info").innerText = `Dispatch ${dispatchEntry} ready - scan boxes.`;
+				document.getElementById("scan-area").style.display = "block";
+
+				frappe.call({
+					method: "elemental_erp.api.get_job_box_progress",
+					args: { job: currentJob },
+					callback: function (r2) {
+						if (r2.message) renderProgress(r2.message);
+					},
+				});
+			}
+		},
+	});
+};
+
+document.getElementById("start-scan-dispatch").onclick = function () {
+	scanner.start(
+		{ facingMode: "environment" },
+		{ fps: 10, qrbox: 220 },
+		(decodedText) => {
+			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
+			scanner.stop();
+			frappe.call({
+				method: "elemental_erp.api.scan_box_dispatch",
+				args: { box_qr_value: value, dispatch_entry: dispatchEntry },
+				callback: function (r) {
+					if (r.message) {
+						const d = r.message;
+						renderProgress(d);
+						let msg = `Box ${d.box_no} loaded - ${d.loaded} of ${d.total} boxes on the vehicle (${d.packed} packed so far).`;
+						if (d.sales_invoice) {
+							msg += ` All boxes loaded - Draft Sales Invoice ${d.sales_invoice} created.`;
+						}
+						document.getElementById("progress-info").innerText = msg;
+					}
+				},
+				error: function () {
+					alert("Could not register this box - check it hasn't already been scanned.");
+				},
+			});
+		}
+	);
+};
+</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+{
+ "doctype": "DocType",
+ "name": "Quotation Item",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {"fieldname": "finished_good", "label": "Finished Good", "fieldtype": "Link", "options": "Finished Good", "reqd": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "fg_name", "label": "FG Name", "fieldtype": "Data", "fetch_from": "finished_good.fg_name", "read_only": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "qty", "label": "Qty", "fieldtype": "Float", "reqd": 1, "in_list_view": 1, "columns": 1},
+  {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "fetch_from": "finished_good.default_uom", "in_list_view": 1, "columns": 1},
+  {"fieldname": "rate", "label": "Quoted Rate", "fieldtype": "Currency", "in_list_view": 1, "columns": 1},
+  {"fieldname": "amount", "label": "Amount", "fieldtype": "Currency", "read_only": 1, "in_list_view": 1, "columns": 1}
+ ]
+}

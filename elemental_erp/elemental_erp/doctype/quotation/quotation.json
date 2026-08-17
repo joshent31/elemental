@@ -1,0 +1,39 @@
+{
+ "doctype": "DocType",
+ "name": "Quotation (Elemental)",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "autoname": "naming_series:",
+ "is_submittable": 1,
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "fields": [
+  {"fieldname": "naming_series", "label": "Series", "fieldtype": "Select", "options": "QTN-.YYYY.-", "reqd": 1},
+  {"fieldname": "customer", "label": "Customer", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_list_view": 1, "columns": 2},
+  {"fieldname": "brand", "label": "Brand", "fieldtype": "Link", "options": "Brand (Elemental)", "in_list_view": 1, "columns": 2},
+  {"fieldname": "column_break_qtn1", "fieldtype": "Column Break"},
+  {"fieldname": "quotation_date", "label": "Quotation Date", "fieldtype": "Date", "default": "Today", "in_list_view": 1, "columns": 1},
+  {"fieldname": "status", "label": "Status", "fieldtype": "Select",
+   "options": "Draft\nSent to Customer\nApproved by Customer\nConverted to Job\nExpired\nCancelled",
+   "default": "Draft", "read_only": 1, "in_list_view": 1, "in_standard_filter": 1, "columns": 2},
+  {"fieldname": "section_break_qtnitems", "label": "Finished Goods Quoted", "fieldtype": "Section Break"},
+  {"fieldname": "items", "label": "Items", "fieldtype": "Table", "options": "Quotation Item", "reqd": 1},
+  {"fieldname": "total_quoted_value", "label": "Total Quoted Value", "fieldtype": "Currency", "read_only": 1},
+  {"fieldname": "section_break_qtnapproval", "label": "Customer Approval \u2014 production can start on this alone, ahead of the formal PO", "fieldtype": "Section Break"},
+  {"fieldname": "approval_reference", "label": "Approval Reference (email subject/thread, call note, etc.)", "fieldtype": "Data"},
+  {"fieldname": "approved_on", "label": "Approved On", "fieldtype": "Datetime", "read_only": 1},
+  {"fieldname": "approved_by", "label": "Approved By (internal)", "fieldtype": "Link", "options": "User", "read_only": 1},
+  {"fieldname": "column_break_qtn2", "fieldtype": "Column Break"},
+  {"fieldname": "job", "label": "Job Created From This Quotation", "fieldtype": "Link", "options": "Job", "read_only": 1},
+  {"fieldname": "remarks", "label": "Remarks", "fieldtype": "Small Text"}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "submit": 1, "cancel": 1, "report": 1, "print": 1},
+  {"role": "Elemental Sales User", "read": 1, "write": 1, "create": 1, "submit": 1, "report": 1, "print": 1},
+  {"role": "Elemental Sales HOD", "read": 1, "write": 1, "create": 1, "submit": 1, "cancel": 1, "delete": 1, "report": 1, "print": 1, "export": 1, "email": 1},
+  {"role": "Elemental Costing User", "read": 1, "report": 1},
+  {"role": "Elemental Costing HOD", "read": 1, "report": 1, "print": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

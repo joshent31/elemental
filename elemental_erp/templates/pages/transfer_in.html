@@ -1,0 +1,143 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
+  <h3>Receive from Department</h3>
+  <p style="color:#666; font-size: 13px;">Scan the QR printed on the transfer slip that came
+     with the box, confirm the qty you actually received, and close your department out on
+     this Job once everything expected has arrived.</p>
+
+  <div id="scanner-in" style="width:100%; margin-bottom: 12px;"></div>
+  <button id="start-scan-in" class="btn btn-primary btn-block">Scan Transfer Slip QR</button>
+
+  <div id="scan-result-in" style="display:none; margin-top: 16px;">
+    <div class="alert alert-info" id="transfer-info"></div>
+
+    <label>Qty Received</label>
+    <input type="number" id="qty-in" class="form-control" style="margin-bottom:10px;" min="0" step="any">
+
+    <label>Remarks (optional - note any damage/shortage)</label>
+    <input type="text" id="remarks-in" class="form-control" style="margin-bottom:10px;">
+
+    <button id="submit-receive" class="btn btn-success btn-block">Confirm Receipt</button>
+  </div>
+
+  <div id="receive-done" style="display:none; margin-top:16px;"></div>
+
+  <div id="close-dept-box" style="display:none; margin-top:16px; padding:12px; border:1px solid #ddd; border-radius:6px;">
+    <p id="close-dept-summary" style="font-size:13px;"></p>
+    <label>Remarks for closing (optional)</label>
+    <input type="text" id="close-remarks" class="form-control" style="margin-bottom:10px;">
+    <button id="close-dept-btn" class="btn btn-warning btn-block">Close Department for this Job</button>
+    <div id="close-done" style="display:none; margin-top:10px;" class="alert alert-success">
+      Department closed for this Job.
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+let transferQrValue = "{{ prefill_qr }}";
+let currentJob = null;
+let currentToDept = null;
+const scanner = new Html5Qrcode("scanner-in");
+
+function loadTransfer(value) {
+	transferQrValue = value;
+	frappe.call({
+		method: "elemental_erp.api.get_transfer",
+		args: { transfer_qr_value: value },
+		callback: function (r) {
+			if (r.message) {
+				const t = r.message;
+				currentJob = t.job;
+				currentToDept = t.to_department;
+				document.getElementById("transfer-info").innerHTML =
+					`Job: <b>${t.job}</b><br>Part: <b>${t.subpart_label || ""}</b><br>` +
+					`From: <b>${t.from_department}</b> \u2192 To: <b>${t.to_department}</b><br>` +
+					`Qty Sent: <b>${t.transfer_qty}</b><br>Status: <b>${t.status}</b>`;
+				document.getElementById("qty-in").value = t.transfer_qty;
+				document.getElementById("scan-result-in").style.display = "block";
+				document.getElementById("close-dept-box").style.display = "none";
+				document.getElementById("receive-done").style.display = "none";
+			}
+		},
+	});
+}
+
+document.getElementById("start-scan-in").onclick = function () {
+	scanner.start(
+		{ facingMode: "environment" },
+		{ fps: 10, qrbox: 220 },
+		(decodedText) => {
+			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
+			scanner.stop();
+			loadTransfer(decodedText.includes("qr=") ? decodedText.split("qr=")[1] : value);
+		}
+	);
+};
+
+if (transferQrValue) {
+	loadTransfer(transferQrValue);
+}
+
+document.getElementById("submit-receive").onclick = function () {
+	frappe.call({
+		method: "elemental_erp.api.receive_transfer",
+		args: {
+			transfer_qr_value: transferQrValue,
+			received_qty: document.getElementById("qty-in").value,
+			remarks: document.getElementById("remarks-in").value,
+		},
+		callback: function (r) {
+			if (r.message) {
+				const d = r.message;
+				const box = document.getElementById("receive-done");
+				box.style.display = "block";
+				box.className = d.status === "Received" ? "alert alert-success" : "alert alert-warning";
+				box.innerText = d.status === "Received"
+					? "Received in full - this transfer is closed."
+					: `Qty mismatch: sent ${d.transfer_qty}, received ${d.received_qty}. Logged for follow-up.`;
+				document.getElementById("scan-result-in").style.display = "none";
+
+				// offer the "close department" step regardless of match/mismatch -
+				// operator decides if the department's work on this Job is done
+				frappe.call({
+					method: "elemental_erp.api.get_department_job_summary",
+					args: { job: currentJob, department: currentToDept },
+					callback: function (r2) {
+						if (r2.message) {
+							const s = r2.message;
+							document.getElementById("close-dept-summary").innerHTML =
+								`<b>${currentToDept}</b> on <b>${currentJob}</b>: total received so far ` +
+								`<b>${s.total_qty_received}</b>. Status: <b>${s.status}</b>. ` +
+								`Pending/unreceived transfers: <b>${s.pending_transfers}</b>.`;
+							document.getElementById("close-dept-box").style.display =
+								s.status === "Closed" ? "none" : "block";
+						}
+					},
+				});
+			}
+		},
+	});
+};
+
+document.getElementById("close-dept-btn").onclick = function () {
+	frappe.call({
+		method: "elemental_erp.api.close_department",
+		args: {
+			job: currentJob,
+			department: currentToDept,
+			remarks: document.getElementById("close-remarks").value,
+		},
+		callback: function (r) {
+			document.getElementById("close-done").style.display = "block";
+			document.getElementById("close-dept-btn").disabled = true;
+		},
+		error: function (r) {
+			alert("Could not close department - there are still pending or mismatched transfers into it.");
+		},
+	});
+};
+</script>
+{% endblock %}
