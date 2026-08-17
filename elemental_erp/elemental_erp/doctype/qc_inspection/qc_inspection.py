@@ -7,7 +7,7 @@ class QCInspection(Document):
 
 
 def qc_passed(job, finished_good):
-	"""Gate used by Packaging Entry and the box-packing scan - Packaging is
+	"""Gate used by Packaging Entry and the box-packing scan — Packaging is
 	blocked until this returns True. A prior Fail doesn't need any rework
 	doctype: QC just re-scans and records a new result, which overwrites
 	this same record's status."""

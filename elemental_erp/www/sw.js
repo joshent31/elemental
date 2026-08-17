@@ -1,4 +1,4 @@
-// Minimal service worker - just enough to satisfy PWA installability
+// Minimal service worker — just enough to satisfy PWA installability
 // (Chrome/Android requires an active service worker with a fetch handler
 // before it will offer "Add to Home Screen"). This does a light
 // network-first cache of visited pages so a flaky factory-floor or gate

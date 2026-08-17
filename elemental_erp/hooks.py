@@ -10,7 +10,7 @@ required_apps = ["erpnext"]
 # ------------------
 app_include_js = "/assets/elemental_erp/js/job.js"
 
-# Fixtures - exported so `bench get-app` installs already ship Notifications
+# Fixtures — exported so `bench get-app` installs already ship Notifications
 # and are safe to re-export any custom Property Setters etc. later
 fixtures = [
 	{"doctype": "Notification", "filters": [["module", "=", "Elemental ERP"]]},
@@ -33,7 +33,7 @@ doc_events = {
 	},
 }
 
-# Website Route Rules - public QR scan landing page: elemental.com/qr/<qr_value>
+# Website Route Rules — public QR scan landing page: elemental.com/qr/<qr_value>
 website_route_rules = [
 	{"from_route": "/qr/<qr_value>", "to_route": "qr_scan"},
 ]

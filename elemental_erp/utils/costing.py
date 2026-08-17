@@ -4,7 +4,7 @@ import frappe
 def hourly_rate(employee=None):
 	"""Rough hourly rate for manpower costing: Employee.ctc / 208 (a ~40hr/wk,
 	4.33wk/month approximation). Returns 0 if no Employee is linked or no
-	ctc is set - callers should treat 0-cost lines as "not yet costed"
+	ctc is set — callers should treat 0-cost lines as "not yet costed"
 	rather than "free"."""
 	if not employee:
 		return 0

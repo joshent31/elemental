@@ -16,7 +16,7 @@
     <label>Qty Received</label>
     <input type="number" id="qty-in" class="form-control" style="margin-bottom:10px;" min="0" step="any">
 
-    <label>Remarks (optional - note any damage/shortage)</label>
+    <label>Remarks (optional — note any damage/shortage)</label>
     <input type="text" id="remarks-in" class="form-control" style="margin-bottom:10px;">
 
     <button id="submit-receive" class="btn btn-success btn-block">Confirm Receipt</button>
@@ -96,11 +96,11 @@ document.getElementById("submit-receive").onclick = function () {
 				box.style.display = "block";
 				box.className = d.status === "Received" ? "alert alert-success" : "alert alert-warning";
 				box.innerText = d.status === "Received"
-					? "Received in full - this transfer is closed."
+					? "Received in full — this transfer is closed."
 					: `Qty mismatch: sent ${d.transfer_qty}, received ${d.received_qty}. Logged for follow-up.`;
 				document.getElementById("scan-result-in").style.display = "none";
 
-				// offer the "close department" step regardless of match/mismatch -
+				// offer the "close department" step regardless of match/mismatch —
 				// operator decides if the department's work on this Job is done
 				frappe.call({
 					method: "elemental_erp.api.get_department_job_summary",
@@ -135,7 +135,7 @@ document.getElementById("close-dept-btn").onclick = function () {
 			document.getElementById("close-dept-btn").disabled = true;
 		},
 		error: function (r) {
-			alert("Could not close department - there are still pending or mismatched transfers into it.");
+			alert("Could not close department — there are still pending or mismatched transfers into it.");
 		},
 	});
 };

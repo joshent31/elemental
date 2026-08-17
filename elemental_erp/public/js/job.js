@@ -1,4 +1,4 @@
-// Client script for the Job form. Job is NOT submittable - it stays open
+// Client script for the Job form. Job is NOT submittable — it stays open
 // so new Finished Goods can be added by the customer at any point, right
 // up until it's explicitly Closed (or Cancelled). Action buttons are
 // gated on "!frm.is_new()", not docstatus (Job has no submit lifecycle),

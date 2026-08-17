@@ -66,7 +66,7 @@ def get_data(filters):
 
 	data = []
 	for job in jobs:
-		# Indent qty, available stock, shortfall - across ALL indents for
+		# Indent qty, available stock, shortfall — across ALL indents for
 		# this Job regardless of who raised them (Costing's BOM pull, or a
 		# department like Packaging/Paints raising its own request)
 		indent = frappe.db.sql(
@@ -82,7 +82,7 @@ def get_data(filters):
 			as_dict=True,
 		)[0]
 
-		# Indent VALUE, split by who raised it - Costing's BOM-driven indent
+		# Indent VALUE, split by who raised it — Costing's BOM-driven indent
 		# vs any department (Packaging, Paints, etc.) raising its own
 		# request for items outside the BOM. Both roll up into one total.
 		indent_value_rows = frappe.db.sql(
@@ -99,7 +99,7 @@ def get_data(filters):
 		indent_value_dept = sum(r.value for r in indent_value_rows if r.raised_by != "Costing (BOM)")
 		total_indent_value = indent_value_costing + indent_value_dept
 
-		# Material Issued (WIP) - lying with departments, not yet booked
+		# Material Issued (WIP) — lying with departments, not yet booked
 		issued_qty = frappe.db.sql(
 			"""
 			SELECT COALESCE(SUM(mii.issued_qty - COALESCE(mii.returned_qty, 0)), 0) AS q
@@ -110,7 +110,7 @@ def get_data(filters):
 			job.job,
 		)[0][0]
 
-		# Material ACTUALLY consumed - only booked once Packaging confirms
+		# Material ACTUALLY consumed — only booked once Packaging confirms
 		# completion and Costing confirms the Job Material Consumption doc.
 		# This intentionally does NOT equal the full indent/issue qty.
 		consumption = frappe.db.get_value(
@@ -219,7 +219,7 @@ def get_data(filters):
 
 		# --- Profitability: Sales Invoice value vs. total cost so far ---
 		# Includes Draft invoices (not just submitted) since the point is an
-		# early profitability signal, not final accounting - cancelled
+		# early profitability signal, not final accounting — cancelled
 		# invoices are excluded.
 		sales_invoice_value = frappe.db.sql(
 			"""

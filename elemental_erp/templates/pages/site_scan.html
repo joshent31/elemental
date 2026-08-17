@@ -2,9 +2,9 @@
 
 {% block page_content %}
 <div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
-  <h3>Site - Receive &amp; Confirm Installation</h3>
+  <h3>Site — Receive &amp; Confirm Installation</h3>
   <p style="color:#666; font-size: 13px;">Scan the box label QR when it arrives on site, and again
-     once it has been installed. No login required - this runs at the customer's site.</p>
+     once it has been installed. No login required — this runs at the customer's site.</p>
 
   <div id="scanner-site" style="width:100%; margin-bottom: 12px;"></div>
   <button id="start-scan-site" class="btn btn-primary btn-block">Scan Box QR</button>
@@ -84,7 +84,7 @@ document.getElementById("confirm-installed-btn").onclick = function () {
 			const box = document.getElementById("site-done");
 			box.style.display = "block";
 			box.innerText = "Marked Installed. Thank you!";
-			// offer the final Job-close step every time - the button call
+			// offer the final Job-close step every time — the button call
 			// itself checks whether every box is actually done
 			document.getElementById("close-job-box").style.display = "block";
 		},
@@ -100,7 +100,7 @@ document.getElementById("close-job-btn").onclick = function () {
 				'<div class="alert alert-success">Job confirmed complete and closed.</div>';
 		},
 		error: function () {
-			alert("Not every box on this Job is marked Installed yet - cannot close the Job.");
+			alert("Not every box on this Job is marked Installed yet — cannot close the Job.");
 		},
 	});
 };

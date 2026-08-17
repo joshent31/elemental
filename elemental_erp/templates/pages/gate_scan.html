@@ -1,6 +1,119 @@
-import frappe
+{% extends "templates/web.html" %}
 
+{% block page_content %}
+<div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px; text-align:center;">
+  <h2 style="margin-bottom:4px;">Elemental Fixtures — Gate</h2>
+  <p style="color:#666; font-size: 13px; margin-top:0;">Mount this device at the gate. Each
+     person holds their badge QR up to the camera — IN/OUT is picked automatically, and the
+     camera keeps running for the next person. No buttons needed after starting.</p>
 
-def get_context(context):
-	context.no_cache = 1
-	return context
+  <button id="install-app-btn" style="display:none; width:100%; margin-bottom:14px; padding:10px;
+    background:#1a2942; color:#fff; border:none; border-radius:6px; font-size:13px;">
+    Install this app on this gate device
+  </button>
+
+  <div id="scanner-gate" style="width:100%; margin-bottom: 12px;"></div>
+
+  <button id="start-scan-gate" class="btn btn-primary btn-lg btn-block">Start Gate Camera</button>
+  <button id="stop-scan-gate" class="btn btn-secondary btn-block" style="display:none; margin-top:8px;">Pause Camera</button>
+
+  <div id="gate-result" style="display:none; margin-top:20px; padding:18px; border-radius:8px; font-size:18px;"></div>
+  <p id="gate-idle-hint" style="display:none; color:#999; font-size:12px; margin-top:14px;">
+    Camera running — waiting for the next badge...
+  </p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+const scanner = new Html5Qrcode("scanner-gate");
+
+// Debounce: the camera will keep "seeing" the same badge across many video
+// frames for as long as it's held up. Without this, one badge shown for a
+// couple of seconds would fire a dozen check-ins instead of one.
+const RECENT_SCAN_COOLDOWN_MS = 8000;
+let lastScannedValue = null;
+let lastScannedAt = 0;
+let processing = false;
+
+function extractQrValue(decodedText) {
+	if (decodedText.includes("qr=")) {
+		return decodedText.split("qr=")[1].split("&")[0];
+	}
+	return decodedText.split("/").filter(Boolean).pop().split("?")[0];
+}
+
+function showResult(html, cls) {
+	const box = document.getElementById("gate-result");
+	box.style.display = "block";
+	box.className = cls;
+	box.innerHTML = html;
+	document.getElementById("gate-idle-hint").style.display = "none";
+	// clear back to the "waiting" state after a few seconds, ready for the next person
+	setTimeout(() => {
+		box.style.display = "none";
+		document.getElementById("gate-idle-hint").style.display = "block";
+	}, 4000);
+}
+
+function handleScan(decodedText) {
+	const value = extractQrValue(decodedText);
+	const now = Date.now();
+
+	if (processing) return;
+	if (value === lastScannedValue && (now - lastScannedAt) < RECENT_SCAN_COOLDOWN_MS) {
+		return; // same badge, still in front of the camera — ignore
+	}
+	lastScannedValue = value;
+	lastScannedAt = now;
+	processing = true;
+
+	frappe.call({
+		method: "elemental_erp.api.gate_scan",
+		args: { qr_value: value },
+		callback: function (r) {
+			processing = false;
+			if (r.message) {
+				const g = r.message;
+				const verb = g.log_type === "IN" ? "Welcome" : "Goodbye";
+				const bg = g.log_type === "IN" ? "background:#d4edda; color:#155724;" : "background:#d1ecf1; color:#0c5460;";
+				showResult(
+					`<b>${verb}, ${g.employee_name}</b><br>Marked <b>${g.log_type}</b> at ${g.time}` +
+					(g.attendance ? `<br><span style="font-size:13px;">Today's attendance updated.</span>` : ""),
+					""
+				);
+				document.getElementById("gate-result").setAttribute("style",
+					`display:block; margin-top:20px; padding:18px; border-radius:8px; font-size:18px; ${bg}`);
+			}
+		},
+		error: function () {
+			processing = false;
+			showResult("Badge not recognised \u2014 check with HR that it's registered.",
+				"");
+			document.getElementById("gate-result").setAttribute("style",
+				"display:block; margin-top:20px; padding:18px; border-radius:8px; font-size:18px; background:#f8d7da; color:#721c24;");
+		},
+	});
+}
+
+document.getElementById("start-scan-gate").onclick = function () {
+	scanner.start(
+		{ facingMode: "environment" },
+		{ fps: 10, qrbox: 250 },
+		handleScan
+	).then(() => {
+		document.getElementById("start-scan-gate").style.display = "none";
+		document.getElementById("stop-scan-gate").style.display = "block";
+		document.getElementById("gate-idle-hint").style.display = "block";
+	});
+};
+
+document.getElementById("stop-scan-gate").onclick = function () {
+	scanner.stop().then(() => {
+		document.getElementById("start-scan-gate").style.display = "block";
+		document.getElementById("stop-scan-gate").style.display = "none";
+		document.getElementById("gate-idle-hint").style.display = "none";
+	});
+};
+</script>
+<script src="/assets/elemental_erp/js/pwa_install.js"></script>
+{% endblock %}

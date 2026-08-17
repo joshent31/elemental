@@ -23,7 +23,7 @@ class PackagingEntry(Document):
 				"qr_code_master": self.qr_code_master,
 				"department": "Packaging",
 				"qty_scanned": 0,  # packing doesn't add to production completion, just logs a checkpoint
-				"remarks": f"Packed {self.packed_qty} - Packaging Entry {self.name}",
+				"remarks": f"Packed {self.packed_qty} — Packaging Entry {self.name}",
 			}
 		).insert(ignore_permissions=True)
 		frappe.db.set_value("Job", self.job, "status", "In Packaging")

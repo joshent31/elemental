@@ -12,7 +12,7 @@ class JobMaterialConsumption(Document):
 			return
 		if not frappe.db.get_value("Job", self.job, "packaging_completed"):
 			frappe.throw(
-				"Cannot confirm material consumption - Packaging has not confirmed this "
+				"Cannot confirm material consumption — Packaging has not confirmed this "
 				"Job as fully packed yet."
 			)
 
@@ -21,7 +21,7 @@ class JobMaterialConsumption(Document):
 		self.confirmed_by = frappe.session.user
 		self.confirmed_on = frappe.utils.now_datetime()
 
-		# flip every Material Issue for this Job to Consumed in one shot -
+		# flip every Material Issue for this Job to Consumed in one shot —
 		# this is the "whole job material consumes at once" requirement
 		issue_names = frappe.get_all("Material Issue", {"job": self.job, "docstatus": 1}, pluck="name")
 		for name in issue_names:
@@ -33,7 +33,7 @@ class JobMaterialConsumption(Document):
 def generate_for_job(job):
 	"""Roll up every submitted Material Issue for this Job (across every
 	department) into one Draft Job Material Consumption doc, grouped by raw
-	material. actual_consumed_qty defaults to the issued qty - the costing
+	material. actual_consumed_qty defaults to the issued qty — the costing
 	team edits it down to what was really used before confirming."""
 	if frappe.db.exists("Job Material Consumption", {"job": job}):
 		return frappe.get_doc("Job Material Consumption", {"job": job})

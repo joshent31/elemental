@@ -4,7 +4,7 @@ from frappe.model.document import Document
 
 class MaterialIndent(Document):
 	def validate(self):
-		"""Stock check that reflects what's ACTUALLY free for this Job -
+		"""Stock check that reflects what's ACTUALLY free for this Job —
 		total Bin qty minus whatever other still-open Jobs have already
 		claimed on their own submitted Indents. Without this, two Jobs can
 		both be told the same units are "available"."""
@@ -40,7 +40,7 @@ class MaterialIndent(Document):
 		frappe.db.set_value("Job", self.job, "status", "Indent Raised")
 		self._mark_covered_fg_items_indented()
 
-		# "once approved, it goes to Purchase Order in draft" - auto-create
+		# "once approved, it goes to Purchase Order in draft" — auto-create
 		# immediately, with no supplier chosen yet; Purchase picks an
 		# existing supplier or adds a new vendor afterwards (desk edit, or
 		# the "Create Purchase Order" fallback button if this is skipped).
@@ -55,7 +55,7 @@ class MaterialIndent(Document):
 
 	def _mark_covered_fg_items_indented(self):
 		"""If this Indent was built via "Pull Items from Job BOM", flag the
-		Job FG Item rows it covered as indent_raised - so the next BOM pull
+		Job FG Item rows it covered as indent_raised — so the next BOM pull
 		for this Job only includes items that genuinely haven't been
 		indented yet, instead of re-totaling everything from scratch."""
 		if not self.covered_finished_goods:

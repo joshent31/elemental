@@ -26,7 +26,7 @@ frappe.ui.form.on("Material Indent", {
 		if (!frm.is_new() && frm.doc.docstatus === 1) {
 			if (frm.doc.purchase_order) {
 				// Draft PO was already auto-created when this Indent was
-				// approved - jump straight to it to add a supplier / rates.
+				// approved — jump straight to it to add a supplier / rates.
 				frm.add_custom_button("Open Purchase Order", () => {
 					frappe.set_route("Form", "Purchase Order", frm.doc.purchase_order);
 				}, "View");

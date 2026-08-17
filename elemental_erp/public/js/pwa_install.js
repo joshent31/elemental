@@ -2,7 +2,7 @@
 // <button id="install-app-btn"> in its markup. Handles the three real
 // states a mobile browser can be in: install prompt available (Android
 // Chrome/Edge), already installed, or no native prompt at all (iOS
-// Safari - those users need the manual Add to Home Screen / Share sheet
+// Safari — those users need the manual Add to Home Screen / Share sheet
 // route, which this shows instructions for instead of a broken button).
 
 let deferredInstallPrompt = null;

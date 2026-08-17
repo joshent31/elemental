@@ -2,7 +2,7 @@
 
 {% block page_content %}
 <div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
-  <h3>Dispatch - Load Vehicle</h3>
+  <h3>Dispatch — Load Vehicle</h3>
   <p style="color:#666; font-size: 13px;">Enter the Job and vehicle, then scan each box's QR as
      it's loaded. Shows how many boxes are packed and ready vs. how many have actually been
      scanned onto the vehicle so far.</p>
@@ -51,7 +51,7 @@ document.getElementById("start-dispatch-btn").onclick = function () {
 		callback: function (r) {
 			if (r.message) {
 				dispatchEntry = r.message;
-				document.getElementById("progress-info").innerText = `Dispatch ${dispatchEntry} ready - scan boxes.`;
+				document.getElementById("progress-info").innerText = `Dispatch ${dispatchEntry} ready — scan boxes.`;
 				document.getElementById("scan-area").style.display = "block";
 
 				frappe.call({
@@ -80,15 +80,15 @@ document.getElementById("start-scan-dispatch").onclick = function () {
 					if (r.message) {
 						const d = r.message;
 						renderProgress(d);
-						let msg = `Box ${d.box_no} loaded - ${d.loaded} of ${d.total} boxes on the vehicle (${d.packed} packed so far).`;
+						let msg = `Box ${d.box_no} loaded — ${d.loaded} of ${d.total} boxes on the vehicle (${d.packed} packed so far).`;
 						if (d.sales_invoice) {
-							msg += ` All boxes loaded - Draft Sales Invoice ${d.sales_invoice} created.`;
+							msg += ` All boxes loaded — Draft Sales Invoice ${d.sales_invoice} created.`;
 						}
 						document.getElementById("progress-info").innerText = msg;
 					}
 				},
 				error: function () {
-					alert("Could not register this box - check it hasn't already been scanned.");
+					alert("Could not register this box — check it hasn't already been scanned.");
 				},
 			});
 		}

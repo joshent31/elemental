@@ -1,4 +1,4 @@
-# Normalize line endings to LF for all text files (Linux/ERPNext server compatible)
+﻿# Normalize line endings to LF for all text files (Linux/ERPNext server compatible)
 * text=auto eol=lf
 *.py text eol=lf
 *.json text eol=lf
