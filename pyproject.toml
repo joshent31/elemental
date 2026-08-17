@@ -10,7 +10,7 @@ readme = "README.md"
 license = { file = "license.txt" }
 authors = [{ name = "Elemental Fixtures Pvt Ltd", email = "dev@elemental.com" }]
 requires-python = ">=3.10"
-dependencies = ["frappe", "qrcode[pil]"]
+dependencies = ["qrcode[pil]"]
 
 [project.urls]
 "Source" = "https://github.com/joshent31/elemental"
