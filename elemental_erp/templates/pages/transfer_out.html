@@ -3,10 +3,10 @@
 {% block page_content %}
 <div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
   <h3>Send to Department</h3>
-  <p style="color:#666; font-size: 13px;">Departments are not in any fixed order - pick where
+  <p style="color:#666; font-size: 13px;">Departments are not in any fixed order — pick where
      you're sending FROM, scan the part, choose where it's going TO, enter qty, confirm.</p>
 
-  <label>Step 1 - Sending FROM which department?</label>
+  <label>Step 1 — Sending FROM which department?</label>
   <select id="from-dept" class="form-control" style="margin-bottom:14px;">
     <option value="">-- select department --</option>
     {% for d in departments %}
@@ -15,13 +15,13 @@
   </select>
 
   <div id="scanner-out" style="width:100%; margin-bottom: 12px;"></div>
-  <button id="start-scan-out" class="btn btn-primary btn-block" disabled>Step 2 - Scan Part QR</button>
+  <button id="start-scan-out" class="btn btn-primary btn-block" disabled>Step 2 — Scan Part QR</button>
   <p id="scan-hint" style="font-size:12px; color:#999;">Select a department above to enable scanning.</p>
 
   <div id="scan-result-out" style="display:none; margin-top: 16px;">
     <div class="alert alert-info" id="part-info"></div>
 
-    <label>Step 3 - Sending TO which department?</label>
+    <label>Step 3 — Sending TO which department?</label>
     <select id="to-dept" class="form-control" style="margin-bottom:10px;">
       <option value="">-- select department --</option>
       {% for d in departments %}
@@ -29,7 +29,7 @@
       {% endfor %}
     </select>
 
-    <label>Step 4 - Qty to Transfer</label>
+    <label>Step 4 — Qty to Transfer</label>
     <input type="number" id="qty-out" class="form-control" style="margin-bottom:10px;" min="0" step="any">
 
     <label>Remarks (optional)</label>
@@ -75,7 +75,7 @@ startBtn.onclick = function () {
 						const p = r.message;
 						document.getElementById("part-info").innerHTML =
 							`Job: <b>${p.job}</b><br>Part: <b>${p.subpart_name}</b> (${p.subpart_code})<br>` +
-							`Process: <b>${p.process}</b><br>Progress: ${p.completed_qty}/${p.total_qty}<br>` +
+							`Process: <b>${p.process_name}</b><br>Progress: ${p.completed_qty}/${p.total_qty}<br>` +
 							`From: <b>${fromDeptEl.value}</b>`;
 						document.getElementById("scan-result-out").style.display = "block";
 					}

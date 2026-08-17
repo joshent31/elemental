@@ -8,14 +8,14 @@ class QRCodeMaster(Document):
 	def update_status(self, qty_scanned):
 		"""Called by QR Scan Log.apply_scan_to_qr_master to advance progress.
 		Refuses scans that would push completed_qty past total_qty, instead
-		of silently absorbing them - an over-scan is almost always a
+		of silently absorbing them — an over-scan is almost always a
 		mistake (wrong QR, duplicate scan, wrong qty typed) and should stop
 		the transaction rather than quietly break the completion %."""
 		if qty_scanned and qty_scanned > 0:
 			remaining = (self.total_qty or 0) - (self.completed_qty or 0)
 			if qty_scanned > remaining + 1e-6:
 				frappe.throw(
-					f"This scan ({qty_scanned}) would take {self.subpart_name} / {self.process} "
+					f"This scan ({qty_scanned}) would take {self.subpart_name} / {self.process_name} "
 					f"to {(self.completed_qty or 0) + qty_scanned}, past its total of {self.total_qty}. "
 					f"Only {remaining} remain \u2014 check the QR and quantity."
 				)
@@ -31,7 +31,7 @@ class QRCodeMaster(Document):
 		check_job_fully_completed(self.job)
 
 
-def create_qr_master(job, finished_good, subpart_code, subpart_name, process, total_qty):
+def create_qr_master(job, finished_good, subpart_code, subpart_name, process_name, total_qty):
 	"""Create one QR Code Master row and render its physical QR image."""
 	qr_value = frappe.generate_hash(length=12).upper()
 
@@ -42,7 +42,7 @@ def create_qr_master(job, finished_good, subpart_code, subpart_name, process, to
 			"finished_good": finished_good,
 			"subpart_code": subpart_code,
 			"subpart_name": subpart_name,
-			"process": process,
+			"process_name": process_name,
 			"total_qty": total_qty,
 			"completed_qty": 0,
 			"status": "Pending",

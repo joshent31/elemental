@@ -43,7 +43,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "process",
+   "fieldname": "process_name",
    "label": "Process",
    "fieldtype": "Select",
    "options": "Metal\nWood\nElectrical\nPowdercoating\nPaint\nUS Assembly\nPacking",

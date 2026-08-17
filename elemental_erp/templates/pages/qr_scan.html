@@ -2,18 +2,18 @@
 
 {% block page_content %}
 <div style="max-width: 480px; margin: 40px auto; font-family: sans-serif;">
-  <h3>Elemental Fixtures - Part Tracking</h3>
+  <h3>Elemental Fixtures — Part Tracking</h3>
   {% if qr %}
     <table class="table table-bordered">
       <tr><td>Job</td><td>{{ qr.job }}</td></tr>
       <tr><td>Finished Good</td><td>{{ qr.finished_good }}</td></tr>
-      <tr><td>Subpart</td><td>{{ qr.subpart_code }} - {{ qr.subpart_name }}</td></tr>
-      <tr><td>Process</td><td>{{ qr.process }}</td></tr>
+      <tr><td>Subpart</td><td>{{ qr.subpart_code }} — {{ qr.subpart_name }}</td></tr>
+      <tr><td>Process</td><td>{{ qr.process_name }}</td></tr>
       <tr><td>Qty</td><td>{{ qr.completed_qty }} / {{ qr.total_qty }}</td></tr>
       <tr><td>Status</td><td><b>{{ qr.status }}</b></td></tr>
     </table>
     <p>Log in to the ERP app on this device to mark this part as scanned at your station
-       (Frappe UI ? QR Scan Log ? New, or use the "Scan QR" action in the mobile app).</p>
+       (Frappe UI → QR Scan Log → New, or use the "Scan QR" action in the mobile app).</p>
   {% else %}
     <p>QR code not recognised: {{ qr_value }}</p>
   {% endif %}

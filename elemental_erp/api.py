@@ -7,7 +7,7 @@ def get_qr_status(qr_value):
 	qr = frappe.db.get_value(
 		"QR Code Master",
 		{"qr_value": qr_value},
-		["name", "job", "finished_good", "subpart_code", "subpart_name", "process", "total_qty", "completed_qty", "status"],
+		["name", "job", "finished_good", "subpart_code", "subpart_name", "process_name", "total_qty", "completed_qty", "status"],
 		as_dict=True,
 	)
 	if not qr:
@@ -53,7 +53,7 @@ def lookup_part_qr(qr_value):
 	qr = frappe.db.get_value(
 		"QR Code Master",
 		{"qr_value": qr_value},
-		["name", "job", "finished_good", "subpart_code", "subpart_name", "process",
+		["name", "job", "finished_good", "subpart_code", "subpart_name", "process_name",
 		 "total_qty", "completed_qty", "status"],
 		as_dict=True,
 	)
@@ -155,11 +155,11 @@ def receive_transfer(transfer_qr_value, received_qty, remarks=None):
 			"department": doc.to_department,
 			"qty_scanned": 0,  # inter-dept receipt doesn't add production progress by itself
 			"remarks": f"Received {doc.received_qty} of {doc.transfer_qty} via Department Transfer {doc.name}"
-			+ (" - QTY MISMATCH" if doc.status == "Qty Mismatch" else ""),
+			+ (" — QTY MISMATCH" if doc.status == "Qty Mismatch" else ""),
 		}
 	).insert(ignore_permissions=True)
 
-	# roll the received qty into a running total for (Job, To-Department) -
+	# roll the received qty into a running total for (Job, To-Department) —
 	# this is what "Close Department" checks against before closing.
 	from elemental_erp.elemental_erp.doctype.job_department_status.job_department_status import (
 		get_or_create,
@@ -177,7 +177,7 @@ def receive_transfer(transfer_qr_value, received_qty, remarks=None):
 @frappe.whitelist()
 def get_department_job_summary(job, department):
 	"""Used by /transfer-in to show the receiving operator a running total
-	for their department on this Job, and whether it's already closed -
+	for their department on this Job, and whether it's already closed —
 	before they decide to close it out."""
 	from elemental_erp.elemental_erp.doctype.job_department_status.job_department_status import (
 		get_or_create,
@@ -231,7 +231,7 @@ def close_department(job, department, remarks=None):
 # Material issued to a department against a Job sits as WIP ("Issued") and is
 # NOT booked as consumed. Only once Packaging confirms the whole Job/FG is
 # fully packed does the system roll up every department's Material Issue for
-# that Job into ONE Job Material Consumption draft - costing then books the
+# that Job into ONE Job Material Consumption draft — costing then books the
 # ACTUAL qty used (which may be less than what was issued), not the full
 # indent/issue qty.
 # ---------------------------------------------------------------------------
@@ -240,7 +240,7 @@ def close_department(job, department, remarks=None):
 def mark_job_packaging_completed(job):
 	"""Called by Packaging once every FG on the Job is packed. Flips the
 	Job flag, and generates the (Draft) Job Material Consumption doc for
-	costing to review - this is the single point where "all items need to
+	costing to review — this is the single point where "all items need to
 	consume at once" happens."""
 	from elemental_erp.elemental_erp.doctype.job_material_consumption.job_material_consumption import (
 		generate_for_job,
@@ -265,7 +265,7 @@ def mark_job_packaging_completed(job):
 #
 # Packaging creates N box labels for a Job (e.g. 20), each with its own QR.
 # As parts/FGs are physically packed, their part-QR is scanned and mapped
-# into a specific box - so each box's contents are known before it ships.
+# into a specific box — so each box's contents are known before it ships.
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
@@ -324,7 +324,7 @@ def lookup_box(box_qr_value):
 
 @frappe.whitelist()
 def map_part_to_box(box_qr_value, part_qr_value, qty):
-	"""Packing operator: scan the BOX QR, then scan a PART QR, enter qty -
+	"""Packing operator: scan the BOX QR, then scan a PART QR, enter qty —
 	maps that part into this box's contents list. Blocked until QC has
 	Passed the part's Finished Good."""
 	box_name = frappe.db.get_value("Packing Box", {"box_qr_value": box_qr_value}, "name")
@@ -404,7 +404,7 @@ def scan_box_dispatch(box_qr_value, dispatch_entry):
 	"""Scan each box's QR as it's loaded onto the vehicle. Shows a running
 	'X of N boxes loaded' count for the Job from the caller side. The
 	moment every box is loaded, a Draft Sales Invoice is created
-	automatically - invoicing is never possible before this point (see
+	automatically — invoicing is never possible before this point (see
 	create_sales_invoice_for_job)."""
 	box_name = frappe.db.get_value("Packing Box", {"box_qr_value": box_qr_value}, "name")
 	if not box_name:
@@ -482,7 +482,7 @@ def scan_box_installed(box_qr_value, installed_by=None):
 @frappe.whitelist()
 def generate_indent_items_from_bom(job):
 	"""Aggregates each not-yet-indented Finished Good's BOM (FG BOM Item) on
-	this Job, multiplied by its Job Qty, into one raw-material list - so
+	this Job, multiplied by its Job Qty, into one raw-material list — so
 	Costing doesn't have to type the recipe from memory. Only covers FG
 	rows where indent_raised is still 0, so calling this again after the
 	customer adds a new FG only pulls the NEW item's requirement, not a
@@ -505,7 +505,7 @@ def generate_indent_items_from_bom(job):
 
 	if not totals:
 		frappe.throw(
-			"No un-indented Finished Goods with a BOM found on this Job - either "
+			"No un-indented Finished Goods with a BOM found on this Job — either "
 			"everything's already been indented, or the BOM (Raw Material BOM "
 			"section) hasn't been filled in on the relevant Finished Good yet."
 		)
@@ -514,7 +514,7 @@ def generate_indent_items_from_bom(job):
 
 def _default_company():
 	"""Best-effort default company for auto-created ERPNext documents
-	(Purchase Order, Sales Invoice) - falls back to the first Company in the
+	(Purchase Order, Sales Invoice) — falls back to the first Company in the
 	system if the user has no default set. Still a DRAFT either way, so a
 	human confirms/corrects it before submitting."""
 	company = frappe.defaults.get_user_default("company")
@@ -525,7 +525,7 @@ def _default_company():
 
 def _resolve_supplier(supplier):
 	"""Accepts either an existing Supplier name, or a new vendor name to
-	create on the fly - 'existing supplier or any new vendor' per the
+	create on the fly — 'existing supplier or any new vendor' per the
 	client's requirement."""
 	if not supplier:
 		return None
@@ -578,7 +578,7 @@ def _create_po_from_indent_doc(indent, supplier=None):
 
 @frappe.whitelist()
 def create_purchase_order_from_indent(material_indent, supplier=None):
-	"""Manual fallback / re-trigger - e.g. to attach a supplier after the
+	"""Manual fallback / re-trigger — e.g. to attach a supplier after the
 	automatic Draft PO (created on Indent approval) was left blank.
 	`supplier` can be an existing Supplier name or a brand new vendor name."""
 	indent = frappe.get_doc("Material Indent", material_indent)
@@ -589,13 +589,13 @@ def create_purchase_order_from_indent(material_indent, supplier=None):
 
 	po = _create_po_from_indent_doc(indent, supplier)
 	if not po:
-		frappe.throw("No shortfall on this Indent - nothing to purchase.")
+		frappe.throw("No shortfall on this Indent — nothing to purchase.")
 	frappe.db.commit()
 	return {"purchase_order": po.name}
 
 
 # ---------------------------------------------------------------------------
-# QC: must Pass before Packaging is allowed. No rework/return workflow -
+# QC: must Pass before Packaging is allowed. No rework/return workflow —
 # a Fail just sits there, and re-scanning the same QR overwrites the result
 # once the issue is corrected on the floor.
 # ---------------------------------------------------------------------------
@@ -615,7 +615,7 @@ def lookup_qc_inspection(qr_value):
 
 @frappe.whitelist()
 def record_qc_result(qr_value, result, inspector=None, remarks=None):
-	"""result is 'Pass' or 'Fail'. Overwrites this QC Inspection's status -
+	"""result is 'Pass' or 'Fail'. Overwrites this QC Inspection's status —
 	there's no separate rework/reinspection doctype, QC just re-scans once
 	the issue is fixed."""
 	name = frappe.db.get_value("QC Inspection", {"qr_value": qr_value}, "name")
@@ -677,7 +677,7 @@ def complete_design(qr_value):
 		frappe.throw("Design QR not recognised")
 	task = frappe.get_doc("Design Task", name)
 	if not task.start_time:
-		frappe.throw("This design task was never started - scan Start first.")
+		frappe.throw("This design task was never started — scan Start first.")
 	task.status = "Completed"
 	task.end_time = frappe.utils.now_datetime()
 	task.compute_time_and_cost()
@@ -710,13 +710,13 @@ def complete_data_entry_task(job, hours_spent=None, remarks=None):
 
 
 # ---------------------------------------------------------------------------
-# Sales Invoice against the Job (draft - Sales/Accounts still need to review
+# Sales Invoice against the Job (draft — Sales/Accounts still need to review
 # rates, taxes, etc. before submitting)
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
 def create_sales_invoice_for_job(job):
-	"""Only allowed once the loading scan is fully complete - i.e. every
+	"""Only allowed once the loading scan is fully complete — i.e. every
 	Packing Box for this Job has been scanned onto the vehicle. This is
 	both called automatically the moment the last box is scanned (see
 	scan_box_dispatch) and available as a manual fallback, but either way
@@ -728,7 +728,7 @@ def create_sales_invoice_for_job(job):
 		)
 		if not_yet_loaded:
 			frappe.throw(
-				f"Cannot create a Sales Invoice yet - {not_yet_loaded} of {total_boxes} box(es) "
+				f"Cannot create a Sales Invoice yet — {not_yet_loaded} of {total_boxes} box(es) "
 				f"have not been scanned as loaded/dispatched."
 			)
 
@@ -748,7 +748,7 @@ def create_sales_invoice_for_job(job):
 	if not items:
 		frappe.throw(
 			"None of the Finished Goods on this Job are mapped to an ERPNext Item "
-			"(Finished Good \u2192 Linked ERPNext Item) - map at least one before invoicing."
+			"(Finished Good \u2192 Linked ERPNext Item) — map at least one before invoicing."
 		)
 
 	si = frappe.get_doc(
@@ -766,7 +766,7 @@ def create_sales_invoice_for_job(job):
 
 
 # ---------------------------------------------------------------------------
-# Explicit final confirmation that the Job is complete - deliberately a
+# Explicit final confirmation that the Job is complete — deliberately a
 # separate action from "last box installed" so a person signs off on it
 # rather than it being purely inferred.
 # ---------------------------------------------------------------------------
@@ -775,7 +775,7 @@ def create_sales_invoice_for_job(job):
 def confirm_job_installation_complete(job, confirmed_by=None):
 	remaining = frappe.db.count("Packing Box", {"job": job, "status": ["!=", "Installed"]})
 	if remaining:
-		frappe.throw(f"{remaining} box(es) are not yet marked Installed - cannot close the Job.")
+		frappe.throw(f"{remaining} box(es) are not yet marked Installed — cannot close the Job.")
 	frappe.db.set_value("Job", job, "status", "Closed")
 	any_qr = frappe.db.get_value("QR Code Master", {"job": job}, "name")
 	if any_qr:
@@ -793,7 +793,7 @@ def confirm_job_installation_complete(job, confirmed_by=None):
 
 
 # ---------------------------------------------------------------------------
-# Employee gate check-in / check-out - scan the Employee's own QR (printed
+# Employee gate check-in / check-out — scan the Employee's own QR (printed
 # on their ID badge, auto-generated when the Employee record was created).
 # Automatically alternates IN/OUT based on their last scan, logs an
 # Employee Checkin, and rebuilds today's Attendance from the day's scans.
@@ -883,13 +883,13 @@ def gate_scan(qr_value):
 
 # ---------------------------------------------------------------------------
 # Quotation -> Job. Production can start the moment the customer approves
-# the quotation by email/call - the formal PO is logged on the Job later,
+# the quotation by email/call — the formal PO is logged on the Job later,
 # whenever it actually arrives, without blocking anything in between.
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
 def mark_quotation_approved(quotation, approval_reference=None):
-	"""Records the customer's approval (an email thread, a call note -
+	"""Records the customer's approval (an email thread, a call note —
 	whatever it actually was) WITHOUT waiting for a formal PO. This is
 	what unlocks "Create Job from Quotation"."""
 	q = frappe.get_doc("Quotation (Elemental)", quotation)
@@ -909,7 +909,7 @@ def create_job_from_quotation(quotation):
 	"""Creates a Job from an Approved quotation, carrying over customer,
 	brand, and every quoted Finished Good as a Job FG Item. The Job's own
 	tracker-generation (QR / Design / QC) then fires normally on save,
-	same as any other Job - this just seeds the FG list instead of
+	same as any other Job — this just seeds the FG list instead of
 	someone re-typing it."""
 	q = frappe.get_doc("Quotation (Elemental)", quotation)
 	if q.status != "Approved by Customer":
@@ -940,15 +940,15 @@ def create_job_from_quotation(quotation):
 
 
 # ---------------------------------------------------------------------------
-# Job close / reopen / cancel - Job has no submit/cancel lifecycle anymore
+# Job close / reopen / cancel — Job has no submit/cancel lifecycle anymore
 # (it stays open so new Finished Goods can keep being added), so "Closed"
 # and "Cancelled" are enforced by Job.validate() blocking further edits once
 # status reaches either. Three distinct actions, not to be confused:
 #   - close_job: administrative "mark this Closed now" for edge cases that
 #     don't go through the box-by-box confirm_job_installation_complete
-#     flow. Does NOT cancel anything - the work was legitimately completed.
+#     flow. Does NOT cancel anything — the work was legitimately completed.
 #   - cancel_job: voids a Job that's being abandoned before completion
-#     (customer cancelled the order, etc.) - THIS cascades cancel to every
+#     (customer cancelled the order, etc.) — THIS cascades cancel to every
 #     submittable child record, unlike close_job.
 #   - reopen_job: the only sanctioned way back out of Closed/Cancelled.
 # All three write directly via frappe.db.set_value, bypassing validate(),
@@ -957,7 +957,7 @@ def create_job_from_quotation(quotation):
 
 @frappe.whitelist()
 def close_job(job):
-	"""Administrative close - does NOT cancel any related records, since
+	"""Administrative close — does NOT cancel any related records, since
 	the work here was completed legitimately. For the normal path where
 	every box has been installed, prefer confirm_job_installation_complete
 	instead, which checks that before closing; this is the manual
@@ -976,7 +976,7 @@ def close_job(job):
 
 @frappe.whitelist()
 def cancel_job(job, reason=None):
-	"""Voids a Job that's being abandoned before completion - cascades
+	"""Voids a Job that's being abandoned before completion — cascades
 	cancel to every submittable child record and flips non-submittable
 	trackers to Cancelled, unlike close_job."""
 	from elemental_erp.elemental_erp.doctype.job.job import cancel_related_records
@@ -1003,7 +1003,7 @@ def reopen_job(job, new_status="Job Created"):
 
 	current_status = frappe.db.get_value("Job", job, "status")
 	if current_status not in ("Closed", "Cancelled"):
-		frappe.throw("This Job isn't Closed or Cancelled - nothing to reopen.")
+		frappe.throw("This Job isn't Closed or Cancelled — nothing to reopen.")
 
 	frappe.db.set_value("Job", job, "status", new_status)
 	frappe.db.commit()

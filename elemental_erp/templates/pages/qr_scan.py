@@ -6,7 +6,7 @@ def get_context(context):
 	qr = frappe.db.get_value(
 		"QR Code Master",
 		{"qr_value": qr_value},
-		["name", "job", "finished_good", "subpart_code", "subpart_name", "process", "total_qty", "completed_qty", "status"],
+		["name", "job", "finished_good", "subpart_code", "subpart_name", "process_name", "total_qty", "completed_qty", "status"],
 		as_dict=True,
 	)
 	context.no_cache = 1

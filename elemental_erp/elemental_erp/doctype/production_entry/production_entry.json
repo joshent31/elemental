@@ -33,10 +33,10 @@
    "columns": 2
   },
   {
-   "fieldname": "process",
+   "fieldname": "process_name",
    "label": "Process",
    "fieldtype": "Data",
-   "fetch_from": "qr_code_master.process",
+   "fetch_from": "qr_code_master.process_name",
    "read_only": 1,
    "in_list_view": 1,
    "columns": 1

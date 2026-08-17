@@ -2,7 +2,7 @@
 
 {% block page_content %}
 <div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
-  <h3>Pack Box - Map Parts to Label</h3>
+  <h3>Pack Box — Map Parts to Label</h3>
   <p style="color:#666; font-size: 13px;">Scan (or arrive via) the box label's QR, then scan each
      part/FG going into this box and enter qty. Repeat for everything in the box.</p>
 
@@ -86,7 +86,7 @@ document.getElementById("start-scan-part").onclick = function () {
 					if (r.message) {
 						const p = r.message;
 						document.getElementById("part-info").innerHTML =
-							`Part: <b>${p.subpart_name}</b> (${p.subpart_code})<br>Process: ${p.process}`;
+							`Part: <b>${p.subpart_name}</b> (${p.subpart_code})<br>Process: ${p.process_name}`;
 						document.getElementById("part-qty-row").style.display = "block";
 					}
 				},

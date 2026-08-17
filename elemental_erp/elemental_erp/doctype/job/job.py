@@ -15,12 +15,12 @@ class Job(Document):
 				row.added_on = frappe.utils.now_datetime()
 
 		# generate QR / Design / QC trackers for any FG row that doesn't
-		# have them yet - covers both the original items at Job creation
+		# have them yet — covers both the original items at Job creation
 		# AND any FG the customer adds later, mid-Job. Idempotent: rows
 		# already flagged trackers_generated are skipped every time.
 		generate_trackers_for_new_fg_rows(self)
 
-		# one Data Entry Task per Job (not per FG) - created once, on
+		# one Data Entry Task per Job (not per FG) — created once, on
 		# whichever save first has fg_items, and left alone after that
 		if self.fg_items:
 			generate_data_entry_task_for_job(self)
@@ -41,8 +41,8 @@ class Job(Document):
 
 def generate_trackers_for_new_fg_rows(doc):
 	"""Runs on every save. For each Job FG Item row that hasn't had its
-	trackers generated yet - new Job, or an FG the customer added
-	mid-Job - creates that row's QR Code Master (part x process), Design
+	trackers generated yet — new Job, or an FG the customer added
+	mid-Job — creates that row's QR Code Master (part x process), Design
 	Task, and QC Inspection, then marks the row done. Rows already
 	processed are skipped, so this is safe to run on every single save."""
 	from elemental_erp.elemental_erp.doctype.qr_code_master.qr_code_master import create_qr_master
@@ -59,7 +59,7 @@ def generate_trackers_for_new_fg_rows(doc):
 			create_qr_master(
 				job=doc.name, finished_good=fg.name,
 				subpart_code=fg.fg_code, subpart_name=fg.fg_name,
-				process="US Assembly", total_qty=fg_row.job_qty,
+				process_name="US Assembly", total_qty=fg_row.job_qty,
 			)
 		else:
 			for sp in fg.subparts:
@@ -69,7 +69,7 @@ def generate_trackers_for_new_fg_rows(doc):
 					create_qr_master(
 						job=doc.name, finished_good=fg.name,
 						subpart_code=sp.part_code, subpart_name=sp.subpart_name,
-						process=process, total_qty=(sp.qty_per_fg or 1) * fg_row.job_qty,
+						process_name=process, total_qty=(sp.qty_per_fg or 1) * fg_row.job_qty,
 					)
 
 		# --- Design Task (one per FG) ---
@@ -100,7 +100,7 @@ def generate_trackers_for_new_fg_rows(doc):
 
 
 def generate_data_entry_task_for_job(doc):
-	"""One Data Entry Task per Job (not per FG) - closes the loop between
+	"""One Data Entry Task per Job (not per FG) — closes the loop between
 	the uploaded diagram/BOQ Excel and the Finished Good / FG Subpart
 	records actually being built. Idempotent regardless of how many times
 	the Job is saved or how many FGs get added to it."""
@@ -112,7 +112,7 @@ def generate_data_entry_task_for_job(doc):
 
 
 def cancel_related_records(job_name):
-	"""Called from api.close_job / api.cancel_job - NOT a doctype hook
+	"""Called from api.close_job / api.cancel_job — NOT a doctype hook
 	anymore, since Job has no submit/cancel lifecycle. Cancels every
 	submittable child record for this Job, and flips non-submittable
 	trackers to a terminal status, so nothing is left looking "active"
