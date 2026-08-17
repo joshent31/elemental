@@ -52,7 +52,7 @@ Below is the master process flow and job status journey from start to finish:
 
 ### 1. 💼 Sales & Customer Service Department
 * **Roles**: \Elemental Sales User\, \Elemental Sales HOD* **Key Tasks**:
-  1. Create **Quotation (Elemental)** with customer items, quantities, and rates.
+  1. Create **Elemental Quotation** with customer items, quantities, and rates.
   2. Upon customer approval, click **Create Job** (or open a new **Job**).
   3. Attach BOQ Excel / Diagram reference.
   4. Fill in customer PO reference numbers when received.

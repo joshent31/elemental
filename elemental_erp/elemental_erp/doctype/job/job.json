@@ -37,7 +37,7 @@
    "fieldname": "brand",
    "label": "Brand",
    "fieldtype": "Link",
-   "options": "Brand (Elemental)",
+   "options": "Elemental Brand",
    "in_list_view": 1,
    "columns": 2
   },
@@ -45,7 +45,7 @@
    "fieldname": "quotation",
    "label": "Created From Quotation",
    "fieldtype": "Link",
-   "options": "Quotation (Elemental)",
+   "options": "Elemental Quotation",
    "read_only": 1,
    "in_list_view": 1,
    "columns": 2

@@ -148,7 +148,7 @@
   },
   {
    "label": "Quotation",
-   "link_to": "Quotation (Elemental)",
+   "link_to": "Elemental Quotation",
    "type": "DocType",
    "doc_view": "List",
    "color": "Green"

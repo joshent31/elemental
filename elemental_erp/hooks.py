@@ -41,5 +41,5 @@ website_route_rules = [
 # Client scripts loaded per-doctype (in addition to app_include_js above)
 doctype_js = {
 	"Material Indent": "public/js/material_indent.js",
-	"Quotation (Elemental)": "public/js/quotation.js",
+	"Elemental Quotation": "public/js/quotation.js",
 }

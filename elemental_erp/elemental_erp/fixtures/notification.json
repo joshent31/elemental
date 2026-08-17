@@ -100,7 +100,7 @@
   "doctype": "Notification",
   "name": "Quotation Approved Ready For Job",
   "subject": "Quotation {{ doc.name }} approved by customer \u2014 ready to create the Job",
-  "document_type": "Quotation (Elemental)",
+  "document_type": "Elemental Quotation",
   "event": "Value Change",
   "value_changed": "status",
   "condition": "doc.status == 'Approved by Customer'",

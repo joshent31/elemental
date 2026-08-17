@@ -1,6 +1,6 @@
 {
  "doctype": "DocType",
- "name": "Brand (Elemental)",
+ "name": "Elemental Brand",
  "module": "Elemental ERP",
  "custom": 0,
  "autoname": "field:brand_name",

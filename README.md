@@ -58,7 +58,7 @@ elemental_erp/
     ├── public/js/job.js           # client script: buttons on the Job form
     └── elemental_erp/             # the "Elemental ERP" module
         ├── doctype/
-        │   ├── brand/                   # Brand (Elemental)
+        │   ├── elemental_brand/         # Elemental Brand
         │   ├── finished_good/           # Finished Good  (+ FG Subpart child table)
         │   ├── fg_subpart/
         │   ├── job/                     # Job            (+ Job FG Item child table)
@@ -551,7 +551,6 @@ anywhere.
 ### 16.1 Quotation, ahead of Job Creation
 
 Production often needs to start on the strength of the customer's **email/call approval of a
-quotation**, before the formal Purchase Order actually arrives. `Quotation (Elemental)` models
 that:
 
 | Piece | What it does |

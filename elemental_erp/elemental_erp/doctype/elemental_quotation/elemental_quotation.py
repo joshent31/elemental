@@ -2,7 +2,7 @@ import frappe
 from frappe.model.document import Document
 
 
-class QuotationElemental(Document):
+class ElementalQuotation(Document):
 	def validate(self):
 		for row in self.items:
 			row.amount = (row.qty or 0) * (row.rate or 0)

@@ -892,7 +892,7 @@ def mark_quotation_approved(quotation, approval_reference=None):
 	"""Records the customer's approval (an email thread, a call note —
 	whatever it actually was) WITHOUT waiting for a formal PO. This is
 	what unlocks "Create Job from Quotation"."""
-	q = frappe.get_doc("Quotation (Elemental)", quotation)
+	q = frappe.get_doc("Elemental Quotation", quotation)
 	if q.docstatus != 1:
 		frappe.throw("Quotation must be submitted (Sent to Customer) first.")
 	q.status = "Approved by Customer"
@@ -911,7 +911,7 @@ def create_job_from_quotation(quotation):
 	tracker-generation (QR / Design / QC) then fires normally on save,
 	same as any other Job — this just seeds the FG list instead of
 	someone re-typing it."""
-	q = frappe.get_doc("Quotation (Elemental)", quotation)
+	q = frappe.get_doc("Elemental Quotation", quotation)
 	if q.status != "Approved by Customer":
 		frappe.throw("Quotation must be marked Approved by Customer before creating a Job from it.")
 	if q.job:

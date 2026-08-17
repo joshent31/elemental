@@ -1,6 +1,6 @@
 {
  "doctype": "DocType",
- "name": "Quotation (Elemental)",
+ "name": "Elemental Quotation",
  "module": "Elemental ERP",
  "custom": 0,
  "autoname": "naming_series:",
@@ -10,7 +10,7 @@
  "fields": [
   {"fieldname": "naming_series", "label": "Series", "fieldtype": "Select", "options": "QTN-.YYYY.-", "reqd": 1},
   {"fieldname": "customer", "label": "Customer", "fieldtype": "Link", "options": "Customer", "reqd": 1, "in_list_view": 1, "columns": 2},
-  {"fieldname": "brand", "label": "Brand", "fieldtype": "Link", "options": "Brand (Elemental)", "in_list_view": 1, "columns": 2},
+  {"fieldname": "brand", "label": "Brand", "fieldtype": "Link", "options": "Elemental Brand", "in_list_view": 1, "columns": 2},
   {"fieldname": "column_break_qtn1", "fieldtype": "Column Break"},
   {"fieldname": "quotation_date", "label": "Quotation Date", "fieldtype": "Date", "default": "Today", "in_list_view": 1, "columns": 1},
   {"fieldname": "status", "label": "Status", "fieldtype": "Select",

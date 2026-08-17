@@ -31,7 +31,7 @@
    "fieldname": "brand",
    "label": "Brand",
    "fieldtype": "Link",
-   "options": "Brand (Elemental)",
+   "options": "Elemental Brand",
    "in_list_view": 1,
    "columns": 2
   },

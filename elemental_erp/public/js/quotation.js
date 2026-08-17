@@ -1,4 +1,4 @@
-frappe.ui.form.on("Quotation (Elemental)", {
+frappe.ui.form.on("Elemental Quotation", {
 	refresh(frm) {
 		if (frm.is_new()) return;
 
