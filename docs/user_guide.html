@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elemental ERP – Customer & Department User Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #1b5e20;
+    --brand-mid: #2e7d32;
+    --brand-pale: #e8f5e9;
+    --accent: #ff6f00;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --text-muted: #475569;
+    --border: #e2e8f0;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .header { background: linear-gradient(135deg, #1b5e20, #2e7d32); color: white; padding: 48px 24px; text-align: center; }
+  .header h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+  .header p { opacity: 0.9; max-width: 600px; margin: 0 auto; font-size: 16px; }
+  .container { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+  .section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+  .section h2 { font-size: 24px; font-weight: 700; color: var(--brand); margin-bottom: 16px; border-bottom: 2px solid var(--brand-pale); padding-bottom: 8px; }
+  
+  /* Diagrams */
+  .flow-container { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin: 24px 0; padding: 20px; background: #f1f5f9; border-radius: var(--radius); }
+  .flow-box { background: white; border: 2px solid var(--border); border-radius: 8px; padding: 12px 16px; text-align: center; min-width: 130px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+  .flow-box.active { border-color: var(--brand); background: var(--brand-pale); }
+  .flow-box .title { font-weight: 700; font-size: 13px; color: var(--text); }
+  .flow-box .dept { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; margin-top: 2px; }
+  .flow-arrow { font-size: 18px; color: var(--brand); font-weight: bold; }
+
+  /* Dept Cards */
+  .dept-card { border-left: 4px solid var(--brand); padding-left: 16px; margin-bottom: 24px; }
+  .dept-card h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .dept-card .role { font-size: 12px; font-weight: 600; color: var(--brand-mid); background: var(--brand-pale); display: inline-block; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px; }
+  .dept-card ul { margin-left: 20px; color: var(--text-muted); font-size: 14px; }
+  
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+  th { background: #f8fafc; font-weight: 700; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏭 Elemental ERP – Customer User Guide</h1>
+  <p>End-to-end department workflow and process diagram for Frappe/ERPNext v15+</p>
+</div>
+
+<div class="container">
+
+  <div class="section">
+    <h2>🔄 Master Process Flow</h2>
+    <p>Every manufacturing job follows a structured stage-by-stage progression with real-time QR code tracking.</p>
+    
+    <div class="flow-container">
+      <div class="flow-box active"><div class="title">Quotation</div><div class="dept">Sales</div></div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-box"><div class="title">Design</div><div class="dept">Design</div></div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-box"><div class="title">Data Entry</div><div class="dept">Data Entry</div></div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-box"><div class="title">Costing & Indent</div><div class="dept">Costing</div></div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-box"><div class="title">Purchase</div><div class="dept">Purchase</div></div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-box"><div class="title">Production (QR)</div><div class="dept">Production</div></div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-box"><div class="title">QC Check</div><div class="dept">QC</div></div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-box"><div class="title">Packaging</div><div class="dept">Packaging</div></div>
+      <div class="flow-arrow">➔</div>
+      <div class="flow-box"><div class="title">Dispatch</div><div class="dept">Dispatch</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🏢 Department Workflows</h2>
+
+    <div class="dept-card">
+      <h3>1. Sales & Customer Service</h3>
+      <span class="role">Roles: Elemental Sales User / HOD</span>
+      <ul>
+        <li>Create Quotation (Elemental) and send to customer.</li>
+        <li>On approval, click <b>Create Job</b>. Attach BOQ Excel and set start/due dates.</li>
+        <li>System automatically generates QR Masters, Design Tasks, QC Inspections, and Data Entry Tasks.</li>
+      </ul>
+    </div>
+
+    <div class="dept-card">
+      <h3>2. Design Department</h3>
+      <span class="role">Roles: Elemental Design User / HOD</span>
+      <ul>
+        <li>Open auto-generated Design Task for each Finished Good.</li>
+        <li>Upload CAD drawings, record hours spent, and update status to Completed.</li>
+      </ul>
+    </div>
+
+    <div class="dept-card">
+      <h3>3. Data Entry Department</h3>
+      <span class="role">Roles: Elemental Data Entry User / HOD</span>
+      <ul>
+        <li>Receive Job Data Entry Task.</li>
+        <li>Create Finished Good records and add FG Subparts with required processes (Cutting, Drilling, Welding, Painting, Assembly).</li>
+        <li>Link Finished Goods to Job table to trigger process QR generation.</li>
+      </ul>
+    </div>
+
+    <div class="dept-card">
+      <h3>4. Costing Department</h3>
+      <span class="role">Roles: Elemental Costing User / HOD</span>
+      <ul>
+        <li>Click <b>Pull Items from Job BOM</b> on Job to auto-populate Material Indent.</li>
+        <li>System checks live stock; shortfalls auto-generate a Draft Purchase Order for Purchase.</li>
+        <li>Confirm Job Material Consumption after packaging completion.</li>
+      </ul>
+    </div>
+
+    <div class="dept-card">
+      <h3>5. Purchase Department</h3>
+      <span class="role">Roles: Elemental Purchase User / HOD</span>
+      <ul>
+        <li>Review auto-created Draft Purchase Orders.</li>
+        <li>Select supplier, submit PO, and log Purchase Receipt on material delivery.</li>
+      </ul>
+    </div>
+
+    <div class="dept-card">
+      <h3>6. Production Department</h3>
+      <span class="role">Roles: Elemental Production User / HOD</span>
+      <ul>
+        <li>Raise Material Issue to transfer stock to workshop floor as WIP.</li>
+        <li>Floor operators scan process QR codes at <code>/scan-menu</code> as parts move through Cutting, Drilling, Welding, Painting, and Assembly.</li>
+        <li>Intra-department transfers tracked via Department Transfer (<code>/transfer-out</code> & <code>/transfer-in</code>).</li>
+      </ul>
+    </div>
+
+    <div class="dept-card">
+      <h3>7. Quality Control (QC)</h3>
+      <span class="role">Roles: Elemental QC User / HOD</span>
+      <ul>
+        <li>Scan QC Inspection QR code at <code>/qc-scan</code>.</li>
+        <li>Record <b>Pass</b> or <b>Fail</b>. <i>Packaging is strictly blocked until QC status is Passed.</i></li>
+      </ul>
+    </div>
+
+    <div class="dept-card">
+      <h3>8. Packaging Department</h3>
+      <span class="role">Roles: Elemental Packaging User / HOD</span>
+      <ul>
+        <li>Generate Packing Box labels.</li>
+        <li>Scan parts into boxes via <code>/pack-box</code>.</li>
+        <li>Mark <b>Packaging Completed</b> on Job once all FGs are packed to trigger material consumption accounting.</li>
+      </ul>
+    </div>
+
+    <div class="dept-card">
+      <h3>9. Dispatch Department</h3>
+      <span class="role">Roles: Elemental Dispatch User / HOD</span>
+      <ul>
+        <li>Create Dispatch Entry with vehicle and driver details.</li>
+        <li>Scan boxes during vehicle loading at <code>/dispatch-scan</code>.</li>
+        <li>Mark Dispatched and Delivered to close the Job.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📱 Mobile Scan Pages</h2>
+    <table>
+      <thead>
+        <tr><th>Route</th><th>Primary User</th><th>Function</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>/scan-menu</code></td><td>Production Workers</td><td>Main floor QR scanning interface</td></tr>
+        <tr><td><code>/qr/&lt;value&gt;</code></td><td>Customer / Guest</td><td>Public real-time QR status page</td></tr>
+        <tr><td><code>/qc-scan</code></td><td>QC Inspector</td><td>Record QC Pass / Fail</td></tr>
+        <tr><td><code>/pack-box</code></td><td>Packaging Team</td><td>Scan parts into packing boxes</td></tr>
+        <tr><td><code>/dispatch-scan</code></td><td>Dispatch Loaders</td><td>Scan box labels onto trucks</td></tr>
+        <tr><td><code>/gate-scan</code></td><td>Gate Security</td><td>Employee QR check-in / check-out</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>
