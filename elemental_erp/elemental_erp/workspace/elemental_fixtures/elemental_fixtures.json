@@ -1,6 +1,6 @@
 {
   "charts": [],
-  "content": "[{\"id\": \"sh00\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Management Dashboard\", \"col\": 4}}, {\"id\": \"hdr01\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Elemental Fixtures \\u2014 Retail Furniture ERP</b></span>\", \"col\": 12}}, {\"id\": \"sh01\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Elemental Quotation\", \"col\": 4}}, {\"id\": \"sh02\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Job\", \"col\": 4}}, {\"id\": \"sh03\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Finished Good\", \"col\": 4}}, {\"id\": \"hdr02\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h5\\\"><b>Mobile Scanning Apps</b></span>\", \"col\": 12}}, {\"id\": \"sh04\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production Scan Menu (Mobile App)\", \"col\": 6}}, {\"id\": \"sh05\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Gate Check-in/Out (Mobile App)\", \"col\": 6}}, {\"id\": \"hdr03\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h5\\\"><b>Process & Operations</b></span>\", \"col\": 12}}, {\"id\": \"sh06\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Material Indent\", \"col\": 4}}, {\"id\": \"sh07\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production Entry\", \"col\": 4}}, {\"id\": \"sh08\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"QR Code Master\", \"col\": 4}}, {\"id\": \"sh09\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Packaging Entry\", \"col\": 4}}, {\"id\": \"sh10\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Dispatch Entry\", \"col\": 4}}, {\"id\": \"sh11\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Job Consumption Report\", \"col\": 4}}]",
+  "content": "[{\"id\": \"sh00\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Management Dashboard\", \"col\": 4}}, {\"id\": \"hdr01\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Elemental Fixtures \\u2014 Retail Furniture ERP</b></span>\", \"col\": 12}}, {\"id\": \"sh01\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Elemental Quotation\", \"col\": 4}}, {\"id\": \"sh02\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Job\", \"col\": 4}}, {\"id\": \"sh03\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Finished Good\", \"col\": 4}}, {\"id\": \"hdr02\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h5\\\"><b>Mobile Scanning Apps</b></span>\", \"col\": 12}}, {\"id\": \"sh04\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production Scan Menu (Mobile App)\", \"col\": 6}}, {\"id\": \"sh05\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Gate Check-in/Out (Mobile App)\", \"col\": 6}}, {\"id\": \"hdr03\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h5\\\"><b>Process & Operations</b></span>\", \"col\": 12}}, {\"id\": \"sh06\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Material Indent\", \"col\": 4}}, {\"id\": \"sh07\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Production Entry\", \"col\": 4}}, {\"id\": \"sh08\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"QR Code Master\", \"col\": 4}}, {\"id\": \"sh09\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Packaging Entry\", \"col\": 4}}, {\"id\": \"sh10\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Dispatch Entry\", \"col\": 4}}, {\"id\": \"sh11\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Job Consumption Report\", \"col\": 4}}, {\"id\": \"sh_wfh\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Work from Home Request\", \"col\": 4}}]",
   "custom_blocks": [],
   "doctype": "Workspace",
   "for_user": "",
@@ -302,6 +302,13 @@
       "label": "Job Consumption Report",
       "link_to": "Job Consumption Report",
       "type": "Report"
+    },
+    {
+      "label": "Work from Home Request",
+      "link_to": "Work from Home Request",
+      "type": "DocType",
+      "doc_view": "List",
+      "color": "Purple"
     }
   ],
   "title": "Elemental Fixtures"

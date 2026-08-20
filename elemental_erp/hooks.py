@@ -45,4 +45,5 @@ doctype_js = {
 	"Production Entry": "public/js/production_entry.js",
 	"Packaging Entry": "public/js/packaging_entry.js",
 	"Dispatch Entry": "public/js/dispatch_entry.js",
+	"Work from Home Request": "public/js/work_from_home_request.js",
 }

@@ -46,5 +46,19 @@
   "read_only": 1,
   "description": "Auto-generated when the Employee record is created \u2014 scan at the gate to check in/out.",
   "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Attendance-work_from_home",
+  "dt": "Attendance",
+  "fieldname": "work_from_home",
+  "label": "Work from Home",
+  "fieldtype": "Check",
+  "insert_after": "status",
+  "read_only": 1,
+  "description": "Set automatically when attendance is created from a Work from Home Request.",
+  "in_list_view": 1,
+  "in_standard_filter": 1,
+  "module": "Elemental ERP"
  }
 ]

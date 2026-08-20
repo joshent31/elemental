@@ -1161,3 +1161,82 @@ def get_dashboard_data():
 		j["total_boxes"] = frappe.db.count("Packing Box", {"job": j.name})
 
 	return {"stats": stats, "charts": charts, "recent_jobs": recent}
+
+
+# ---------------------------------------------------------------------------
+# Work from Home Request — apply, approve, reject, cancel
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def apply_wfh(employee, from_date, to_date, reason):
+	"""Employee applies for Work from Home. Creates a WFH Request
+	in Open status, awaiting manager/HR approval."""
+	doc = frappe.get_doc(
+		{
+			"doctype": "Work from Home Request",
+			"employee": employee,
+			"from_date": from_date,
+			"to_date": to_date,
+			"reason": reason,
+			"status": "Open",
+		}
+	)
+	doc.insert(ignore_permissions=True)
+	frappe.db.commit()
+	return doc.as_dict()
+
+
+@frappe.whitelist()
+def approve_wfh(wfh_request):
+	"""Approve a WFH Request. Creates Attendance records for each
+	approved WFH date, marking the employee as Present."""
+	from elemental_erp.elemental_erp.doctype.work_from_home_request.work_from_home_request import (
+		approve_wfh_request,
+	)
+	return approve_wfh_request(wfh_request)
+
+
+@frappe.whitelist()
+def reject_wfh(wfh_request, reason=None):
+	"""Reject a WFH Request."""
+	from elemental_erp.elemental_erp.doctype.work_from_home_request.work_from_home_request import (
+		reject_wfh_request,
+	)
+	return reject_wfh_request(wfh_request, reason)
+
+
+@frappe.whitelist()
+def cancel_wfh(wfh_request):
+	"""Cancel a WFH Request (employee or HR can cancel an Open request)."""
+	doc = frappe.get_doc("Work from Home Request", wfh_request)
+	if doc.status not in ("Open",):
+		frappe.throw(f"Cannot cancel — this request is {doc.status}.")
+	doc.status = "Cancelled"
+	doc.save(ignore_permissions=True)
+	frappe.db.commit()
+	return doc.as_dict()
+
+
+@frappe.whitelist()
+def get_my_wfh_requests(employee, limit=20):
+	"""Get the current employee's recent WFH requests."""
+	return frappe.get_all(
+		"Work from Home Request",
+		filters={"employee": employee},
+		fields=["name", "from_date", "to_date", "total_days", "reason",
+		        "status", "approved_by", "approved_on", "attendance_marked"],
+		order_by="modified desc",
+		limit_page_length=limit,
+	)
+
+
+@frappe.whitelist()
+def get_pending_wfh_approvals():
+	"""Get WFH requests pending approval (for managers/HR)."""
+	return frappe.get_all(
+		"Work from Home Request",
+		filters={"status": "Open"},
+		fields=["name", "employee", "employee_name", "department",
+		        "from_date", "to_date", "total_days", "reason", "creation"],
+		order_by="creation asc",
+	)
