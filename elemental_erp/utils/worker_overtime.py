@@ -1,25 +1,38 @@
 """Worker Overtime calculation engine.
 
-For Worker-category employees, this module:
-1. Computes daily OT hours from Employee Checkin (IN/OUT pairs)
-2. Applies the government cap of 15 OT hours/month
-3. Splits OT into Salary Slip portion (12 hrs × 2× rate) and Cash portion
-4. Generates a summary suitable for the Worker Attendance Report
+Business Logic (from client's Excel PayRepWorkersAttn):
+=========================================================
 
-OT Rate Formula (from client):
+Standard Shift: 9 AM to 6 PM = 8 working hours/day
+OT = Any hours beyond 8 per day
+
+Government Rules:
+- Max OT per month = 15 hours (for government report)
+- OT Rate = 2 × Hourly Rate (as per govt norm)
+
+OT Rate Formula:
     Daily Rate  = Monthly Salary / Days in Month
     Hourly Rate = Daily Rate / 8
     Example: 16913 / 31 / 8 = 68.20 (for July with 31 days)
-             16913 / 30 / 8 = 70.47 (for June with 30 days)
-             16913 / 28 / 8 = 75.50 (for Feb with 28 days)
 
-Government Rules:
-    - Standard shift = 8 hours per day
-    - Hours beyond 8 = Overtime
-    - Max OT per month = 15 hours (government cap)
-    - OT Rate = 2 × Hourly Rate
-    - Salary Slip: 12 OT hours × 2× rate
-    - Cash payment: remaining 3 OT hours × 2× rate (15 - 12 = 3)
+Report Columns:
+1. Total OT Hours    = Sum of all daily OT hours in the month
+2. Total OT Amount   = Total OT Hours × Hourly Rate (at 1× rate)
+                       This is what the company tracks internally
+3. Salary Slip Hours = min(Total OT, 15) — government capped
+4. Salary Slip Amount = Salary Slip Hours × Hourly Rate × 2 (at 2× rate)
+                       This goes on the salary slip
+5. Cash to Worker    = Total OT Amount (1×) − Salary Slip Amount (2×)
+                       The difference is paid in cash to the worker
+6. Total Earnings    = Attendance Salary + Total OT Amount (1×)
+
+Example (Worker with salary 16913, July 31 days):
+    Hourly Rate = 16913 / 31 / 8 = 68.20
+    If worker works 60.5 OT hours in the month:
+    - Total OT Amount  = 60.5 × 68.20 = 4126.10 (at 1×)
+    - Salary Slip (15 hrs capped) = 15 × 68.20 × 2 = 2046.00 (at 2×)
+    - Cash to Worker   = 4126.10 − 2046.00 = 2080.10
+    - Total Earnings   = Att.Salary + 4126.10
 """
 import calendar
 import frappe
@@ -28,11 +41,7 @@ from frappe.utils import getdate, time_diff_in_hours
 
 # Government OT cap per month
 GOV_OT_CAP_HOURS = 15
-# Of the 15 hrs, how many go on the salary slip
-SALARY_SLIP_OT_HOURS = 12
-# Cash OT = GOV_OT_CAP - SALARY_SLIP_OT
-CASH_OT_HOURS = GOV_OT_CAP_HOURS - SALARY_SLIP_OT_HOURS
-# Standard shift
+# Standard shift = 8 working hours
 STANDARD_SHIFT = 8
 
 
@@ -71,12 +80,7 @@ def hourly_rate(employee, year=None, month=None):
 
 
 def daily_rate(employee, year=None, month=None):
-    """Daily Rate = Monthly Salary / Days in Month.
-
-    Example for employee with salary 16913:
-        July (31 days): 16913 / 31 = 545.58
-        June (30 days): 16913 / 30 = 563.77
-    """
+    """Daily Rate = Monthly Salary / Days in Month."""
     emp = frappe.db.get_value("Employee", employee, ["ctc", "employee_category"], as_dict=True)
     if not emp or emp.employee_category != "Worker":
         return 0
@@ -94,8 +98,8 @@ def daily_rate(employee, year=None, month=None):
 def compute_daily_ot(employee, date):
     """Compute OT hours for a single day from Employee Checkin records.
 
+    Standard shift = 8 hours. Hours beyond 8 = OT.
     Returns dict with in_time, out_time, total_hours, ot_hours, ot_amount.
-    OT = Total Hours - 8 (standard shift).
     """
     emp = frappe.db.get_value(
         "Employee", employee,
@@ -150,8 +154,13 @@ def compute_daily_ot(employee, date):
 def compute_monthly_summary(employee, year, month):
     """Compute full monthly OT summary for a Worker.
 
-    Returns dict with all fields needed for the report.
-    This should be run at month end when all checkin data is complete.
+    Report columns:
+    - Total OT Hours: sum of all daily OT hours
+    - Total OT Amount: OT Hours × Hourly Rate (at 1× rate)
+    - Salary Slip Hours: min(Total OT, 15) — govt capped
+    - Salary Slip Amount: Salary Slip Hours × Hourly Rate × 2 (at 2× rate)
+    - Cash to Worker: Total OT Amount (1×) − Salary Slip Amount (2×)
+    - Total Earnings: Attendance Salary + Total OT Amount (1×)
     """
     emp = frappe.db.get_value(
         "Employee", employee,
@@ -261,21 +270,27 @@ def compute_monthly_summary(employee, year, month):
             "brand": "",
         })
 
-    # Apply government cap (max 15 OT hrs/month)
+    # === OT Calculations ===
+    # Total OT Amount = OT Hours × Hourly Rate (at 1× rate)
+    # This is what the company tracks internally
+    total_ot_amount_1x = round(total_ot_hours * hr, 2)
+
+    # Government cap: max 15 OT hours per month
     capped_ot_hours = min(total_ot_hours, GOV_OT_CAP_HOURS)
-    salary_slip_ot_hours = min(capped_ot_hours, SALARY_SLIP_OT_HOURS)
-    cash_ot_hours = max(capped_ot_hours - salary_slip_ot_hours, 0)
 
-    # OT amounts at 2× hourly rate
-    salary_slip_ot_amount = round(salary_slip_ot_hours * hr * 2, 2)
-    cash_ot_amount = round(cash_ot_hours * hr * 2, 2)
-    total_ot_amount_capped = round(capped_ot_hours * hr * 2, 2)
+    # Salary Slip = Capped OT Hours × Hourly Rate × 2 (at 2× rate)
+    # This goes on the salary slip as per govt norm
+    salary_slip_ot_amount = round(capped_ot_hours * hr * 2, 2)
 
-    # Attendance salary = paid days × daily rate
+    # Cash to Worker = Total OT Amount (1×) − Salary Slip Amount (2×)
+    # The difference is paid in cash
+    cash_to_worker = round(total_ot_amount_1x - salary_slip_ot_amount, 2)
+
+    # Attendance Salary = Paid Days × Daily Rate
     att_salary = round(paid_days * dr, 2)
 
-    # Total earnings = attendance salary + OT (at 2× rate)
-    total_earnings = round(att_salary + total_ot_amount_capped, 2)
+    # Total Earnings = Att.Salary + Total OT Amount (1×)
+    total_earnings = round(att_salary + total_ot_amount_1x, 2)
 
     def format_hhmm(hours):
         h = int(hours)
@@ -297,17 +312,17 @@ def compute_monthly_summary(employee, year, month):
         "ph_days": ph_days,
         "lop_days": lop_days,
         "att_salary": att_salary,
+        # Total OT (at 1× rate — company tracking)
         "total_ot_hours": total_ot_hours,
         "total_ot_hours_fmt": format_hhmm(total_ot_hours),
-        "total_ot_amount": round(total_ot_amount, 2),
-        "salary_slip_ot_hours": salary_slip_ot_hours,
-        "salary_slip_ot_hours_fmt": format_hhmm(salary_slip_ot_hours),
-        "salary_slip_ot_amount": salary_slip_ot_amount,
-        "cash_ot_hours": cash_ot_hours,
-        "cash_ot_hours_fmt": format_hhmm(cash_ot_hours),
-        "cash_ot_amount": cash_ot_amount,
-        "govt_ot_hours": capped_ot_hours,
-        "govt_ot_hours_fmt": format_hhmm(capped_ot_hours),
+        "total_ot_amount_1x": total_ot_amount_1x,
+        # Salary Slip (at 2× rate — govt required)
+        "salary_slip_ot_hours": capped_ot_hours,
+        "salary_slip_ot_hours_fmt": format_hhmm(capped_ot_hours),
+        "salary_slip_ot_amount_2x": salary_slip_ot_amount,
+        # Cash to Worker (difference)
+        "cash_to_worker": cash_to_worker,
+        # Total Earnings
         "total_earnings": total_earnings,
         "daily_data": daily_data,
     }
@@ -316,8 +331,7 @@ def compute_monthly_summary(employee, year, month):
 def get_worker_attendance_report_data(year, month, department=None, location=None):
     """Get all Worker-category employees' attendance data for the report.
 
-    This should be run at month end when all checkin data is complete.
-    Returns list of monthly summaries sorted by department, name.
+    Run at month end when all checkin data is complete.
     """
     filters = {"employee_category": "Worker"}
     if department:
