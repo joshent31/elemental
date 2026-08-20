@@ -47,6 +47,18 @@ def execute(filters=None):
             status = day_info.get("status", "")
             if status in ("A", "L", "PH", "W/O"):
                 row[f"{prefix}_in"] = status
+            elif status == "PH-Work":
+                # Govt holiday with work — ALL hours = OT
+                row[f"{prefix}_in"] = format_time(day_info.get("in_time"))
+                row[f"{prefix}_out"] = format_time(day_info.get("out_time"))
+                ot_hrs = day_info.get("ot_hours", 0)
+                if ot_hrs > 0:
+                    h = int(ot_hrs)
+                    m = int(round((ot_hrs - h) * 60))
+                    row[f"{prefix}_ot"] = f"{h}:{m:02d}"
+                    row[f"{prefix}_amt"] = day_info.get("ot_amount", 0)
+                row[f"{prefix}_job"] = day_info.get("job", "")
+                row[f"{prefix}_brand"] = day_info.get("brand", "")
             else:
                 row[f"{prefix}_in"] = format_time(day_info.get("in_time"))
                 row[f"{prefix}_out"] = format_time(day_info.get("out_time"))

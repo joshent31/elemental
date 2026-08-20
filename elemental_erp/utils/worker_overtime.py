@@ -95,10 +95,13 @@ def daily_rate(employee, year=None, month=None):
     return ctc / days if days else 0
 
 
-def compute_daily_ot(employee, date):
+def compute_daily_ot(employee, date, is_holiday=False):
     """Compute OT hours for a single day from Employee Checkin records.
 
-    Standard shift = 8 hours. Hours beyond 8 = OT.
+    Rules:
+    - Normal day: Hours beyond 8 = OT
+    - Holiday/Sunday: ALL hours worked = OT (full day is OT)
+
     Returns dict with in_time, out_time, total_hours, ot_hours, ot_amount.
     """
     emp = frappe.db.get_value(
@@ -134,7 +137,14 @@ def compute_daily_ot(employee, date):
         return {"in_time": in_time, "out_time": None, "total_hours": 0, "ot_hours": 0, "ot_amount": 0, "status": "A"}
 
     total_hours = round(time_diff_in_hours(out_time, in_time), 2)
-    ot_hours = max(total_hours - shift, 0)
+
+    # Holiday/Sunday: ALL hours = OT (full day is OT)
+    # Normal day: only hours beyond 8 = OT
+    if is_holiday:
+        ot_hours = total_hours  # ALL hours are OT on holidays
+    else:
+        ot_hours = max(total_hours - shift, 0)
+
     ot_hours = round(ot_hours, 2)
 
     date_obj = getdate(date)
@@ -148,6 +158,7 @@ def compute_daily_ot(employee, date):
         "ot_hours": ot_hours,
         "ot_amount": ot_amount,
         "status": "P",
+        "is_holiday": is_holiday,
     }
 
 
@@ -225,9 +236,28 @@ def compute_monthly_summary(employee, year, month):
         date_obj = getdate(date_str)
         is_weekend = date_obj.weekday() >= 5
 
-        if str(date_obj) in holiday_dates:
-            daily_data.append({"date": date_str, "status": "PH", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
-            ph_days += 1
+        is_holiday = str(date_obj) in holiday_dates
+
+        if is_holiday:
+            # Govt holiday — if they work, ALL hours = OT
+            has_scan = frappe.db.exists(
+                "Employee Checkin",
+                {"employee": employee, "time": ["between", [f"{date_str} 00:00:00", f"{date_str} 23:59:59"]]},
+            )
+            if has_scan:
+                result = compute_daily_ot(employee, date_str, is_holiday=True)
+                if result["status"] == "P":
+                    qr_days += 1
+                    paid_days += 1
+                    total_ot_hours += result["ot_hours"]
+                    total_ot_amount += result["ot_amount"]
+                    daily_data.append({"date": date_str, "status": "PH-Work", "in_time": result["in_time"], "out_time": result["out_time"], "total_hours": result["total_hours"], "ot_hours": result["ot_hours"], "ot_amount": result["ot_amount"], "job": "", "brand": ""})
+                else:
+                    daily_data.append({"date": date_str, "status": "PH", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
+                ph_days += 1
+            else:
+                daily_data.append({"date": date_str, "status": "PH", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
+                ph_days += 1
             continue
 
         if str(date_obj) in leave_dates:
@@ -247,7 +277,8 @@ def compute_monthly_summary(employee, year, month):
                 lop_days += 1
             continue
 
-        result = compute_daily_ot(employee, date_str)
+        # Sunday (weekend) with check-in = ALL hours are OT
+        result = compute_daily_ot(employee, date_str, is_holiday=is_weekend)
         if result["status"] == "A":
             daily_data.append({"date": date_str, "status": "A", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
             lop_days += 1
@@ -268,6 +299,7 @@ def compute_monthly_summary(employee, year, month):
             "ot_amount": result["ot_amount"],
             "job": "",
             "brand": "",
+            "is_holiday": is_weekend,
         })
 
     # === OT Calculations ===

@@ -1,0 +1,15 @@
+{
+ "doctype": "Report",
+ "name": "Worker OT Summary",
+ "report_name": "Worker OT Summary",
+ "report_type": "Script Report",
+ "module": "Elemental ERP",
+ "is_standard": "Yes",
+ "ref_doctype": "Employee",
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "HR Manager"},
+  {"role": "HR User"},
+  {"role": "Elemental Production HOD"}
+ ]
+}
