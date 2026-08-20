@@ -1240,3 +1240,81 @@ def get_pending_wfh_approvals():
 		        "from_date", "to_date", "total_days", "reason", "creation"],
 		order_by="creation asc",
 	)
+
+
+# ---------------------------------------------------------------------------
+# Salary Slip OT calculation for Workers
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def calculate_slip_ot(employee, start_date, end_date):
+	"""Calculate OT hours and amount for a Worker's Salary Slip.
+	Called from the Salary Slip client script.
+
+	Returns: ot_hours, hourly_rate, ot_amount, and formatted versions."""
+	from elemental_erp.utils.worker_overtime import (
+		hourly_rate, daily_rate, compute_daily_ot,
+		GOV_OT_CAP_HOURS, STANDARD_SHIFT, get_days_in_month,
+	)
+	from frappe.utils import getdate, date_diff, add_days
+
+	emp = frappe.db.get_value(
+		"Employee", employee,
+		["employee_category", "ctc", "standard_shift_hours"],
+		as_dict=True,
+	)
+	if not emp or emp.employee_category != "Worker":
+		return None
+
+	_start = getdate(start_date)
+	_end = getdate(end_date)
+	year = _start.year
+	month = _start.month
+
+	hr = hourly_rate(employee, year, month)
+
+	# Calculate OT for each day in the slip period
+	total_ot_hours = 0
+	current = _start
+	while current <= _end:
+		date_str = str(current)
+
+		# Check if holiday
+		is_holiday = False
+		holiday_list = frappe.db.get_value("Employee", employee, "holiday_list")
+		if holiday_list:
+			is_holiday = frappe.db.exists(
+				"Holiday",
+				{"parent": holiday_list, "holiday_date": date_str},
+			)
+
+		# Check if weekend
+		is_weekend = current.weekday() >= 5
+		is_day_off = is_holiday or is_weekend
+
+		result = compute_daily_ot(employee, date_str, is_holiday=is_day_off)
+		if result and result["status"] == "P":
+			total_ot_hours += result["ot_hours"]
+
+		current = add_days(current, 1)
+
+	# Apply government cap (max 15 hrs)
+	capped_ot_hours = min(total_ot_hours, GOV_OT_CAP_HOURS)
+
+	# OT Amount = Capped Hours × Hourly Rate × 2 (at 2× rate)
+	ot_amount = round(capped_ot_hours * hr * 2, 2)
+
+	def fmt_hhmm(hours):
+		h = int(hours)
+		m = int(round((hours - h) * 60))
+		return f"{h}:{m:02d}"
+
+	return {
+		"ot_hours": round(capped_ot_hours, 2),
+		"ot_hours_fmt": fmt_hhmm(capped_ot_hours),
+		"hourly_rate": round(hr, 2),
+		"ot_amount": ot_amount,
+		"ot_amount_fmt": frappe.format_currency(ot_amount),
+		"total_ot_actual": round(total_ot_hours, 2),
+		"total_ot_actual_fmt": fmt_hhmm(total_ot_hours),
+	}

@@ -18,6 +18,7 @@ fixtures = [
 	{"doctype": "Role", "filters": [["name", "like", "Elemental %"]]},
 	{"doctype": "Role Profile", "filters": [["name", "like", "Elemental %"]]},
 	{"doctype": "Custom DocPerm", "filters": [["role", "like", "Elemental %"]]},
+	{"doctype": "Salary Component", "filters": [["module", "=", "Payroll"]]},
 ]
 
 # Document Events
@@ -46,4 +47,5 @@ doctype_js = {
 	"Packaging Entry": "public/js/packaging_entry.js",
 	"Dispatch Entry": "public/js/dispatch_entry.js",
 	"Work from Home Request": "public/js/work_from_home_request.js",
+	"Salary Slip": "public/js/salary_slip.js",
 }

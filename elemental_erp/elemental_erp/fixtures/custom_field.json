@@ -88,5 +88,41 @@
   "insert_after": "employee_category",
   "description": "Standard working hours per day for this employee. Hours beyond this are counted as Overtime.",
   "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Salary Slip-overtime_hours",
+  "dt": "Salary Slip",
+  "fieldname": "overtime_hours",
+  "label": "OT Hours (Govt Capped)",
+  "fieldtype": "Float",
+  "insert_after": "total_working_days",
+  "read_only": 1,
+  "description": "Auto-calculated: min(Total OT, 15 hrs). Hours worked beyond 8/day. Sunday/Holiday = all hours.",
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Salary Slip-overtime_rate",
+  "dt": "Salary Slip",
+  "fieldname": "overtime_rate",
+  "label": "OT Hourly Rate",
+  "fieldtype": "Currency",
+  "insert_after": "overtime_hours",
+  "read_only": 1,
+  "description": "Auto-calculated: Monthly Salary / Days in Month / 8",
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Salary Slip-overtime_amount",
+  "dt": "Salary Slip",
+  "fieldname": "overtime_amount",
+  "label": "OT Amount (2x Rate)",
+  "fieldtype": "Currency",
+  "insert_after": "overtime_rate",
+  "read_only": 1,
+  "description": "Auto-calculated: OT Hours × Hourly Rate × 2 (as per govt norm)",
+  "module": "Elemental ERP"
  }
 ]
