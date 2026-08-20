@@ -33,6 +33,9 @@ doc_events = {
 	"Employee": {
 		"after_insert": "elemental_erp.employee_gate.generate_employee_qr",
 	},
+	"Leave Application": {
+		"validate": "elemental_erp.utils.leave_validation.validate_leave_application",
+	},
 }
 
 # Website Route Rules — public QR scan landing page: elemental.com/qr/<qr_value>
@@ -49,4 +52,5 @@ doctype_js = {
 	"Dispatch Entry": "public/js/dispatch_entry.js",
 	"Work from Home Request": "public/js/work_from_home_request.js",
 	"Salary Slip": "public/js/salary_slip.js",
+	"Leave Application": "public/js/leave_application.js",
 }
