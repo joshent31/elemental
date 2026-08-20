@@ -1,0 +1,15 @@
+{
+ "doctype": "Page",
+ "name": "po-initiation",
+ "title": "PO Initiation",
+ "page_name": "po-initiation",
+ "module": "Elemental ERP",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Elemental Purchase User"},
+  {"role": "Elemental Purchase HOD"},
+  {"role": "Elemental Costing HOD"}
+ ]
+}

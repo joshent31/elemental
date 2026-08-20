@@ -1008,3 +1008,156 @@ def reopen_job(job, new_status="Job Created"):
 	frappe.db.set_value("Job", job, "status", new_status)
 	frappe.db.commit()
 	return {"job": job, "status": new_status}
+
+
+# ---------------------------------------------------------------------------
+# Management Dashboard — KPI stats, charts data, and recent jobs
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def get_dashboard_data():
+	"""Powers the Management Dashboard page. Returns stats cards,
+	chart data, and the most recent jobs in one call."""
+	now = frappe.utils.nowdate()
+
+	# --- Stats ---
+	active_statuses = [
+		"Job Created", "Indent Raised", "In Purchase", "In Production",
+		"In Packaging", "Material Consumption Pending", "Material Consumed",
+		"Dispatched", "Installed",
+	]
+	active_jobs = frappe.db.count("Job", {"status": ["in", active_statuses]})
+	in_production = frappe.db.count("Job", {"status": ["in", ["In Production", "In Packaging"]]})
+	pending_indents = frappe.db.count("Material Indent", {"docstatus": 0})
+
+	qr_totals = frappe.db.sql(
+		"""
+		SELECT COALESCE(SUM(completed_qty), 0) AS done,
+		       COALESCE(SUM(total_qty), 0) AS total
+		FROM `tabQR Code Master`
+		""",
+		as_dict=True,
+	)[0]
+	qr_completion_pct = round((qr_totals.done / qr_totals.total * 100), 1) if qr_totals.total else 0
+
+	revenue_row = frappe.db.sql(
+		"""
+		SELECT COALESCE(SUM(grand_total), 0) AS total
+		FROM `tabSales Invoice`
+		WHERE docstatus != 2
+		""",
+	)[0]
+	total_revenue = revenue_row[0] if revenue_row else 0
+
+	cost_row = frappe.db.sql(
+		"""
+		SELECT COALESCE(SUM(mi.total_indent_value), 0) AS indent
+		FROM `tabMaterial Indent` mi WHERE mi.docstatus = 1
+		""",
+	)[0]
+	total_indent_value = cost_row[0] if cost_row else 0
+
+	manpower_row = frappe.db.sql(
+		"""
+		SELECT COALESCE(SUM(design_cost), 0) + COALESCE(SUM(data_entry_cost), 0)
+		       + COALESCE(SUM(production_cost), 0) + COALESCE(SUM(packaging_cost), 0)
+		       + COALESCE(SUM(dispatch_cost), 0) AS total
+		FROM (
+		  SELECT design_cost, 0 AS data_entry_cost, 0 AS production_cost,
+		         0 AS packaging_cost, 0 AS dispatch_cost FROM `tabDesign Task`
+		  UNION ALL
+		  SELECT 0, data_entry_cost, 0, 0, 0 FROM `tabData Entry Task`
+		  UNION ALL
+		  SELECT 0, 0, production_cost, 0, 0 FROM `tabProduction Entry` WHERE docstatus=1
+		  UNION ALL
+		  SELECT 0, 0, 0, packaging_cost, 0 FROM `tabPackaging Entry` WHERE docstatus=1
+		  UNION ALL
+		  SELECT 0, 0, 0, 0, dispatch_cost FROM `tabDispatch Entry` WHERE docstatus=1
+		) t
+		""",
+	)[0]
+	total_manpower = manpower_row[0] if manpower_row else 0
+	total_cost = total_indent_value + total_manpower
+	avg_margin_pct = round(((total_revenue - total_cost) / total_revenue * 100), 1) if total_revenue else 0
+
+	overdue_jobs = frappe.db.count(
+		"Job",
+		{
+			"due_date": ["<", now],
+			"status": ["in", active_statuses],
+		},
+	)
+
+	stats = {
+		"active_jobs": active_jobs,
+		"in_production": in_production,
+		"pending_indents": pending_indents,
+		"qr_completion_pct": qr_completion_pct,
+		"total_revenue": total_revenue,
+		"total_cost": total_cost,
+		"avg_margin_pct": avg_margin_pct,
+		"overdue_jobs": overdue_jobs,
+	}
+
+	# --- Charts ---
+	status_rows = frappe.db.sql(
+		"""
+		SELECT status AS label, COUNT(*) AS value
+		FROM `tabJob`
+		WHERE status != 'Cancelled'
+		GROUP BY status
+		ORDER BY value DESC
+		""",
+		as_dict=True,
+	)
+
+	from dateutil.relativedelta import relativedelta
+
+	monthly_jobs = []
+	for i in range(5, -1, -1):
+		month_start = (frappe.utils.getdate(now) - relativedelta(months=i)).replace(day=1)
+		month_end = month_start + relativedelta(months=1)
+		label = month_start.strftime("%b %Y")
+		created = frappe.db.count("Job", {"creation": [">=", str(month_start), "<", str(month_end)]})
+		closed = frappe.db.count("Job", {"status": "Closed", "modified": [">=", str(month_start), "<", str(month_end)]})
+		monthly_jobs.append({"label": label, "created": created, "closed": closed})
+
+	dept_rows = frappe.db.sql(
+		"""
+		SELECT to_department AS label, COUNT(*) AS value
+		FROM `tabDepartment Transfer`
+		WHERE status IN ('Pending Dispatch', 'In Transit', 'Qty Mismatch')
+		GROUP BY to_department
+		ORDER BY value DESC
+		LIMIT 10
+		""",
+		as_dict=True,
+	)
+
+	charts = {
+		"jobs_by_status": status_rows,
+		"monthly_jobs": monthly_jobs,
+		"department_activity": dept_rows,
+	}
+
+	recent = frappe.get_all(
+		"Job",
+		fields=["name", "job_name", "customer", "status", "due_date"],
+		order_by="modified desc",
+		limit_page_length=15,
+	)
+	for j in recent:
+		qr = frappe.db.sql(
+			"""
+			SELECT COALESCE(SUM(completed_qty), 0) AS done,
+			       COALESCE(SUM(total_qty), 0) AS total
+			FROM `tabQR Code Master` WHERE job = %s
+			""",
+			j.name,
+			as_dict=True,
+		)[0]
+		j["qr_pct"] = round((qr.done / qr.total * 100), 1) if qr.total else 0
+		j["packed_boxes"] = frappe.db.count("Packing Box", {"job": j.name, "status": ["in", ["Packed", "Dispatched", "Received at Site", "Installed"]]})
+		j["total_boxes"] = frappe.db.count("Packing Box", {"job": j.name})
+
+	return {"stats": stats, "charts": charts, "recent_jobs": recent}

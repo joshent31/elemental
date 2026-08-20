@@ -42,4 +42,7 @@ website_route_rules = [
 doctype_js = {
 	"Material Indent": "public/js/material_indent.js",
 	"Elemental Quotation": "public/js/quotation.js",
+	"Production Entry": "public/js/production_entry.js",
+	"Packaging Entry": "public/js/packaging_entry.js",
+	"Dispatch Entry": "public/js/dispatch_entry.js",
 }

@@ -1,0 +1,17 @@
+{
+ "doctype": "DocType",
+ "name": "Item Supplier (Elemental)",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {"fieldname": "supplier", "label": "Supplier", "fieldtype": "Link", "options": "Supplier", "reqd": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "supplier_part_no", "label": "Supplier Part No.", "fieldtype": "Data", "in_list_view": 1, "columns": 2},
+  {"fieldname": "last_rate", "label": "Last Known Rate", "fieldtype": "Currency", "in_list_view": 1, "columns": 2,
+   "description": "Manually entered, not pulled live \u2014 for reference only when choosing between suppliers on the PO Initiation workbench."},
+  {"fieldname": "is_default", "label": "Default", "fieldtype": "Check", "in_list_view": 1, "columns": 1,
+   "description": "Pre-selected on the PO Initiation workbench. Mark at most one row per Item as default."}
+ ]
+}

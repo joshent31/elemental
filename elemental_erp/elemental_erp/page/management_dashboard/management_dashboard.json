@@ -1,0 +1,18 @@
+{
+ "doctype": "Page",
+ "name": "management-dashboard",
+ "title": "Management Dashboard",
+ "page_name": "management-dashboard",
+ "module": "Elemental ERP",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Elemental Sales HOD"},
+  {"role": "Elemental Production HOD"},
+  {"role": "Elemental Purchase HOD"},
+  {"role": "Elemental Costing HOD"},
+  {"role": "Elemental Packaging HOD"},
+  {"role": "Elemental Dispatch HOD"}
+ ]
+}
