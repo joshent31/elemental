@@ -1,0 +1,23 @@
+[
+ {
+  "doctype": "Leave Type",
+  "name": "Saturday Off",
+  "leave_type_name": "Saturday Off",
+  "max_leaves_allowed": 1,
+  "is_carry_forward": 0,
+  "is_lwp": 0,
+  "is_ppl": 0,
+  "is_earned_leave": 1,
+  "earned_leave_frequency": "Monthly",
+  "allocate_on_day": "First Day",
+  "allow_negative": 0,
+  "allow_over_allocation": 0,
+  "include_holiday": 0,
+  "is_compensatory": 0,
+  "is_optional_leave": 0,
+  "max_continuous_days_allowed": 1,
+  "applicable_after": 0,
+  "module": "HR",
+  "description": "Staff can take one Saturday off per month. Earned monthly — use it or lose it. Does not carry forward. Apply via Leave Application."
+ }
+]

@@ -19,6 +19,7 @@ fixtures = [
 	{"doctype": "Role Profile", "filters": [["name", "like", "Elemental %"]]},
 	{"doctype": "Custom DocPerm", "filters": [["role", "like", "Elemental %"]]},
 	{"doctype": "Salary Component", "filters": [["module", "=", "Payroll"]]},
+	{"doctype": "Leave Type", "filters": [["leave_type_name", "=", "Saturday Off"]]},
 ]
 
 # Document Events
