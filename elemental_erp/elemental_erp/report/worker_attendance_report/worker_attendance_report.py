@@ -18,11 +18,16 @@ def execute(filters=None):
 	month = filters.get("month") or getdate().month
 	department = filters.get("department")
 
-	from elemental_erp.utils.worker_overtime import get_worker_attendance_report_data
+	from elemental_erp.utils.worker_overtime import get_worker_attendance_report_data, get_days_in_month, hourly_rate
+
+	# Month-end completeness check
+	days_in_month = get_days_in_month(year, month)
+	today = getdate()
+	is_month_complete = (today.year > year) or (today.year == year and today.month > month) or (today.year == year and today.month == month and today.day >= days_in_month)
 
 	data = get_worker_attendance_report_data(year, month, department)
 	columns = get_columns(year, month)
-	summary = get_summary(data)
+	summary = get_summary(data, year, month, is_month_complete)
 
 	# Flatten daily data into each row
 	for i, row in enumerate(data):
@@ -98,8 +103,8 @@ def get_columns(year, month):
 	return columns
 
 
-def get_summary(data):
-	"""Summary row at the top showing totals."""
+def get_summary(data, year=None, month=None, is_month_complete=False):
+	"""Summary row at the top showing totals + OT formula info."""
 	if not data:
 		return None
 
@@ -119,17 +124,24 @@ def get_summary(data):
 		m = int(round((hours - h) * 60))
 		return f"{h}:{m:02d}"
 
-	# Return as a message dict shown above the report
+	# OT formula explanation
+	from elemental_erp.utils.worker_overtime import get_days_in_month, STANDARD_SHIFT
+	days = get_days_in_month(year, month) if year and month else 31
+	formula_msg = f"OT Rate Formula: Monthly Salary / {days} days / {STANDARD_SHIFT} hrs = Hourly Rate (then 2x for OT)"
+
+	month_status = "COMPLETE" if is_month_complete else "IN PROGRESS — run at month end for final data"
+
 	return {
 		"message": (
-			f"Total Workers: {len(data)} | "
+			f"<b>Workers: {len(data)}</b> | "
 			f"Paid Days: {total_paid:.0f} | PH: {total_ph} | LOP: {total_lop:.0f} | "
-			f"Total Monthly: {frappe.format_currency(total_salary)} | "
-		 f"Att.Salary: {frappe.format_currency(total_att_salary)} | "
-		 f"Total OT: {fmt_hhmm(total_ot_hours)} ({frappe.format_currency(total_ot_amount)}) | "
-		 f"Payslip OT: {frappe.format_currency(total_slip_ot)} | "
-		 f"Cash OT: {frappe.format_currency(total_cash_ot)} | "
-		 f"Total Earnings: {frappe.format_currency(total_earnings)}"
+			f"Att.Salary: {frappe.format_currency(total_att_salary)} | "
+			f"Total OT: {fmt_hhmm(total_ot_hours)} ({frappe.format_currency(total_ot_amount)}) | "
+			f"Payslip OT (12h x 2x): {frappe.format_currency(total_slip_ot)} | "
+			f"Cash OT (3h x 2x): {frappe.format_currency(total_cash_ot)} | "
+			f"Total Earnings: {frappe.format_currency(total_earnings)}<br>"
+			f"<span style='color:#888;'>{formula_msg}</span><br>"
+			f"<span style='color:{'green' if is_month_complete else 'orange'};'><b>Month Status: {month_status}</b></span>"
 		)
 	}
 

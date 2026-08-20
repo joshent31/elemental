@@ -6,17 +6,24 @@ For Worker-category employees, this module:
 3. Splits OT into Salary Slip portion (12 hrs × 2× rate) and Cash portion
 4. Generates a summary suitable for the Worker Attendance Report
 
-Business Rules (from client requirements):
-- Standard shift = employee's standard_shift_hours (default 8)
-- Any hours beyond standard shift = Overtime
-- Government allows max 15 OT hours/month
-- OT rate = 2× hourly rate
-- Salary Slip shows: 12 OT hours × 2× hourly rate
-- Cash payment: remaining (15 - 12 = 3) OT hours × 2× hourly rate
-- Hours beyond 15 = not paid (for government reporting purposes)
+OT Rate Formula (from client):
+    Daily Rate  = Monthly Salary / Days in Month
+    Hourly Rate = Daily Rate / 8
+    Example: 16913 / 31 / 8 = 68.20 (for July with 31 days)
+             16913 / 30 / 8 = 70.47 (for June with 30 days)
+             16913 / 28 / 8 = 75.50 (for Feb with 28 days)
+
+Government Rules:
+    - Standard shift = 8 hours per day
+    - Hours beyond 8 = Overtime
+    - Max OT per month = 15 hours (government cap)
+    - OT Rate = 2 × Hourly Rate
+    - Salary Slip: 12 OT hours × 2× rate
+    - Cash payment: remaining 3 OT hours × 2× rate (15 - 12 = 3)
 """
+import calendar
 import frappe
-from frappe.utils import getdate, get_datetime, time_diff_in_hours, format_duration
+from frappe.utils import getdate, time_diff_in_hours
 
 
 # Government OT cap per month
@@ -25,45 +32,71 @@ GOV_OT_CAP_HOURS = 15
 SALARY_SLIP_OT_HOURS = 12
 # Cash OT = GOV_OT_CAP - SALARY_SLIP_OT
 CASH_OT_HOURS = GOV_OT_CAP_HOURS - SALARY_SLIP_OT_HOURS
+# Standard shift
+STANDARD_SHIFT = 8
 
 
-def hourly_rate(employee):
+def get_days_in_month(year, month):
+    """Get actual calendar days in the month (28, 29, 30, or 31)."""
+    return calendar.monthrange(year, month)[1]
+
+
+def hourly_rate(employee, year=None, month=None):
     """Compute hourly rate for a Worker.
-    hourly_rate = monthly_salary / (days_in_month * standard_shift_hours)
-    This matches the Excel report's /Hour column."""
+
+    Formula: Monthly Salary / Days in Month / 8
+
+    Example for employee with salary 16913:
+        July (31 days):   16913 / 31 / 8 = 68.20
+        June (30 days):   16913 / 30 / 8 = 70.47
+        Feb (28 days):    16913 / 28 / 8 = 75.50
+    """
     emp = frappe.db.get_value(
         "Employee", employee,
-        ["ctc", "employee_category", "standard_shift_hours"],
+        ["ctc", "employee_category"],
         as_dict=True,
     )
     if not emp or emp.employee_category != "Worker":
         return 0
-    shift = emp.standard_shift_hours or 8
+
     ctc = emp.ctc or 0
-    # Use 26 working days * shift hours as denominator (standard Indian calculation)
-    # But to match the Excel: Monthly / (31 * 8) = Monthly / 248
-    # We'll use days_in_month * shift for accuracy
-    import calendar
-    today = getdate()
-    days_in_month = calendar.monthrange(today.year, today.month)[1]
-    denominator = days_in_month * shift
+    if not year or not month:
+        today = getdate()
+        year = today.year
+        month = today.month
+
+    days = get_days_in_month(year, month)
+    denominator = days * STANDARD_SHIFT  # e.g. 31 * 8 = 248
     return ctc / denominator if denominator else 0
 
 
-def daily_rate(employee):
-    """Daily rate = monthly_salary / days_in_month."""
+def daily_rate(employee, year=None, month=None):
+    """Daily Rate = Monthly Salary / Days in Month.
+
+    Example for employee with salary 16913:
+        July (31 days): 16913 / 31 = 545.58
+        June (30 days): 16913 / 30 = 563.77
+    """
     emp = frappe.db.get_value("Employee", employee, ["ctc", "employee_category"], as_dict=True)
     if not emp or emp.employee_category != "Worker":
         return 0
-    import calendar
-    today = getdate()
-    days_in_month = calendar.monthrange(today.year, today.month)[1]
-    return (emp.ctc or 0) / days_in_month if days_in_month else 0
+
+    ctc = emp.ctc or 0
+    if not year or not month:
+        today = getdate()
+        year = today.year
+        month = today.month
+
+    days = get_days_in_month(year, month)
+    return ctc / days if days else 0
 
 
 def compute_daily_ot(employee, date):
     """Compute OT hours for a single day from Employee Checkin records.
-    Returns dict with in_time, out_time, total_hours, ot_hours, ot_amount."""
+
+    Returns dict with in_time, out_time, total_hours, ot_hours, ot_amount.
+    OT = Total Hours - 8 (standard shift).
+    """
     emp = frappe.db.get_value(
         "Employee", employee,
         ["employee_category", "standard_shift_hours", "ctc"],
@@ -72,7 +105,7 @@ def compute_daily_ot(employee, date):
     if not emp or emp.employee_category != "Worker":
         return None
 
-    shift = emp.standard_shift_hours or 8
+    shift = emp.standard_shift_hours or STANDARD_SHIFT
 
     checkins = frappe.get_all(
         "Employee Checkin",
@@ -100,7 +133,8 @@ def compute_daily_ot(employee, date):
     ot_hours = max(total_hours - shift, 0)
     ot_hours = round(ot_hours, 2)
 
-    hr = hourly_rate(employee)
+    date_obj = getdate(date)
+    hr = hourly_rate(employee, date_obj.year, date_obj.month)
     ot_amount = round(ot_hours * hr, 2)
 
     return {
@@ -109,31 +143,31 @@ def compute_daily_ot(employee, date):
         "total_hours": total_hours,
         "ot_hours": ot_hours,
         "ot_amount": ot_amount,
-        "status": "P",  # Present
+        "status": "P",
     }
 
 
 def compute_monthly_summary(employee, year, month):
     """Compute full monthly OT summary for a Worker.
-    Returns dict with all fields needed for the report."""
-    import calendar
 
+    Returns dict with all fields needed for the report.
+    This should be run at month end when all checkin data is complete.
+    """
     emp = frappe.db.get_value(
         "Employee", employee,
         ["employee_name", "department", "designation", "ctc",
          "employee_category", "standard_shift_hours", "company",
-         "branch", "cell_number"],
+         "branch"],
         as_dict=True,
     )
     if not emp or emp.employee_category != "Worker":
         return None
 
-    shift = emp.standard_shift_hours or 8
-    days_in_month = calendar.monthrange(year, month)[1]
-    hr = hourly_rate(employee)
-    dr = daily_rate(employee)
+    shift = emp.standard_shift_hours or STANDARD_SHIFT
+    days_in_month = get_days_in_month(year, month)
+    hr = hourly_rate(employee, year, month)
+    dr = daily_rate(employee, year, month)
 
-    # Get attendance status for the month
     month_start = f"{year}-{month:02d}-01"
     month_end = f"{year}-{month:02d}-{days_in_month}"
 
@@ -148,7 +182,7 @@ def compute_monthly_summary(employee, year, month):
         )
         holiday_dates = {str(h.holiday_date) for h in holidays}
 
-    # Check for leaves
+    # Check for approved leaves
     leave_dates = set()
     leaves = frappe.get_all(
         "Leave Application",
@@ -162,7 +196,8 @@ def compute_monthly_summary(employee, year, month):
     )
     for leave in leaves:
         d = getdate(leave.from_date)
-        while d <= getdate(leave.to_date):
+        end = getdate(leave.to_date)
+        while d <= end:
             leave_dates.add(str(d))
             from frappe.utils import add_days
             d = add_days(d, 1)
@@ -179,9 +214,7 @@ def compute_monthly_summary(employee, year, month):
     for day in range(1, days_in_month + 1):
         date_str = f"{year}-{month:02d}-{day:02d}"
         date_obj = getdate(date_str)
-
-        # Check if weekend (optional — depends on company policy)
-        is_weekend = date_obj.weekday() >= 5  # Saturday=5, Sunday=6
+        is_weekend = date_obj.weekday() >= 5
 
         if str(date_obj) in holiday_dates:
             daily_data.append({"date": date_str, "status": "PH", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
@@ -192,7 +225,6 @@ def compute_monthly_summary(employee, year, month):
             daily_data.append({"date": date_str, "status": "L", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
             continue
 
-        # Check if QR scan exists (means they checked in via gate)
         has_scan = frappe.db.exists(
             "Employee Checkin",
             {"employee": employee, "time": ["between", [f"{date_str} 00:00:00", f"{date_str} 23:59:59"]]},
@@ -229,19 +261,22 @@ def compute_monthly_summary(employee, year, month):
             "brand": "",
         })
 
-    # Apply government cap
+    # Apply government cap (max 15 OT hrs/month)
     capped_ot_hours = min(total_ot_hours, GOV_OT_CAP_HOURS)
     salary_slip_ot_hours = min(capped_ot_hours, SALARY_SLIP_OT_HOURS)
     cash_ot_hours = max(capped_ot_hours - salary_slip_ot_hours, 0)
 
-    salary_slip_ot_amount = round(salary_slip_ot_hours * hr * 2, 2)  # 2× rate
-    cash_ot_amount = round(cash_ot_hours * hr * 2, 2)  # 2× rate
+    # OT amounts at 2× hourly rate
+    salary_slip_ot_amount = round(salary_slip_ot_hours * hr * 2, 2)
+    cash_ot_amount = round(cash_ot_hours * hr * 2, 2)
     total_ot_amount_capped = round(capped_ot_hours * hr * 2, 2)
 
+    # Attendance salary = paid days × daily rate
     att_salary = round(paid_days * dr, 2)
+
+    # Total earnings = attendance salary + OT (at 2× rate)
     total_earnings = round(att_salary + total_ot_amount_capped, 2)
 
-    # Format OT hours as HH:MM
     def format_hhmm(hours):
         h = int(hours)
         m = int(round((hours - h) * 60))
@@ -254,8 +289,9 @@ def compute_monthly_summary(employee, year, month):
         "designation": emp.designation,
         "location": emp.branch or "",
         "monthly_salary": emp.ctc or 0,
-        "hourly_rate": round(hr, 2),
         "days_in_month": days_in_month,
+        "hourly_rate": round(hr, 2),
+        "daily_rate": round(dr, 2),
         "paid_days": paid_days,
         "qr_days": qr_days,
         "ph_days": ph_days,
@@ -279,7 +315,10 @@ def compute_monthly_summary(employee, year, month):
 
 def get_worker_attendance_report_data(year, month, department=None, location=None):
     """Get all Worker-category employees' attendance data for the report.
-    Returns list of monthly summaries sorted by department, name."""
+
+    This should be run at month end when all checkin data is complete.
+    Returns list of monthly summaries sorted by department, name.
+    """
     filters = {"employee_category": "Worker"}
     if department:
         filters["department"] = department
