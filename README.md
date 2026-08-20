@@ -685,3 +685,228 @@ real inventory reservation (see the existing stock-check caveats in section 15 b
 - **QC Inspection is one record per (Job, Finished Good), not per subpart.** If you need QC to
   fail/pass individual subparts rather than the whole Finished Good, that's a bigger change —
   say the word and I'll rework it to key off `QR Code Master` instead.
+
+---
+
+## 18. Management Dashboard — KPI Summary
+
+A real-time dashboard page at `/app/management-dashboard` showing:
+
+| Piece | What it does |
+|---|---|
+| **8 Stats Cards** | Active Jobs, In Production, Pending Indents, QR Completion %, Total Revenue, Total Cost, Avg Margin %, Overdue Jobs |
+| **Jobs by Status** (Pie Chart) | Visual breakdown of all jobs by current status |
+| **Monthly Jobs** (Bar Chart) | Jobs created vs closed over last 6 months |
+| **Department Activity** (Bar Chart) | Pending/in-transit transfers per department |
+| **Recent Jobs Table** | Last 15 jobs with status, QR %, box progress, due date |
+
+Access: `/app/management-dashboard` or via **Elemental Fixtures** workspace shortcut.
+
+---
+
+## 19. Worker Attendance Report & OT Tracking
+
+For **Worker-category employees** only (not Staff). Tracks daily check-in/out, calculates
+overtime, and generates government-compliant reports.
+
+### 19.1 OT Rate Formula
+
+```
+Hourly Rate = Monthly Salary / Days in Month / 8
+```
+
+| Month | Days | Salary | Hourly Rate |
+|-------|------|--------|-------------|
+| July | 31 | 16,913 | 16913 / 31 / 8 = **68.20** |
+| June | 30 | 16,913 | 16913 / 30 / 8 = **70.47** |
+| Feb | 28 | 16,913 | 16913 / 28 / 8 = **75.50** |
+
+### 19.2 OT Rules
+
+| Day Type | OT Rule |
+|----------|---------|
+| Normal day (9 AM – 6 PM) | Hours beyond 8 = OT |
+| **Sunday** (no work) | W/O — no OT |
+| **Sunday** (works) | **ALL hours = OT** |
+| **Govt Holiday** (no work) | PH — no OT |
+| **Govt Holiday** (works) | **ALL hours = OT** |
+
+### 19.3 Report Columns
+
+| Column | Formula | Rate |
+|--------|---------|------|
+| Total OT Hours | Sum of all daily OT | — |
+| Total OT Amount | OT Hours × Hourly Rate | **1×** (company tracking) |
+| Salary Slip | min(OT, 15 hrs) × Rate × 2 | **2×** (govt required) |
+| Cash to Worker | Total OT (1×) − Slip OT (2×) | Difference |
+| Total Earnings | Att.Salary + Total OT (1×) | — |
+
+### 19.4 Two Reports
+
+| Report | Access | Purpose |
+|--------|--------|---------|
+| **Worker Attendance Report** | `/app/query-report/Worker Attendance Report` | Full detail — Excel format with IN/OUT, OT, Salary, Cash |
+| **Worker OT Summary (Govt)** | `/app/query-report/Worker OT Summary` | Government only — daily OT hours, total ≤15, no cash column |
+
+### 19.5 Custom Fields on Employee
+
+| Field | Type | Options |
+|-------|------|---------|
+| `employee_category` | Select | Staff / Worker |
+| `standard_shift_hours` | Float | Default: 8 |
+
+**Government Cap:** Max 15 OT hours/month. Salary Slip shows 12 hrs × 2× rate.
+Cash to Worker = Total OT (1×) − Slip OT (2×).
+
+---
+
+## 20. Work from Home (WFH) Request
+
+Employees apply for WFH via a dedicated doctype. On approval, Attendance is automatically
+marked as **Present** for each WFH date.
+
+| Piece | What it does |
+|---|---|
+| `Work from Home Request` doctype | Employee, date range, reason, status (Open/Approved/Rejected/Cancelled) |
+| **Approve/Reject** buttons | HR/Managers approve with one click |
+| **Auto Attendance** | On approval, creates Attendance records marked "Present" for each WFH date |
+| **Notifications** | Employee notified on approval/rejection |
+| `work_from_home` field on Attendance | Custom field to identify WFH-created attendance |
+
+### WFH Summary Report
+
+| Report | Access | Purpose |
+|--------|--------|---------|
+| **WFH Summary** | `/app/query-report/WFH Summary` | Employee × Month matrix with WFH days count |
+
+**Filters:** Employee, Department, Year, Company. Includes bar chart of top 10 employees.
+
+---
+
+## 21. Saturday Off Leave Type (Staff Only)
+
+Staff can take **one Saturday off per month** — paid, earned monthly, Saturday only.
+
+| Setting | Value |
+|---------|-------|
+| Leave Type Name | Saturday Off |
+| Earned Leave | Yes (monthly) |
+| Max Leaves Allowed | 1 |
+| Carry Forward | No (use it or lose it) |
+| Max Continuous Days | 1 |
+| Paid | Yes (not LWP) |
+
+### How It Works
+
+1. **1st of month:** HRMS auto-allocates 1 Saturday Off
+2. **Employee applies:** Leave Application → Select "Saturday Off" → Pick a Saturday
+3. **Validation:** System blocks if not a Saturday
+4. **HR approves:** Standard Leave Application workflow
+5. **Month end:** Unused leave expires
+
+### Validation
+
+- **Server-side:** Blocks save if date is not a Saturday
+- **Client-side:** Shows warning immediately when wrong day selected
+- **Error message:** "Saturday Off can only be applied on Saturdays"
+
+---
+
+## 22. Staff Attendance Rules (All Paid)
+
+| Status | Pay Impact | Notes |
+|--------|-----------|-------|
+| Present | **PAID** | Gate scan |
+| Work from Home | **PAID** | WFH Request approved |
+| Saturday Off | **PAID** | 1/month, earned |
+| Complimentary Leave | **PAID** | Leave balance |
+| Half Day | **PAID** | 0.5 from leave balance |
+| Holiday (PH) | **PAID** | Govt Holiday |
+| Week Off (Sunday) | **PAID** | Weekly off |
+| **Absent** | **UNPAID (LOP)** | Full day salary deducted |
+| **Leave Without Pay** | **UNPAID (LOP)** | Full day salary deducted |
+
+**Rule:** Staff only gets LOP for Absent or Leave Without Pay. All other statuses are paid.
+
+---
+n## 23. Salary Slip OT Integration
+
+For **Worker-category employees**, OT is auto-calculated on Salary Slip.
+
+| Piece | What it does |
+|---|---|
+| **"Calculate Worker OT"** button | Pulls checkin data for slip period, calculates OT |
+| `overtime_hours` field | Auto-filled: min(Total OT, 15 hrs) |
+| `overtime_rate` field | Auto-filled: Salary / Days / 8 |
+| `overtime_amount` field | Auto-filled: OT Hours × Rate × 2 |
+| **Overtime Salary Component** | Shipped as fixture for ERPNext payroll |
+
+### Salary Slip Shows:
+
+```
+Earnings:
+  Basic Salary:           16,913.00
+  Overtime (15h × 2×):     2,046.00  ← AUTO
+Total Earnings:          18,959.00
+```
+
+Cash to Worker (paid separately) = Total OT (1×) − Slip OT (2×)
+
+---
+
+## 24. Client Scripts (New)
+
+| Doctype | File | Features |
+|---------|------|----------|
+| Production Entry | `public/js/production_entry.js` | View Job/QR, job status info, cost auto-compute |
+| Packaging Entry | `public/js/packaging_entry.js` | QC check, Mark Packaging Completed, Create Labels |
+| Dispatch Entry | `public/js/dispatch_entry.js` | Box progress, Mark Dispatched/Delivered, Create Invoice |
+| Work from Home Request | `public/js/work_from_home_request.js` | Approve/Reject/Cancel buttons, status info |
+| Salary Slip | `public/js/salary_slip.js` | Calculate Worker OT button |
+| Leave Application | `public/js/leave_application.js` | Saturday Off day validation warning |
+
+---
+
+## 25. Test Suite
+
+28 unit tests covering core business logic:
+
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| `tests/test_utils.py` | 7 | `hourly_rate()`, `compute_cost()`, `generate_qr_image()` |
+| `tests/test_api.py` | 14 | QR lookup, scan, transfers, BOM indent, job lifecycle, packing, invoice |
+| `tests/test_qr_code_master.py` | 7 | Status advancement, over-scan protection, job completion |
+
+### Run Tests:
+
+```bash
+bench run-tests --module elemental_erp.elemental_erp.tests.test_utils
+bench run-tests --module elemental_erp.elemental_erp.tests.test_api
+bench run-tests --module elemental_erp.elemental_erp.tests.test_qr_code_master
+```
+
+---
+
+## 26. Complete Feature Summary
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Job Lifecycle | ✅ | Job → Design → Purchase → Production → Packaging → Dispatch |
+| QR Code Tracking | ✅ | Per part per process, auto-generated |
+| Inter-dept Transfer | ✅ | Mobile scan, print slip, receive, close dept |
+| Material Flow | ✅ | Indent → Issue → Consumption (WIP) |
+| Packing & Dispatch | ✅ | Box labels, scan loading, site receive/install |
+| QC Gate | ✅ | Must Pass before Packaging |
+| Sales Invoice | ✅ | Auto-create after full dispatch |
+| Employee Gate QR | ✅ | Auto Attendance from check-in/out |
+| **Management Dashboard** | ✅ | KPI cards, charts, recent jobs |
+| **Worker Attendance Report** | ✅ | Excel format, daily IN/OUT, OT |
+| **Worker OT Summary (Govt)** | ✅ | Government compliance, ≤15 hrs |
+| **Work from Home Request** | ✅ | Apply/approve/reject, Attendance sync |
+| **WFH Summary Report** | ✅ | Employee × Month matrix |
+| **Saturday Off Leave Type** | ✅ | Paid, 1/month, earned, Saturday only |
+| **Client Scripts** | ✅ | Production/Packaging/Dispatch/WFH/SL |
+| **PO Initiation** | ✅ | Supplier dropdown, rate auto-fill |
+| **Salary Slip OT** | ✅ | Auto-populate OT for Workers |
+| **OT Calculation Engine** | ✅ | Sunday/Holiday = full OT, 15h cap |
+| **Test Suite** | ✅ | 28 unit tests |
