@@ -6,7 +6,7 @@
  "autoname": "naming_series:",
  "is_submittable": 0,
  "engine": "InnoDB",
- "editable_grid": 1,
+ "editable_grid": 0,
  "track_changes": 1,
  "fields": [
   {
