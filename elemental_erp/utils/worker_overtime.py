@@ -121,20 +121,47 @@ def compute_daily_ot(employee, date, is_holiday=False):
         order_by="time asc",
     )
 
-    if not checkins:
-        return {"in_time": None, "out_time": None, "total_hours": 0, "ot_hours": 0, "ot_amount": 0, "status": "A"}
+    # Track all individual checkin entries for the detail report
+    all_entries = []
+    for c in checkins:
+        all_entries.append({"log_type": c.log_type, "time": c.time})
 
+    # If no gate checkins, fall back to manual Attendance record
     in_times = [c.time for c in checkins if c.log_type == "IN"]
     out_times = [c.time for c in checkins if c.log_type == "OUT"]
 
     if not in_times:
-        return {"in_time": None, "out_time": None, "total_hours": 0, "ot_hours": 0, "ot_amount": 0, "status": "A"}
-
-    in_time = min(in_times)
-    out_time = max(out_times) if out_times else None
+        # Check for manual Attendance (HR entered directly)
+        att = frappe.db.get_value(
+            "Attendance",
+            {"employee": employee, "attendance_date": date},
+            ["in_time", "out_time", "working_hours", "status"],
+            as_dict=True,
+        )
+        if att and att.in_time and att.out_time:
+            in_time = att.in_time
+            out_time = att.out_time
+            # Also log manual attendance as a single entry
+            all_entries = [
+                {"log_type": "IN", "time": in_time},
+                {"log_type": "OUT", "time": out_time},
+            ]
+        else:
+            return {
+                "in_time": None, "out_time": None, "total_hours": 0,
+                "ot_hours": 0, "ot_amount": 0, "status": "A",
+                "all_entries": [],
+            }
+    else:
+        in_time = min(in_times)
+        out_time = max(out_times) if out_times else None
 
     if not out_time:
-        return {"in_time": in_time, "out_time": None, "total_hours": 0, "ot_hours": 0, "ot_amount": 0, "status": "A"}
+        return {
+            "in_time": in_time, "out_time": None, "total_hours": 0,
+            "ot_hours": 0, "ot_amount": 0, "status": "A",
+            "all_entries": all_entries,
+        }
 
     total_hours = round(time_diff_in_hours(out_time, in_time), 2)
 
@@ -159,6 +186,7 @@ def compute_daily_ot(employee, date, is_holiday=False):
         "ot_amount": ot_amount,
         "status": "P",
         "is_holiday": is_holiday,
+        "all_entries": all_entries,
     }
 
 
@@ -244,7 +272,15 @@ def compute_monthly_summary(employee, year, month):
                 "Employee Checkin",
                 {"employee": employee, "time": ["between", [f"{date_str} 00:00:00", f"{date_str} 23:59:59"]]},
             )
-            if has_scan:
+            # Also check manual Attendance for holidays
+            has_manual_att = False
+            if not has_scan:
+                has_manual_att = frappe.db.exists(
+                    "Attendance",
+                    {"employee": employee, "attendance_date": date_str,
+                     "in_time": ["is", "set"], "out_time": ["is", "set"]},
+                )
+            if has_scan or has_manual_att:
                 result = compute_daily_ot(employee, date_str, is_holiday=True)
                 if result["status"] == "P":
                     qr_days += 1
@@ -269,15 +305,48 @@ def compute_monthly_summary(employee, year, month):
             {"employee": employee, "time": ["between", [f"{date_str} 00:00:00", f"{date_str} 23:59:59"]]},
         )
 
+        # Also check for manual Attendance (HR entered directly)
+        has_manual_att = False
         if not has_scan:
-            if is_weekend:
+            has_manual_att = frappe.db.exists(
+                "Attendance",
+                {"employee": employee, "attendance_date": date_str,
+                 "in_time": ["is", "set"], "out_time": ["is", "set"]},
+            )
+
+        if not has_scan and not has_manual_att:
+            # Check if HR manually marked attendance as Present (no times entered)
+            att_status = frappe.db.get_value(
+                "Attendance",
+                {"employee": employee, "attendance_date": date_str},
+                "status",
+            )
+            if att_status == "Present":
+                # Manual Present without times — count as paid, 0 OT (no time data)
+                paid_days += 1
+                daily_data.append({
+                    "date": date_str, "status": "M", "in_time": "Manual",
+                    "out_time": "Manual", "total_hours": 0,
+                    "ot_hours": 0, "ot_amount": 0, "job": "", "brand": "",
+                })
+                continue
+            elif att_status == "Half Day":
+                paid_days += 0.5
+                daily_data.append({
+                    "date": date_str, "status": "HD", "in_time": "Manual",
+                    "out_time": "Manual", "total_hours": 0,
+                    "ot_hours": 0, "ot_amount": 0, "job": "", "brand": "",
+                })
+                continue
+            elif is_weekend:
                 daily_data.append({"date": date_str, "status": "W/O", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
             else:
                 daily_data.append({"date": date_str, "status": "A", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
                 lop_days += 1
             continue
 
-        # Sunday (weekend) with check-in = ALL hours are OT
+        # compute_daily_ot handles both checkin and manual attendance
+        # Sunday (weekend) with check-in or manual att = ALL hours are OT
         result = compute_daily_ot(employee, date_str, is_holiday=is_weekend)
         if result["status"] == "A":
             daily_data.append({"date": date_str, "status": "A", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})

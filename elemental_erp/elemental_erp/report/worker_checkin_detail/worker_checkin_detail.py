@@ -1,0 +1,206 @@
+"""Worker Checkin Detail Report — Shows ALL entries and exits per day.
+
+This report shows every individual IN/OUT scan for each worker per day,
+not just first-in and last-out. Useful for tracking multiple entries/exits.
+
+Columns:
+- Employee, Name, Department
+- Date
+- Entry 1 (IN/OUT), Entry 2, Entry 3, etc.
+- First IN time, Last OUT time
+- Total Span (last OUT - first IN)
+- OT Hours (based on span)
+- Source (Gate Scan / Manual Attendance)
+"""
+import calendar
+import frappe
+from frappe.utils import getdate, time_diff_in_hours
+
+
+def execute(filters=None):
+    filters = filters or {}
+    year = filters.get("year") or getdate().year
+    month = filters.get("month") or getdate().month
+    employee = filters.get("employee")
+    department = filters.get("department")
+
+    days_in_month = calendar.monthrange(year, month)[1]
+    month_start = f"{year}-{month:02d}-01"
+    month_end = f"{year}-{month:02d}-{days_in_month}"
+
+    # Get workers
+    emp_filters = {"employee_category": "Worker"}
+    if employee:
+        emp_filters["name"] = employee
+    if department:
+        emp_filters["department"] = department
+
+    workers = frappe.get_all(
+        "Employee",
+        filters=emp_filters,
+        fields=["name", "employee_name", "department", "designation"],
+        order_by="department asc, employee_name asc",
+    )
+
+    columns = get_columns()
+    data = []
+
+    for idx, emp in enumerate(workers):
+        for day in range(1, days_in_month + 1):
+            date_str = f"{year}-{month:02d}-{day:02d}"
+            row = build_day_row(emp, date_str, idx + 1)
+            if row:
+                data.append(row)
+
+    return columns, data, None, None
+
+
+def build_day_row(emp, date_str, sno):
+    """Build one row per worker per day with all checkin/checkout entries."""
+
+    # Get ALL Employee Checkin records for this day
+    checkins = frappe.get_all(
+        "Employee Checkin",
+        filters={
+            "employee": emp.name,
+            "time": ["between", [f"{date_str} 00:00:00", f"{date_str} 23:59:59"]],
+        },
+        fields=["log_type", "time", "employee"],
+        order_by="time asc",
+    )
+
+    # Check for manual Attendance
+    manual_att = None
+    source = "Gate Scan"
+    if not checkins:
+        manual_att = frappe.db.get_value(
+            "Attendance",
+            {"employee": emp.name, "attendance_date": date_str},
+            ["in_time", "out_time", "working_hours", "status"],
+            as_dict=True,
+        )
+        if manual_att and manual_att.in_time:
+            source = "Manual Attendance"
+            # Create virtual entries from manual attendance
+            checkins = []
+            if manual_att.in_time:
+                checkins.append({"log_type": "IN", "time": manual_att.in_time})
+            if manual_att.out_time:
+                checkins.append({"log_type": "OUT", "time": manual_att.out_time})
+
+    if not checkins and not manual_att:
+        return None
+
+    # Determine first IN, last OUT
+    in_times = [c["time"] for c in checkins if c["log_type"] == "IN"]
+    out_times = [c["time"] for c in checkins if c["log_type"] == "OUT"]
+
+    first_in = min(in_times) if in_times else None
+    last_out = max(out_times) if out_times else None
+
+    # Total span
+    total_hours = 0
+    if first_in and last_out:
+        total_hours = round(time_diff_in_hours(last_out, first_in), 2)
+
+    # OT: span - 8 hours (or full span on Sunday/Holiday)
+    date_obj = getdate(date_str)
+    is_weekend = date_obj.weekday() >= 5
+
+    # Check for holiday
+    holiday_list = frappe.db.get_value("Employee", emp.name, "holiday_list")
+    is_holiday = False
+    if holiday_list:
+        is_holiday = frappe.db.exists(
+            "Holiday",
+            {"parent": holiday_list, "holiday_date": date_str},
+        )
+
+    if is_weekend or is_holiday:
+        ot_hours = total_hours  # ALL hours on Sunday/Holiday
+    else:
+        ot_hours = max(total_hours - 8, 0)
+
+    ot_hours = round(ot_hours, 2)
+
+    # Build entry strings: "IN 9:00AM → OUT 1:30PM → IN 2:15PM → OUT 6:45PM"
+    entry_parts = []
+    for c in checkins:
+        t = format_time(c["time"])
+        entry_parts.append(f"{c['log_type']} {t}")
+
+    entries_str = " → ".join(entry_parts) if entry_parts else ""
+
+    # Count IN/OUT pairs
+    in_count = len(in_times)
+    out_count = len(out_times)
+
+    # Day type
+    day_type = "Working"
+    if is_weekend:
+        day_type = "Sunday/WO"
+    elif is_holiday:
+        day_type = "Holiday"
+
+    return {
+        "sno": sno,
+        "employee": emp.name,
+        "employee_name": emp.employee_name,
+        "department": emp.department,
+        "designation": emp.designation,
+        "date": date_str,
+        "day": getdate(date_str).strftime("%a"),
+        "day_type": day_type,
+        "source": source,
+        "entries": entries_str,
+        "entry_count": in_count + out_count,
+        "first_in": format_time(first_in),
+        "last_out": format_time(last_out),
+        "total_hours": total_hours,
+        "ot_hours": ot_hours,
+        "ot_hours_fmt": format_hhmm(ot_hours),
+        "in_count": in_count,
+        "out_count": out_count,
+    }
+
+
+def format_time(dt):
+    """Format datetime to AM/PM string."""
+    if not dt:
+        return ""
+    try:
+        from frappe.utils import getdate as _getdate
+        return _getdate(dt).strftime("%I:%M %p").lstrip("0")
+    except Exception:
+        return str(dt)
+
+
+def format_hhmm(hours):
+    """Format decimal hours to H:MM."""
+    h = int(hours)
+    m = int(round((hours - h) * 60))
+    return f"{h}:{m:02d}"
+
+
+def get_columns():
+    """Columns for the report."""
+    return [
+        {"label": "S.No", "fieldname": "sno", "fieldtype": "Int", "width": 45},
+        {"label": "Code", "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 70},
+        {"label": "Name", "fieldname": "employee_name", "fieldtype": "Data", "width": 160},
+        {"label": "Dept", "fieldname": "department", "fieldtype": "Data", "width": 90},
+        {"label": "Desg", "fieldname": "designation", "fieldtype": "Data", "width": 90},
+        {"label": "Date", "fieldname": "date", "fieldtype": "Date", "width": 90},
+        {"label": "Day", "fieldname": "day", "fieldtype": "Data", "width": 45},
+        {"label": "Type", "fieldname": "day_type", "fieldtype": "Data", "width": 80},
+        {"label": "Source", "fieldname": "source", "fieldtype": "Data", "width": 100},
+        {"label": "All Entries (IN → OUT → IN → ...)", "fieldname": "entries", "fieldtype": "Small Text", "width": 350},
+        {"label": "Scans", "fieldname": "entry_count", "fieldtype": "Int", "width": 45},
+        {"label": "1st IN", "fieldname": "first_in", "fieldtype": "Data", "width": 80},
+        {"label": "Last OUT", "fieldname": "last_out", "fieldtype": "Data", "width": 80},
+        {"label": "Span (hrs)", "fieldname": "total_hours", "fieldtype": "Float", "width": 75, "precision": "2"},
+        {"label": "OT (hrs)", "fieldname": "ot_hours", "fieldtype": "Float", "width": 65, "precision": "2"},
+        {"label": "OT", "fieldname": "ot_hours_fmt", "fieldtype": "Data", "width": 55},
+        {"label": "INs", "fieldname": "in_count", "fieldtype": "Int", "width": 40},
+        {"label": "OUTs", "fieldname": "out_count", "fieldtype": "Int", "width": 40},
+    ]

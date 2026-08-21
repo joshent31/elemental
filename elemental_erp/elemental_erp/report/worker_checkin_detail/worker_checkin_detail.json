@@ -1,0 +1,13 @@
+{
+  "name": "Worker Checkin Detail",
+  "module": "Elemental ERP",
+  "doctype": "Report",
+  "report_type": "Script Report",
+  "ref_doctype": "Employee Checkin",
+  "is_standard": "Yes",
+  "roles": [
+    {"role": "System Manager"},
+    {"role": "HR User"},
+    {"role": "HR Manager"}
+  ]
+}
