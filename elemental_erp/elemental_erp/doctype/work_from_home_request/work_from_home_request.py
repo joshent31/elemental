@@ -7,7 +7,7 @@ needing to physically check in at the gate.
 """
 import frappe
 from frappe.model.document import Document
-from frappe.utils import getdate, getdate, date_diff, add_days, get_days_in_month
+from frappe.utils import getdate, date_diff, add_days
 
 
 class WorkfromHomeRequest(Document):
