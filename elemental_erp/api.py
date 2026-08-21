@@ -1318,3 +1318,154 @@ def calculate_slip_ot(employee, start_date, end_date):
 		"total_ot_actual": round(total_ot_hours, 2),
 		"total_ot_actual_fmt": fmt_hhmm(total_ot_hours),
 	}
+
+
+# ── Installation Self-Checkin APIs ─────────────────────────────────────
+
+
+@frappe.whitelist(allow_guest=True)
+def lookup_employee_by_qr(qr_or_code):
+	"""Look up employee by QR value or employee code.
+	Returns employee info for the self-checkin page."""
+	# Try QR value first
+	emp = frappe.db.get_value(
+		"Employee",
+		{"employee_qr_value": qr_or_code},
+		["name", "employee_name", "department", "designation", "employee_category"],
+		as_dict=True,
+	)
+	if not emp:
+		# Try by employee name/code
+		emp = frappe.db.get_value(
+			"Employee",
+			{"name": qr_or_code},
+			["name", "employee_name", "department", "designation", "employee_category"],
+			as_dict=True,
+		)
+	if not emp:
+		return {"found": False}
+
+	return {
+		"found": True,
+		"employee": emp.name,
+		"employee_name": emp.employee_name,
+		"department": emp.department or "",
+		"designation": emp.designation or "",
+		"category": emp.employee_category or "",
+	}
+
+
+@frappe.whitelist()
+def installation_self_checkin(employee, action, photo=None, latitude=None, longitude=None, address=""):
+	"""Create an Employee Checkin from the mobile self-checkin page.
+	
+	Args:
+	    employee: Employee name/code
+	    action: 'IN' or 'OUT'
+	    photo: base64 data URL of the site photo
+	    latitude: GPS latitude
+	    longitude: GPS longitude
+	    address: Site address/landmark text
+		"""
+	if action not in ("IN", "OUT"):
+		return {"success": False, "message": "Invalid action. Must be IN or OUT."}
+
+	# Verify employee exists
+	emp_name = frappe.db.get_value("Employee", employee, "name")
+	if not emp_name:
+		# Try by QR value
+		emp_name = frappe.db.get_value("Employee", {"employee_qr_value": employee}, "name")
+	if not emp_name:
+		return {"success": False, "message": f"Employee not found: {employee}"}
+
+	# Save photo as file if provided
+	photo_url = None
+	if photo:
+		try:
+			import base64
+			# Handle data URL format
+			if photo.startswith("data:"):
+				header, data = photo.split(",", 1)
+				file_ext = "jpg"
+				if "png" in header:
+					file_ext = "png"
+			else:
+				data = photo
+				file_ext = "jpg"
+
+			file_data = base64.b64decode(data)
+			file_name = f"checkin_{emp_name}_{frappe.utils.now_datetime().strftime('%Y%m%d_%H%M%S')}.{file_ext}"
+
+			# Save to temp path and create File document
+			import os
+			tmp_path = os.path.join(frappe.get_site_path("private", "files"), file_name)
+			with open(tmp_path, "wb") as f:
+				f.write(file_data)
+
+			# Create File document
+			file_doc = frappe.get_doc({
+				"doctype": "File",
+				"file_name": file_name,
+				"is_private": 1,
+				"file_url": f"/private/files/{file_name}",
+				"attached_to_doctype": "Employee Checkin",
+			})
+			file_doc.insert(ignore_permissions=True)
+			photo_url = file_doc.file_url
+		except Exception as e:
+			frappe.log_error(title="Installation Checkin - Photo save", message=str(e))
+
+	# Create Employee Checkin
+	checkin = frappe.get_doc({
+		"doctype": "Employee Checkin",
+		"employee": emp_name,
+		"log_type": action,
+		"time": frappe.utils.now_datetime(),
+		"skip_auto_attendance": 0,
+		"latitude": latitude,
+		"longitude": longitude,
+		"checkin_photo": photo_url,
+		"checkin_address": address,
+		"checkin_source": "Self (Mobile)",
+	})
+	checkin.insert(ignore_permissions=True)
+
+	# Auto-create attendance
+	from elemental_erp.employee_gate import upsert_attendance_for_day
+	today = frappe.utils.nowdate()
+	upsert_attendance_for_day(emp_name, today)
+
+	emp_name_display = frappe.db.get_value("Employee", emp_name, "employee_name")
+	log_time = frappe.utils.format_datetime(frappe.utils.now_datetime(), "hh:mm a")
+
+	return {
+		"success": True,
+		"message": f"{action} recorded for {emp_name_display} at {log_time}",
+		"checkin_name": checkin.name,
+	}
+
+
+@frappe.whitelist(allow_guest=True)
+def get_today_checkins():
+	"""Get today's checkins for the recent list on the self-checkin page."""
+	today = frappe.utils.nowdate()
+	checkins = frappe.get_all(
+		"Employee Checkin",
+		filters={
+			"time": ["between", [f"{today} 00:00:00", f"{today} 23:59:59"]],
+		},
+		fields=["employee", "employee_name", "log_type", "time", "checkin_source", "checkin_photo"],
+		order_by="time desc",
+		limit_page_length=20,
+	)
+	result = []
+	for c in checkins:
+		result.append({
+			"employee": c.employee,
+			"employee_name": c.employee_name,
+			"log_type": c.log_type,
+			"time": frappe.utils.format_datetime(c.time, "hh:mm a"),
+			"source": c.checkin_source or "Gate QR",
+			"has_photo": bool(c.checkin_photo),
+		})
+	return result

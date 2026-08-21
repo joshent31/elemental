@@ -1,0 +1,295 @@
+{% extends "templates/pages/web.html" %}
+{% block page_content %}
+<div id="checkin-app" style="max-width:480px; margin:0 auto; padding:16px; font-family:Arial,sans-serif;">
+
+  <!-- Header -->
+  <div style="text-align:center; padding:12px 0; background:#1a237e; color:#fff; border-radius:8px; margin-bottom:16px;">
+    <h2 style="margin:0; font-size:18px;">🏗️ Installation Site Check-in</h2>
+    <p id="date-time" style="margin:4px 0 0; font-size:13px; opacity:0.9;"></p>
+  </div>
+
+  <!-- Employee QR Input -->
+  <div id="qr-section" style="margin-bottom:16px;">
+    <label style="font-weight:bold; display:block; margin-bottom:4px;">Scan Employee QR or Enter Code</label>
+    <input type="text" id="emp-qr" placeholder="Scan QR or type Employee Code"
+           style="width:100%; padding:12px; border:2px solid #ccc; border-radius:6px; font-size:16px;"
+           autofocus>
+  </div>
+
+  <!-- Employee Info (hidden until scanned) -->
+  <div id="emp-info" style="display:none; background:#e8f5e9; padding:12px; border-radius:6px; margin-bottom:16px;">
+    <b id="emp-name"></b><br>
+    <span id="emp-dept" style="font-size:13px; color:#555;"></span>
+  </div>
+
+  <!-- Site Photo -->
+  <div id="photo-section" style="margin-bottom:16px;">
+    <label style="font-weight:bold; display:block; margin-bottom:4px;">📸 Take Site Photo (Required)</label>
+    <div style="text-align:center;">
+      <video id="camera" autoplay playsinline style="width:100%; max-height:250px; border-radius:8px; background:#000;"></video>
+      <canvas id="photo-canvas" style="display:none;"></canvas>
+      <img id="photo-preview" style="display:none; width:100%; max-height:250px; border-radius:8px;">
+      <div style="margin-top:8px;">
+        <button id="btn-capture" onclick="capturePhoto()"
+                style="padding:10px 24px; background:#1565c0; color:#fff; border:none; border-radius:6px; font-size:15px; cursor:pointer;">
+          📷 Capture Photo
+        </button>
+        <button id="btn-retake" onclick="retakePhoto()" style="display:none; padding:10px 24px; background:#e65100; color:#fff; border:none; border-radius:6px; font-size:15px; cursor:pointer;">
+          🔄 Retake
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GPS Location -->
+  <div id="gps-section" style="margin-bottom:16px;">
+    <label style="font-weight:bold; display:block; margin-bottom:4px;">📍 Location (Auto-detected)</label>
+    <div id="gps-status" style="padding:12px; background:#f5f5f5; border-radius:6px; font-size:13px;">
+      <span id="gps-text">Detecting location...</span>
+    </div>
+  </div>
+
+  <!-- Site Address -->
+  <div style="margin-bottom:16px;">
+    <label style="font-weight:bold; display:block; margin-bottom:4px;">🏠 Site Address / Landmark</label>
+    <textarea id="site-address" rows="2" placeholder="Enter site address or landmark"
+              style="width:100%; padding:10px; border:2px solid #ccc; border-radius:6px; font-size:14px;"></textarea>
+  </div>
+
+  <!-- Check-in / Check-out Toggle -->
+  <div style="margin-bottom:16px;">
+    <label style="font-weight:bold; display:block; margin-bottom:4px;">Action</label>
+    <div style="display:flex; gap:8px;">
+      <button id="btn-in" onclick="setAction('IN')" style="flex:1; padding:14px; background:#2e7d32; color:#fff; border:3px solid #1b5e20; border-radius:6px; font-size:16px; font-weight:bold; cursor:pointer;">
+        ✅ CHECK IN
+      </button>
+      <button id="btn-out" onclick="setAction('OUT')" style="flex:1; padding:14px; background:#c62828; color:#fff; border:3px solid #b71c1c; border-radius:6px; font-size:16px; font-weight:bold; cursor:pointer;">
+        🚪 CHECK OUT
+      </button>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <button id="btn-submit" onclick="submitCheckin()" disabled
+          style="width:100%; padding:16px; background:#0d47a1; color:#fff; border:none; border-radius:8px; font-size:18px; font-weight:bold; cursor:pointer; opacity:0.5;">
+    SUBMIT CHECK-IN
+  </button>
+
+  <!-- Status Message -->
+  <div id="status-msg" style="display:none; margin-top:12px; padding:12px; border-radius:6px; text-align:center; font-weight:bold;"></div>
+
+  <!-- Recent Checkins -->
+  <div id="recent-section" style="display:none; margin-top:20px;">
+    <h4 style="margin-bottom:8px;">📋 Today's Check-ins</h4>
+    <div id="recent-list"></div>
+  </div>
+
+</div>
+
+<script>
+  // State
+  let currentAction = 'IN';
+  let photoData = null;
+  let latitude = null;
+  let longitude = null;
+  let employeeCode = null;
+
+  // Update date/time
+  function updateDateTime() {
+    const now = new Date();
+    document.getElementById('date-time').textContent =
+      now.toLocaleDateString('en-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric'}) +
+      ' — ' + now.toLocaleTimeString('en-IN');
+  }
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
+
+  // GPS
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(
+      (pos) => {
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+        document.getElementById('gps-text').innerHTML =
+          '✅ Location captured<br>Lat: ' + latitude.toFixed(6) + ', Lng: ' + longitude.toFixed(6) +
+          '<br>Accuracy: ±' + Math.round(pos.coords.accuracy) + 'm';
+        document.getElementById('gps-status').style.background = '#e8f5e9';
+
+        // Reverse geocode
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.display_name) {
+              document.getElementById('site-address').value = data.display_name.split(',').slice(0,3).join(',');
+            }
+          })
+          .catch(() => {});
+      },
+      (err) => {
+        document.getElementById('gps-text').textContent = '⚠️ GPS not available: ' + err.message;
+        document.getElementById('gps-status').style.background = '#fff3e0';
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  }
+
+  // Camera
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      document.getElementById('camera').srcObject = stream;
+    } catch(e) {
+      document.getElementById('camera').style.display = 'none';
+    }
+  }
+  startCamera();
+
+  function capturePhoto() {
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('photo-canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    photoData = canvas.toDataURL('image/jpeg', 0.8);
+    document.getElementById('photo-preview').src = photoData;
+    video.style.display = 'none';
+    document.getElementById('photo-preview').style.display = 'block';
+    document.getElementById('btn-capture').style.display = 'none';
+    document.getElementById('btn-retake').style.display = 'inline-block';
+  }
+
+  function retakePhoto() {
+    photoData = null;
+    document.getElementById('photo-preview').style.display = 'none';
+    document.getElementById('camera').style.display = 'block';
+    document.getElementById('btn-retake').style.display = 'none';
+    document.getElementById('btn-capture').style.display = 'inline-block';
+  }
+
+  function setAction(action) {
+    currentAction = action;
+    document.getElementById('btn-in').style.border = action === 'IN' ? '3px solid #1b5e20' : '3px solid transparent';
+    document.getElementById('btn-out').style.border = action === 'OUT' ? '3px solid #b71c1c' : '3px solid transparent';
+    document.getElementById('btn-submit').textContent = 'SUBMIT CHECK-' + action;
+    validateForm();
+  }
+
+  // QR scan / manual entry
+  document.getElementById('emp-qr').addEventListener('input', function() {
+    const val = this.value.trim();
+    if (val.length >= 3) {
+      lookupEmployee(val);
+    }
+  });
+
+  function lookupEmployee(code) {
+    frappe.call({
+      method: 'elemental_erp.api.lookup_employee_by_qr',
+      args: { qr_or_code: code },
+      callback: function(r) {
+        if (r.message && r.message.found) {
+          employeeCode = r.message.employee;
+          document.getElementById('emp-name').textContent = r.message.employee_name;
+          document.getElementById('emp-dept').textContent = r.message.department + ' | ' + r.message.designation;
+          document.getElementById('emp-info').style.display = 'block';
+          validateForm();
+        } else {
+          employeeCode = null;
+          document.getElementById('emp-info').style.display = 'none';
+          validateForm();
+        }
+      }
+    });
+  }
+
+  function validateForm() {
+    const btn = document.getElementById('btn-submit');
+    if (employeeCode && photoData) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    } else {
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+    }
+  }
+
+  function submitCheckin() {
+    if (!employeeCode) { alert('Please scan employee QR first'); return; }
+    if (!photoData) { alert('Please take a site photo'); return; }
+
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.textContent = '⏳ Submitting...';
+
+    frappe.call({
+      method: 'elemental_erp.api.installation_self_checkin',
+      args: {
+        employee: employeeCode,
+        action: currentAction,
+        photo: photoData,
+        latitude: latitude,
+        longitude: longitude,
+        address: document.getElementById('site-address').value || ''
+      },
+      callback: function(r) {
+        if (r.message && r.message.success) {
+          showStatus('✅ ' + r.message.message, '#e8f5e9', '#2e7d32');
+          loadRecentCheckins();
+          // Reset form
+          retakePhoto();
+          document.getElementById('emp-qr').value = '';
+          employeeCode = null;
+          document.getElementById('emp-info').style.display = 'none';
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+          btn.textContent = 'SUBMIT CHECK-IN';
+        } else {
+          showStatus('❌ ' + (r.message ? r.message.message : 'Error'), '#ffebee', '#c62828');
+          btn.disabled = false;
+          btn.textContent = 'SUBMIT CHECK-' + currentAction;
+        }
+      },
+      error: function(err) {
+        showStatus('❌ Error: ' + err, '#ffebee', '#c62828');
+        btn.disabled = false;
+        btn.textContent = 'SUBMIT CHECK-' + currentAction;
+      }
+    });
+  }
+
+  function showStatus(msg, bg, color) {
+    const el = document.getElementById('status-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+    el.style.background = bg;
+    el.style.color = color;
+    setTimeout(() => { el.style.display = 'none'; }, 5000);
+  }
+
+  function loadRecentCheckins() {
+    frappe.call({
+      method: 'elemental_erp.api.get_today_checkins',
+      callback: function(r) {
+        if (r.message && r.message.length > 0) {
+          let html = '';
+          r.message.forEach(c => {
+            html += '<div style="padding:8px; margin:4px 0; background:#f5f5f5; border-radius:4px; font-size:13px;">' +
+              '<b>' + c.employee_name + '</b> — ' +
+              '<span style="color:' + (c.log_type === 'IN' ? '#2e7d32' : '#c62828') + ';">' + c.log_type + '</span> ' +
+              c.time + (c.source ? ' (' + c.source + ')' : '') +
+              (c.has_photo ? ' 📸' : '') +
+              '</div>';
+          });
+          document.getElementById('recent-list').innerHTML = html;
+          document.getElementById('recent-section').style.display = 'block';
+        }
+      }
+    });
+  }
+
+  // Load recent on page load
+  loadRecentCheckins();
+</script>
+{% endblock %}

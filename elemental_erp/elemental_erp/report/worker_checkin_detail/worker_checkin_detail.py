@@ -65,7 +65,8 @@ def build_day_row(emp, date_str, sno):
             "employee": emp.name,
             "time": ["between", [f"{date_str} 00:00:00", f"{date_str} 23:59:59"]],
         },
-        fields=["log_type", "time", "employee"],
+        fields=["log_type", "time", "employee", "latitude", "longitude",
+                "checkin_photo", "checkin_address", "checkin_source"],
         order_by="time asc",
     )
 
@@ -125,9 +126,21 @@ def build_day_row(emp, date_str, sno):
 
     # Build entry strings: "IN 9:00AM → OUT 1:30PM → IN 2:15PM → OUT 6:45PM"
     entry_parts = []
+    has_photo = False
+    gps_info = ""
+    source_info = ""
+    address_info = ""
     for c in checkins:
         t = format_time(c["time"])
         entry_parts.append(f"{c['log_type']} {t}")
+        if c.get("checkin_photo"):
+            has_photo = True
+        if c.get("latitude") and c.get("longitude"):
+            gps_info = f"{c['latitude']:.6f}, {c['longitude']:.6f}"
+        if c.get("checkin_source") and not source_info:
+            source_info = c["checkin_source"]
+        if c.get("checkin_address") and not address_info:
+            address_info = c["checkin_address"]
 
     entries_str = " → ".join(entry_parts) if entry_parts else ""
 
@@ -151,7 +164,7 @@ def build_day_row(emp, date_str, sno):
         "date": date_str,
         "day": getdate(date_str).strftime("%a"),
         "day_type": day_type,
-        "source": source,
+        "source": source_info or source,
         "entries": entries_str,
         "entry_count": in_count + out_count,
         "first_in": format_time(first_in),
@@ -161,6 +174,9 @@ def build_day_row(emp, date_str, sno):
         "ot_hours_fmt": format_hhmm(ot_hours),
         "in_count": in_count,
         "out_count": out_count,
+        "has_photo": "📸" if has_photo else "",
+        "gps": gps_info,
+        "address": address_info,
     }
 
 
@@ -203,4 +219,7 @@ def get_columns():
         {"label": "OT", "fieldname": "ot_hours_fmt", "fieldtype": "Data", "width": 55},
         {"label": "INs", "fieldname": "in_count", "fieldtype": "Int", "width": 40},
         {"label": "OUTs", "fieldname": "out_count", "fieldtype": "Int", "width": 40},
+        {"label": "", "fieldname": "has_photo", "fieldtype": "Data", "width": 30},
+        {"label": "GPS Location", "fieldname": "gps", "fieldtype": "Data", "width": 160},
+        {"label": "Site Address", "fieldname": "address", "fieldtype": "Small Text", "width": 200},
     ]

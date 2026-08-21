@@ -124,5 +124,51 @@
   "read_only": 1,
   "description": "Auto-calculated: OT Hours × Hourly Rate × 2 (as per govt norm)",
   "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Employee-checkin_photo",
+  "dt": "Employee Checkin",
+  "fieldname": "checkin_photo",
+  "label": "Site Photo",
+  "fieldtype": "Attach Image",
+  "insert_after": "geolocation",
+  "description": "Photo taken at check-in/out (self-checkin from mobile)",
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Employee-checkin_address",
+  "dt": "Employee Checkin",
+  "fieldname": "checkin_address",
+  "label": "Site Address / Landmark",
+  "fieldtype": "Small Text",
+  "insert_after": "checkin_photo",
+  "description": "Auto-filled from GPS or entered manually",
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Employee-checkin_source",
+  "dt": "Employee Checkin",
+  "fieldname": "checkin_source",
+  "label": "Check-in Source",
+  "fieldtype": "Select",
+  "options": "\nGate QR\nSelf (Mobile)\nManual (HR)",
+  "insert_after": "checkin_address",
+  "default": "Gate QR",
+  "description": "How this checkin was recorded",
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Employee-installation_worker",
+  "dt": "Employee",
+  "fieldname": "installation_worker",
+  "label": "Installation Worker",
+  "fieldtype": "Check",
+  "insert_after": "employee_category",
+  "description": "Enable if worker is deployed at installation sites (uses mobile self-checkin)",
+  "module": "Elemental ERP"
  }
 ]
