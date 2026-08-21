@@ -1057,26 +1057,12 @@ def get_dashboard_data():
 	)[0]
 	total_indent_value = cost_row[0] if cost_row else 0
 
-	manpower_row = frappe.db.sql(
-		"""
-		SELECT COALESCE(SUM(design_cost), 0) + COALESCE(SUM(data_entry_cost), 0)
-		       + COALESCE(SUM(production_cost), 0) + COALESCE(SUM(packaging_cost), 0)
-		       + COALESCE(SUM(dispatch_cost), 0) AS total
-		FROM (
-		  SELECT design_cost, 0 AS data_entry_cost, 0 AS production_cost,
-		         0 AS packaging_cost, 0 AS dispatch_cost FROM `tabDesign Task`
-		  UNION ALL
-		  SELECT 0, data_entry_cost, 0, 0, 0 FROM `tabData Entry Task`
-		  UNION ALL
-		  SELECT 0, 0, production_cost, 0, 0 FROM `tabProduction Entry` WHERE docstatus=1
-		  UNION ALL
-		  SELECT 0, 0, 0, packaging_cost, 0 FROM `tabPackaging Entry` WHERE docstatus=1
-		  UNION ALL
-		  SELECT 0, 0, 0, 0, dispatch_cost FROM `tabDispatch Entry` WHERE docstatus=1
-		) t
-		""",
-	)[0]
-	total_manpower = manpower_row[0] if manpower_row else 0
+	design_cost = frappe.db.sql("SELECT COALESCE(SUM(design_cost), 0) FROM `tabDesign Task`")[0][0]
+	data_entry_cost = frappe.db.sql("SELECT COALESCE(SUM(data_entry_cost), 0) FROM `tabData Entry Task`")[0][0]
+	production_cost = frappe.db.sql("SELECT COALESCE(SUM(production_cost), 0) FROM `tabProduction Entry` WHERE docstatus=1")[0][0]
+	packaging_cost = frappe.db.sql("SELECT COALESCE(SUM(packaging_cost), 0) FROM `tabPackaging Entry` WHERE docstatus=1")[0][0]
+	dispatch_cost = frappe.db.sql("SELECT COALESCE(SUM(dispatch_cost), 0) FROM `tabDispatch Entry` WHERE docstatus=1")[0][0]
+	total_manpower = (design_cost or 0) + (data_entry_cost or 0) + (production_cost or 0) + (packaging_cost or 0) + (dispatch_cost or 0)
 	total_cost = total_indent_value + total_manpower
 	avg_margin_pct = round(((total_revenue - total_cost) / total_revenue * 100), 1) if total_revenue else 0
 
@@ -1118,8 +1104,8 @@ def get_dashboard_data():
 		month_start = (frappe.utils.getdate(now) - relativedelta(months=i)).replace(day=1)
 		month_end = month_start + relativedelta(months=1)
 		label = month_start.strftime("%b %Y")
-		created = frappe.db.count("Job", {"creation": [">=", str(month_start), "<", str(month_end)]})
-		closed = frappe.db.count("Job", {"status": "Closed", "modified": [">=", str(month_start), "<", str(month_end)]})
+		created = frappe.db.count("Job", [["creation", ">=", str(month_start)], ["creation", "<", str(month_end)]])
+		closed = frappe.db.count("Job", [["status", "=", "Closed"], ["modified", ">=", str(month_start)], ["modified", "<", str(month_end)]])
 		monthly_jobs.append({"label": label, "created": created, "closed": closed})
 
 	dept_rows = frappe.db.sql(
