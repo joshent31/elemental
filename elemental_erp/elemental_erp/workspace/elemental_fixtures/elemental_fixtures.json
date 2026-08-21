@@ -231,24 +231,21 @@
     },
     {
       "color": "Green",
-      "doc_view": "List",
       "label": "Elemental Quotation",
-      "link_to": "Elemental Quotation",
-      "type": "DocType"
+      "url": "/app/elemental-quotation",
+      "type": "URL"
     },
     {
       "color": "Green",
-      "doc_view": "List",
       "label": "Job",
-      "link_to": "Job",
-      "type": "DocType"
+      "url": "/app/job",
+      "type": "URL"
     },
     {
       "color": "Blue",
-      "doc_view": "List",
       "label": "Finished Good",
-      "link_to": "Finished Good",
-      "type": "DocType"
+      "url": "/app/finished-good",
+      "type": "URL"
     },
     {
       "color": "Blue",
@@ -264,71 +261,62 @@
     },
     {
       "color": "Yellow",
-      "doc_view": "List",
       "label": "Material Indent",
-      "link_to": "Material Indent",
-      "type": "DocType"
+      "url": "/app/material-indent",
+      "type": "URL"
     },
     {
       "color": "Purple",
-      "doc_view": "List",
       "label": "Production Entry",
-      "link_to": "Production Entry",
-      "type": "DocType"
+      "url": "/app/production-entry",
+      "type": "URL"
     },
     {
       "color": "Orange",
-      "doc_view": "List",
       "label": "QR Code Master",
-      "link_to": "QR Code Master",
-      "type": "DocType"
+      "url": "/app/qr-code-master",
+      "type": "URL"
     },
     {
       "color": "Cyan",
-      "doc_view": "List",
       "label": "Packaging Entry",
-      "link_to": "Packaging Entry",
-      "type": "DocType"
+      "url": "/app/packaging-entry",
+      "type": "URL"
     },
     {
       "color": "Red",
-      "doc_view": "List",
       "label": "Dispatch Entry",
-      "link_to": "Dispatch Entry",
-      "type": "DocType"
+      "url": "/app/dispatch-entry",
+      "type": "URL"
     },
     {
       "color": "Grey",
       "label": "Job Consumption Report",
-      "link_to": "Job Consumption Report",
-      "type": "Report"
+      "url": "/app/job-consumption-report",
+      "type": "URL"
     },
     {
       "label": "Work from Home Request",
-      "link_to": "Work from Home Request",
-      "type": "DocType",
-      "doc_view": "List",
+      "url": "/app/work-from-home-request",
+      "type": "URL",
       "color": "Purple"
     },
     {
       "label": "WFH Summary Report",
-      "link_to": "WFH Summary",
-      "type": "Report",
-      "doc_view": "",
+      "url": "/app/wfh-summary",
+      "type": "URL",
       "color": "Grey"
     },
     {
       "label": "Worker Attendance Report",
-      "link_to": "Worker Attendance Report",
-      "type": "Report",
-      "doc_view": "",
+      "url": "/app/worker-attendance-report",
+      "type": "URL",
       "color": "Red"
     },
     {
       "label": "Worker OT Summary (Govt)",
-      "link_to": "Worker OT Summary",
-      "type": "Report",
-      "doc_view": "",
+      "url": "/app/worker-ot-summary",
+      "type": "URL",
       "color": "Orange"
     }
   ],
