@@ -18,24 +18,31 @@ app_include_js = "/assets/elemental_erp/js/job.js"
 # the word " from " which matches Frappe's IS_QUERY_PREDICATE_PATTERN
 # regex when fields get table-prefixed during query building.
 #
-# FIX: Wrap DatabaseQuery.sanitize_fields so it strips table prefixes
-# before the check, then re-adds them afterward.
+# FIX: For this specific doctype, strip all tab-prefixed table names
+# from fields before sanitize_fields runs, then restore afterward.
 # ------------------------------------------------------------------
 import frappe
 from frappe.model.db_query import DatabaseQuery as _DQ
 
 _original_sanitize = _DQ.sanitize_fields
-import re as _re
-_table_prefix_re = _re.compile(r"`?tab[\w ]+`?\\.")
+
+# Matches: `tabWork from Home Request`.`name` or tabWork from Home Request.name
+_tab_re = __import__("re").compile(r"`?tab[^`.]+`?\.`?(\w+)`?")
+
+
+def _strip_tab(field):
+	"""Strip table prefix from a field, returning just the column name."""
+	field = str(field)
+	m = _tab_re.match(field.strip())
+	if m:
+		return m.group(1)
+	return field.strip().replace("`", "")
 
 
 def _safe_sanitize_fields(self):
 	if getattr(self, "doctype", "") == "Work from Home Request":
-		_stripped = []
-		for f in self.fields:
-			_stripped.append(_table_prefix_re.sub("", str(f)))
-		_orig = self.fields
-		self.fields = _stripped
+		_orig = list(self.fields)
+		self.fields = [_strip_tab(f) for f in self.fields]
 		try:
 			return _original_sanitize(self)
 		finally:
