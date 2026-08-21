@@ -1,6 +1,6 @@
 {
     "charts": [],
-    "content": "[{\"id\":\"eh01hd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Elemental Fixtures - Retail Furniture ERP</b></span>\",\"col\":12}},{\"id\":\"eh02md\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Management Dashboard\",\"col\":4}},{\"id\":\"eh03qt\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Elemental Quotation\",\"col\":4}},{\"id\":\"eh04jb\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Job\",\"col\":4}},{\"id\":\"eh05fg\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Finished Good\",\"col\":4}},{\"id\":\"eh06ps\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Scan Menu (Mobile App)\",\"col\":4}},{\"id\":\"eh07gs\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Gate Check-in/Out (Mobile App)\",\"col\":4}},{\"id\":\"eh08mi\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Material Indent\",\"col\":4}},{\"id\":\"eh09pe\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Entry\",\"col\":4}},{\"id\":\"eh10qr\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"QR Code Master\",\"col\":4}},{\"id\":\"eh11pk\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Packaging Entry\",\"col\":4}},{\"id\":\"eh12dp\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dispatch Entry\",\"col\":4}},{\"id\":\"eh13jc\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Job Consumption Report\",\"col\":4}},{\"id\":\"eh14wf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Work from Home Request\",\"col\":4}},{\"id\":\"eh15ws\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"WFH Summary Report\",\"col\":4}},{\"id\":\"eh16wa\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Worker Attendance Report\",\"col\":4}},{\"id\":\"eh17wo\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Worker OT Summary (Govt)\",\"col\":4}},{\"id\":\"eh18wc\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Worker Checkin Detail\",\"col\":4}}]",
+    "content": "[{\"id\":\"eh01hd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Elemental Fixtures - Retail Furniture ERP</b></span>\",\"col\":12}}]",
     "creation": "2026-08-21 10:00:00.000000",
     "custom_blocks": [],
     "doctype": "Workspace",
@@ -12,6 +12,12 @@
     "label": "Elemental Fixtures",
     "links": [
         {
+            "type": "Card Break",
+            "label": "Pages",
+            "icon": "list",
+            "link_count": -1
+        },
+        {
             "hidden": 0,
             "is_query_report": 0,
             "label": "Management Dashboard",
@@ -20,6 +26,32 @@
             "link_type": "Page",
             "onboard": 1,
             "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Production Scan Menu (Mobile App)",
+            "link_count": 0,
+            "link_to": "scan-menu",
+            "link_type": "Page",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Gate Check-in/Out (Mobile App)",
+            "link_count": 0,
+            "link_to": "gate-scan",
+            "link_type": "Page",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "type": "Card Break",
+            "label": "DocTypes",
+            "icon": "application",
+            "link_count": -1
         },
         {
             "hidden": 0,
@@ -48,26 +80,6 @@
             "link_count": 0,
             "link_to": "Finished Good",
             "link_type": "DocType",
-            "onboard": 1,
-            "type": "Link"
-        },
-        {
-            "hidden": 0,
-            "is_query_report": 0,
-            "label": "Production Scan Menu (Mobile App)",
-            "link_count": 0,
-            "link_to": "scan-menu",
-            "link_type": "Page",
-            "onboard": 1,
-            "type": "Link"
-        },
-        {
-            "hidden": 0,
-            "is_query_report": 0,
-            "label": "Gate Check-in/Out (Mobile App)",
-            "link_count": 0,
-            "link_to": "gate-scan",
-            "link_type": "Page",
             "onboard": 1,
             "type": "Link"
         },
@@ -123,21 +135,27 @@
         },
         {
             "hidden": 0,
-            "is_query_report": 1,
-            "label": "Job Consumption Report",
-            "link_count": 0,
-            "link_to": "Job Consumption Report",
-            "link_type": "Report",
-            "onboard": 1,
-            "type": "Link"
-        },
-        {
-            "hidden": 0,
             "is_query_report": 0,
             "label": "Work from Home Request",
             "link_count": 0,
             "link_to": "Work from Home Request",
             "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "type": "Card Break",
+            "label": "Reports",
+            "icon": "chart-bar",
+            "link_count": -1
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 1,
+            "label": "Job Consumption Report",
+            "link_count": 0,
+            "link_to": "Job Consumption Report",
+            "link_type": "Report",
             "onboard": 1,
             "type": "Link"
         },
@@ -193,118 +211,6 @@
     "restrict_to_domain": "",
     "roles": [],
     "sequence_id": 25,
-    "shortcuts": [
-        {
-            "color": "Blue",
-            "label": "Management Dashboard",
-            "link_to": "management-dashboard",
-            "type": "Page"
-        },
-        {
-            "color": "Green",
-            "doc_view": "List",
-            "label": "Elemental Quotation",
-            "link_to": "Elemental Quotation",
-            "type": "DocType"
-        },
-        {
-            "color": "Green",
-            "doc_view": "List",
-            "label": "Job",
-            "link_to": "Job",
-            "type": "DocType"
-        },
-        {
-            "color": "Blue",
-            "doc_view": "List",
-            "label": "Finished Good",
-            "link_to": "Finished Good",
-            "type": "DocType"
-        },
-        {
-            "color": "Blue",
-            "label": "Production Scan Menu (Mobile App)",
-            "link_to": "scan-menu",
-            "type": "Page"
-        },
-        {
-            "color": "Green",
-            "label": "Gate Check-in/Out (Mobile App)",
-            "link_to": "gate-scan",
-            "type": "Page"
-        },
-        {
-            "color": "Yellow",
-            "doc_view": "List",
-            "label": "Material Indent",
-            "link_to": "Material Indent",
-            "type": "DocType"
-        },
-        {
-            "color": "Purple",
-            "doc_view": "List",
-            "label": "Production Entry",
-            "link_to": "Production Entry",
-            "type": "DocType"
-        },
-        {
-            "color": "Orange",
-            "doc_view": "List",
-            "label": "QR Code Master",
-            "link_to": "QR Code Master",
-            "type": "DocType"
-        },
-        {
-            "color": "Cyan",
-            "doc_view": "List",
-            "label": "Packaging Entry",
-            "link_to": "Packaging Entry",
-            "type": "DocType"
-        },
-        {
-            "color": "Red",
-            "doc_view": "List",
-            "label": "Dispatch Entry",
-            "link_to": "Dispatch Entry",
-            "type": "DocType"
-        },
-        {
-            "color": "Grey",
-            "label": "Job Consumption Report",
-            "link_to": "Job Consumption Report",
-            "type": "Report"
-        },
-        {
-            "color": "Purple",
-            "doc_view": "List",
-            "label": "Work from Home Request",
-            "link_to": "Work from Home Request",
-            "type": "DocType"
-        },
-        {
-            "color": "Grey",
-            "label": "WFH Summary Report",
-            "link_to": "WFH Summary",
-            "type": "Report"
-        },
-        {
-            "color": "Red",
-            "label": "Worker Attendance Report",
-            "link_to": "Worker Attendance Report",
-            "type": "Report"
-        },
-        {
-            "color": "Orange",
-            "label": "Worker OT Summary (Govt)",
-            "link_to": "Worker OT Summary",
-            "type": "Report"
-        },
-        {
-            "color": "Grey",
-            "label": "Worker Checkin Detail",
-            "link_to": "Worker Checkin Detail",
-            "type": "Report"
-        }
-    ],
+    "shortcuts": [],
     "title": "Elemental Fixtures"
 }
