@@ -64,12 +64,12 @@ frappe.ui.form.on("Work from Home Request", {
 				"Reject",
 				() => {
 					frappe.prompt(
-						{
-							fieldname: "reason",
-							label: "Rejection Reason",
-							fieldtype": "Small Text",
-							reqd: 1,
-						},
+							{
+								fieldname: "reason",
+								label: "Rejection Reason",
+								fieldtype: "Small Text",
+								reqd: 1,
+							},
 						(values) => {
 							frappe.call({
 								method: "elemental_erp.api.reject_wfh",
