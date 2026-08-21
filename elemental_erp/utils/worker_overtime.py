@@ -60,12 +60,14 @@ def hourly_rate(employee, year=None, month=None):
         June (30 days):   16913 / 30 / 8 = 70.47
         Feb (28 days):    16913 / 28 / 8 = 75.50
     """
-    emp = frappe.db.get_value(
-        "Employee", employee,
-        ["ctc", "employee_category"],
-        as_dict=True,
-    )
-    if not emp or emp.employee_category != "Worker":
+    has_cat = frappe.db.column_exists("Employee", "employee_category")
+    fields = ["ctc"]
+    if has_cat:
+        fields.append("employee_category")
+    emp = frappe.db.get_value("Employee", employee, fields, as_dict=True)
+    if not emp:
+        return 0
+    if has_cat and emp.employee_category != "Worker":
         return 0
 
     ctc = emp.ctc or 0
@@ -81,8 +83,14 @@ def hourly_rate(employee, year=None, month=None):
 
 def daily_rate(employee, year=None, month=None):
     """Daily Rate = Monthly Salary / Days in Month."""
-    emp = frappe.db.get_value("Employee", employee, ["ctc", "employee_category"], as_dict=True)
-    if not emp or emp.employee_category != "Worker":
+    has_cat = frappe.db.column_exists("Employee", "employee_category")
+    fields = ["ctc"]
+    if has_cat:
+        fields.append("employee_category")
+    emp = frappe.db.get_value("Employee", employee, fields, as_dict=True)
+    if not emp:
+        return 0
+    if has_cat and emp.employee_category != "Worker":
         return 0
 
     ctc = emp.ctc or 0
@@ -104,12 +112,14 @@ def compute_daily_ot(employee, date, is_holiday=False):
 
     Returns dict with in_time, out_time, total_hours, ot_hours, ot_amount.
     """
-    emp = frappe.db.get_value(
-        "Employee", employee,
-        ["employee_category", "standard_shift_hours", "ctc"],
-        as_dict=True,
-    )
-    if not emp or emp.employee_category != "Worker":
+    has_cat = frappe.db.column_exists("Employee", "employee_category")
+    fields = ["standard_shift_hours", "ctc"]
+    if has_cat:
+        fields.append("employee_category")
+    emp = frappe.db.get_value("Employee", employee, fields, as_dict=True)
+    if not emp:
+        return None
+    if has_cat and emp.employee_category != "Worker":
         return None
 
     shift = emp.standard_shift_hours or STANDARD_SHIFT
@@ -201,14 +211,15 @@ def compute_monthly_summary(employee, year, month):
     - Cash to Worker: Total OT Amount (1×) − Salary Slip Amount (2×)
     - Total Earnings: Attendance Salary + Total OT Amount (1×)
     """
-    emp = frappe.db.get_value(
-        "Employee", employee,
-        ["employee_name", "department", "designation", "ctc",
-         "employee_category", "standard_shift_hours", "company",
-         "branch"],
-        as_dict=True,
-    )
-    if not emp or emp.employee_category != "Worker":
+    has_cat = frappe.db.column_exists("Employee", "employee_category")
+    fields = ["employee_name", "department", "designation", "ctc",
+              "standard_shift_hours", "company", "branch"]
+    if has_cat:
+        fields.append("employee_category")
+    emp = frappe.db.get_value("Employee", employee, fields, as_dict=True)
+    if not emp:
+        return None
+    if has_cat and emp.employee_category != "Worker":
         return None
 
     shift = emp.standard_shift_hours or STANDARD_SHIFT
@@ -434,7 +445,10 @@ def get_worker_attendance_report_data(year, month, department=None, location=Non
 
     Run at month end when all checkin data is complete.
     """
-    filters = {"employee_category": "Worker"}
+    filters = {}
+    has_cat = frappe.db.column_exists("Employee", "employee_category")
+    if has_cat:
+        filters["employee_category"] = "Worker"
     if department:
         filters["department"] = department
 

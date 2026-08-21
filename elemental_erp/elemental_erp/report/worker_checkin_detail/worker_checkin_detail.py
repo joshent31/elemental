@@ -28,8 +28,11 @@ def execute(filters=None):
     month_start = f"{year}-{month:02d}-01"
     month_end = f"{year}-{month:02d}-{days_in_month}"
 
-    # Get workers
-    emp_filters = {"employee_category": "Worker"}
+    # Get workers — filter by employee_category only if the custom field exists
+    emp_filters = {}
+    has_category = frappe.db.column_exists("Employee", "employee_category")
+    if has_category:
+        emp_filters["employee_category"] = "Worker"
     if employee:
         emp_filters["name"] = employee
     if department:

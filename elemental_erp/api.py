@@ -1244,12 +1244,14 @@ def calculate_slip_ot(employee, start_date, end_date):
 	)
 	from frappe.utils import getdate, date_diff, add_days
 
-	emp = frappe.db.get_value(
-		"Employee", employee,
-		["employee_category", "ctc", "standard_shift_hours"],
-		as_dict=True,
-	)
-	if not emp or emp.employee_category != "Worker":
+	has_cat = frappe.db.column_exists("Employee", "employee_category")
+	fields = ["ctc", "standard_shift_hours"]
+	if has_cat:
+		fields.append("employee_category")
+	emp = frappe.db.get_value("Employee", employee, fields, as_dict=True)
+	if not emp:
+		return None
+	if has_cat and emp.employee_category != "Worker":
 		return None
 
 	_start = getdate(start_date)
@@ -1314,10 +1316,15 @@ def lookup_employee_by_qr(qr_or_code):
 	"""Look up employee by QR value or employee code.
 	Returns employee info for the self-checkin page."""
 	# Try QR value first
+	has_cat = frappe.db.column_exists("Employee", "employee_category")
+	_emp_fields = ["name", "employee_name", "department", "designation"]
+	if has_cat:
+		_emp_fields.append("employee_category")
+
 	emp = frappe.db.get_value(
 		"Employee",
 		{"employee_qr_value": qr_or_code},
-		["name", "employee_name", "department", "designation", "employee_category"],
+		_emp_fields,
 		as_dict=True,
 	)
 	if not emp:
@@ -1325,7 +1332,7 @@ def lookup_employee_by_qr(qr_or_code):
 		emp = frappe.db.get_value(
 			"Employee",
 			{"name": qr_or_code},
-			["name", "employee_name", "department", "designation", "employee_category"],
+			_emp_fields,
 			as_dict=True,
 		)
 	if not emp:
@@ -1337,7 +1344,7 @@ def lookup_employee_by_qr(qr_or_code):
 		"employee_name": emp.employee_name,
 		"department": emp.department or "",
 		"designation": emp.designation or "",
-		"category": emp.employee_category or "",
+		"category": getattr(emp, "employee_category", None) or "",
 	}
 
 
