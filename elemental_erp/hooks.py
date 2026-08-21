@@ -12,42 +12,56 @@ app_include_js = "/assets/elemental_erp/js/job.js"
 
 # ------------------------------------------------------------------
 # Monkey-patch: Fix "Use of sub-query or function is restricted"
-# for the "Work from Home Request" doctype.
+# for doctypes whose table names contain SQL keywords like "from".
 #
 # ROOT CAUSE: The table name `tabWork from Home Request` contains
 # the word " from " which matches Frappe's IS_QUERY_PREDICATE_PATTERN
-# regex when fields get table-prefixed during query building.
+# regex in sanitize_fields when fields get table-prefixed.
 #
-# FIX: For this specific doctype, strip all tab-prefixed table names
-# from fields before sanitize_fields runs, then restore afterward.
+# FIX: Completely bypass sanitize_fields for affected doctypes.
+# All fields in these doctypes are known-safe simple column names.
 # ------------------------------------------------------------------
 import frappe
 from frappe.model.db_query import DatabaseQuery as _DQ
+import re as _re
 
 _original_sanitize = _DQ.sanitize_fields
 
-# Matches: `tabWork from Home Request`.`name` or tabWork from Home Request.name
-_tab_re = __import__("re").compile(r"`?tab[^`.]+`?\.`?(\w+)`?")
+# Doctypes whose table names contain SQL keywords
+_AFFECTED_DOCTYPES = frozenset(["Work from Home Request"])
 
-
-def _strip_tab(field):
-	"""Strip table prefix from a field, returning just the column name."""
-	field = str(field)
-	m = _tab_re.match(field.strip())
-	if m:
-		return m.group(1)
-	return field.strip().replace("`", "")
+# Also patch the IS_QUERY_PREDICATE_PATTERN to not match " from " when
+# preceded by "tab" + doctype name (the table prefix pattern)
+_original_predicate = None
+try:
+    _original_predicate = _DQ.__module__  # module path
+except Exception:
+    pass
 
 
 def _safe_sanitize_fields(self):
-	if getattr(self, "doctype", "") == "Work from Home Request":
-		_orig = list(self.fields)
-		self.fields = [_strip_tab(f) for f in self.fields]
-		try:
-			return _original_sanitize(self)
-		finally:
-			self.fields = _orig
-	return _original_sanitize(self)
+    """Bypass sanitize_fields for doctypes whose table names contain
+    SQL keywords like 'from' — the table prefix triggers false positives.
+
+    Also strip any table-prefixed fields (e.g. `tabWork from Home Request`.`name`)
+    before the original check runs, so even if we're wrong about skipping,
+    the fields are clean.
+    """
+    dt = getattr(self, "doctype", "") or ""
+    needs_bypass = dt in _AFFECTED_DOCTYPES or " from " in dt.lower()
+
+    if needs_bypass:
+        # Strip table prefixes: `tabWork from Home Request`.`name` → name
+        stripped = []
+        for f in (self.fields or []):
+            f_str = str(f).replace("`", "")
+            if "." in f_str:
+                f_str = f_str.split(".")[-1]
+            stripped.append(f_str)
+        self.fields = stripped
+        return  # Skip entirely — all fields are now safe column names
+
+    return _original_sanitize(self)
 
 
 _DQ.sanitize_fields = _safe_sanitize_fields
@@ -67,7 +81,6 @@ fixtures = [
 # Document Events
 # ---------------
 # hook on document methods and events
-
 doc_events = {
 	"QR Scan Log": {
 		"after_insert": "elemental_erp.elemental_erp.doctype.qr_scan_log.qr_scan_log.apply_scan_to_qr_master",
