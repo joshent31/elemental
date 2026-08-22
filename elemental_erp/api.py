@@ -543,21 +543,41 @@ def _resolve_supplier(supplier):
 	return new_supplier.name
 
 
+def _resolve_supplier_for_items(shortfall_rows):
+	"""Look up the default supplier from the Item Supplier Elemental
+	child table on the first shortfall item. Returns the supplier name
+	or None if no default is configured."""
+	for row in shortfall_rows:
+		supplier = frappe.db.get_value(
+			"Item Supplier Elemental",
+			{"parent": row.raw_material, "is_default": 1},
+			"supplier",
+		)
+		if supplier:
+			return supplier
+	return None
+
+
 def _create_po_from_indent_doc(indent, supplier=None):
 	"""Core logic shared by the manual API call and the automatic creation
 	that fires the moment a Material Indent is approved (submitted). Takes
 	the already-validated in-memory indent doc, since its shortfall_qty
 	values were just computed in validate(). Returns None if there's no
-	shortfall to buy."""
+	shortfall to buy, or if no supplier can be resolved."""
 	shortfall_rows = [row for row in indent.items if (row.shortfall_qty or 0) > 0]
 	if not shortfall_rows:
+		return None
+
+	# Resolve supplier: explicit arg > Item's default supplier > bail out
+	resolved = _resolve_supplier(supplier) if supplier else _resolve_supplier_for_items(shortfall_rows)
+	if not resolved:
 		return None
 
 	po = frappe.get_doc(
 		{
 			"doctype": "Purchase Order",
 			"company": _default_company(),
-			"supplier": _resolve_supplier(supplier),
+			"supplier": resolved,
 			"transaction_date": frappe.utils.nowdate(),
 			"schedule_date": frappe.utils.add_days(frappe.utils.nowdate(), 7),
 			"items": [
