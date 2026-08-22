@@ -162,8 +162,8 @@ one profile that matches your job — e.g. `Elemental - Packaging User`.
 | Sales / CS | Elemental Sales User / HOD | Create Quotations, create Jobs, track Sales Invoices |
 | Design | Elemental Design User / HOD | Design Tasks, scan at `/design-scan` |
 | Data Entry | Elemental Data Entry User / HOD | Create Finished Goods, Subparts, BOMs; Data Entry Tasks |
-| Costing | Elemental Costing User / HOD | Pull BOM into Material Indents, Job Material Consumption, Job Consumption Report |
-| Purchase | Elemental Purchase User / HOD | Purchase Orders, Suppliers, review Material Indents |
+| Costing | Elemental Costing User / HOD | Maintain Item masters, pull BOM into Material Indents, Job Material Consumption, Job Consumption Report |
+| Purchase | Elemental Purchase User / HOD | Maintain Item masters and supplier mappings, Purchase Orders, Suppliers, review Material Indents |
 | Production | Elemental Production User / HOD | Material Issues, Production Entries, Department Transfers, `/transfer-out` & `/transfer-in` |
 | QC | Elemental QC User / HOD | QC Inspections, `/qc-scan` |
 | Packaging | Elemental Packaging User / HOD | Packaging Entries, Packing Boxes, `/pack-box`, own Material Indents |
