@@ -170,5 +170,28 @@
   "insert_after": "employee_category",
   "description": "Enable if worker is deployed at installation sites (uses mobile self-checkin)",
   "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Item-section_suppliers_elemental",
+  "dt": "Item",
+  "fieldname": "section_suppliers_elemental",
+  "label": "Preferred Suppliers (Elemental)",
+  "fieldtype": "Section Break",
+  "insert_after": "supplier_items",
+  "collapsible": 0,
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Item-item_suppliers_elemental",
+  "dt": "Item",
+  "fieldname": "item_suppliers_elemental",
+  "label": "Preferred Suppliers",
+  "fieldtype": "Table",
+  "options": "Item Supplier Elemental",
+  "insert_after": "section_suppliers_elemental",
+  "description": "Suppliers for this item with part numbers and default flag. Used by Material Indent to auto-select supplier on Purchase Orders.",
+  "module": "Elemental ERP"
  }
 ]
