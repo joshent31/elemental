@@ -14,6 +14,16 @@ class Job(Document):
 			if not row.added_on:
 				row.added_on = frappe.utils.now_datetime()
 
+		if is_new_job and self.status == "Draft":
+			self.status = "Job Created"
+
+	def on_update(self):
+		"""Generate trackers AFTER the document has its final name.
+
+		validate() runs before naming_series resolves the docname,
+		so inserting child docs there would link them to the temporary
+		placeholder (new-job-xxxxx) instead of the real name.
+		"""
 		# generate QR / Design / QC trackers for any FG row that doesn't
 		# have them yet — covers both the original items at Job creation
 		# AND any FG the customer adds later, mid-Job. Idempotent: rows
@@ -24,9 +34,6 @@ class Job(Document):
 		# whichever save first has fg_items, and left alone after that
 		if self.fg_items:
 			generate_data_entry_task_for_job(self)
-
-		if is_new_job and self.status == "Draft":
-			self.status = "Job Created"
 
 	def _block_edits_if_closed(self):
 		if self.is_new():
