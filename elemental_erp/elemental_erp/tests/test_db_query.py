@@ -1,8 +1,12 @@
 """Regression tests for database-query compatibility helpers."""
 
 import unittest
+from types import SimpleNamespace
 
-from elemental_erp.utils.db_query import strip_doctype_table_prefix
+from elemental_erp.utils.db_query import (
+	normalize_database_query_fields,
+	strip_doctype_table_prefix,
+)
 
 
 class TestStripDoctypeTablePrefix(unittest.TestCase):
@@ -40,3 +44,16 @@ class TestStripDoctypeTablePrefix(unittest.TestCase):
 	def test_preserves_none_and_simple_fields(self):
 		self.assertIsNone(strip_doctype_table_prefix(None, self.doctype))
 		self.assertEqual(strip_doctype_table_prefix("name", self.doctype), "name")
+
+	def test_normalizes_affected_database_query(self):
+		query = SimpleNamespace(
+			doctype=self.doctype,
+			fields=["`tabWork from Home Request`.`name`", "name, sleep(1)"],
+		)
+		self.assertTrue(normalize_database_query_fields(query))
+		self.assertEqual(query.fields, ["`name`", "name, sleep(1)"])
+
+	def test_does_not_change_other_database_queries(self):
+		query = SimpleNamespace(doctype="Employee", fields=["`tabEmployee`.`name`"])
+		self.assertFalse(normalize_database_query_fields(query))
+		self.assertEqual(query.fields, ["`tabEmployee`.`name`"])

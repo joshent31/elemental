@@ -10,34 +10,10 @@ required_apps = ["erpnext"]
 # ------------------
 app_include_js = "/assets/elemental_erp/js/job.js"
 
-# ------------------------------------------------------------------
-# Compatibility patch for Frappe's false positive on the word "from" in
-# `tabWork from Home Request`. Normalize only that exact table prefix, then
-# retain Frappe's normal field sanitization and permission processing.
-# ------------------------------------------------------------------
-from frappe.model.db_query import DatabaseQuery as _DQ
-
-from elemental_erp.utils.db_query import strip_doctype_table_prefix
-
-_original_sanitize = getattr(
-	_DQ.sanitize_fields,
-	"_elemental_original_sanitize_fields",
-	_DQ.sanitize_fields,
-)
-
-_AFFECTED_DOCTYPES = frozenset(["Work from Home Request"])
-
-def _safe_sanitize_fields(self):
-	"""Remove the affected main-table prefix before Frappe validates fields."""
-	dt = getattr(self, "doctype", "") or ""
-	if dt in _AFFECTED_DOCTYPES:
-		self.fields = [strip_doctype_table_prefix(field, dt) for field in (self.fields or [])]
-
-	return _original_sanitize(self)
-
-
-_safe_sanitize_fields._elemental_original_sanitize_fields = _original_sanitize
-_DQ.sanitize_fields = _safe_sanitize_fields
+# Install the Work from Home list-query compatibility wrapper through Frappe's
+# request lifecycle. Import-time side effects in hooks.py are not reliable when
+# Frappe reads cached hook metadata.
+before_request = ["elemental_erp.utils.db_query.install_database_query_compatibility"]
 
 # Fixtures — exported so `bench get-app` installs already ship Notifications
 # and are safe to re-export any custom Property Setters etc. later
