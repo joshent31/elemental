@@ -19,7 +19,7 @@ class ManagementDashboard {
 	}
 
 	make_header() {
-		this.page.add_inner_button("Refresh", () => this.load_all(), "btn-primary");
+		this.page.add_inner_button("Refresh", () => this.load_all(), null, "primary");
 	}
 
 	make_stats_row() {
@@ -49,6 +49,7 @@ class ManagementDashboard {
 
 	load_all() {
 		this.$stats.empty().html('<div class="text-muted" style="padding:20px;">Loading…</div>');
+		this.$charts.find("#dash-chart-status, #dash-chart-monthly, #dash-chart-department").empty();
 		this.$recent.find("#dash-recent-jobs").html('<div class="text-muted">Loading…</div>');
 
 		frappe.call({
@@ -56,12 +57,31 @@ class ManagementDashboard {
 			freeze: true,
 			callback: (r) => {
 				if (r.message) {
-					this.render_stats(r.message.stats);
-					this.render_charts(r.message.charts);
-					this.render_recent_jobs(r.message.recent_jobs);
+					try {
+						this.render_stats(r.message.stats);
+						this.render_recent_jobs(r.message.recent_jobs);
+						this.render_charts(r.message.charts);
+					} catch (error) {
+						console.error("Management Dashboard rendering failed", error);
+						this.render_error();
+					}
+				} else {
+					this.render_error();
 				}
 			},
+			error: () => this.render_error(),
 		});
+	}
+
+	render_error() {
+		const message = `
+			<div class="text-muted" style="padding:20px;">
+				Unable to load dashboard data. Please click Refresh or check the Error Log.
+			</div>
+		`;
+		this.$stats.html(message);
+		this.$charts.find("#dash-chart-status, #dash-chart-monthly, #dash-chart-department").empty();
+		this.$recent.find("#dash-recent-jobs").html(message);
 	}
 
 	render_stats(stats) {
@@ -70,8 +90,8 @@ class ManagementDashboard {
 			{ label: "In Production", value: stats.in_production, color: "#7b61ff", icon: "fa-cogs" },
 			{ label: "Pending Indents", value: stats.pending_indents, color: "#ff5858", icon: "fa-file-text-o" },
 			{ label: "QR Completion", value: stats.qr_completion_pct + "%", color: "#28a745", icon: "fa-check-circle" },
-			{ label: "Total Revenue", value: frappe.format.currency_with_symbol(stats.total_revenue), color: "#f0ad4e", icon: "fa-rupee" },
-			{ label: "Total Cost", value: frappe.format.currency_with_symbol(stats.total_cost), color: "#dc3545", icon: "fa-calculator" },
+			{ label: "Total Revenue", value: format_currency(stats.total_revenue || 0), color: "#f0ad4e", icon: "fa-rupee" },
+			{ label: "Total Cost", value: format_currency(stats.total_cost || 0), color: "#dc3545", icon: "fa-calculator" },
 			{ label: "Avg Margin", value: stats.avg_margin_pct + "%", color: stats.avg_margin_pct >= 0 ? "#28a745" : "#dc3545", icon: "fa-line-chart" },
 			{ label: "Overdue Jobs", value: stats.overdue_jobs, color: stats.overdue_jobs > 0 ? "#dc3545" : "#28a745", icon: "fa-exclamation-triangle" },
 		];
@@ -179,15 +199,17 @@ class ManagementDashboard {
 		jobs.forEach((j) => {
 			const color = statusColors[j.status] || "#6c757d";
 			const overdue = j.due_date && j.due_date < frappe.datetime.get_today() && !["Closed", "Cancelled", "Installed"].includes(j.status);
+			const jobUrl = `/app/job/${encodeURIComponent(j.name || "")}`;
+			const escape = (value) => frappe.utils.escape_html(String(value ?? ""));
 			html += `
 				<tr style="${overdue ? "background:#fff5f5;" : ""}">
-					<td><a href="/app/job/${j.name}"><b>${j.name}</b></a><br><span class="text-muted">${j.job_name || ""}</span></td>
-					<td>${j.customer || ""}</td>
-					<td><span class="label" style="background:${color}; color:#fff; font-size:11px;">${j.status}</span></td>
-					<td>${j.qr_pct || 0}%</td>
-					<td>${j.packed_boxes || 0} / ${j.total_boxes || 0}</td>
-					<td style="${overdue ? "color:#dc3545; font-weight:bold;" : ""}">${j.due_date || "—"}</td>
-					<td><a href="/app/job/${j.name}" class="btn btn-xs btn-default">Open</a></td>
+					<td><a href="${jobUrl}"><b>${escape(j.name)}</b></a><br><span class="text-muted">${escape(j.job_name)}</span></td>
+					<td>${escape(j.customer)}</td>
+					<td><span class="label" style="background:${color}; color:#fff; font-size:11px;">${escape(j.status)}</span></td>
+					<td>${escape(j.qr_pct || 0)}%</td>
+					<td>${escape(j.packed_boxes || 0)} / ${escape(j.total_boxes || 0)}</td>
+					<td style="${overdue ? "color:#dc3545; font-weight:bold;" : ""}">${escape(j.due_date || "—")}</td>
+					<td><a href="${jobUrl}" class="btn btn-xs btn-default">Open</a></td>
 				</tr>
 			`;
 		});
