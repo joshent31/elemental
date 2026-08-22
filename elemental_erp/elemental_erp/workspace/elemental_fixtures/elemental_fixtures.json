@@ -144,6 +144,106 @@
             "type": "Link"
         },
         {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Material Issue",
+            "link_count": 0,
+            "link_to": "Material Issue",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Elemental Brand",
+            "link_count": 0,
+            "link_to": "Elemental Brand",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Data Entry Task",
+            "link_count": 0,
+            "link_to": "Data Entry Task",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Job Department Status",
+            "link_count": 0,
+            "link_to": "Job Department Status",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Design Task",
+            "link_count": 0,
+            "link_to": "Design Task",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Packing Box",
+            "link_count": 0,
+            "link_to": "Packing Box",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Job Material Consumption",
+            "link_count": 0,
+            "link_to": "Job Material Consumption",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "QC Inspection",
+            "link_count": 0,
+            "link_to": "QC Inspection",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "QR Scan Log",
+            "link_count": 0,
+            "link_to": "QR Scan Log",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Department Transfer",
+            "link_count": 0,
+            "link_to": "Department Transfer",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
             "type": "Card Break",
             "label": "Reports",
             "icon": "chart-bar",
