@@ -30,7 +30,7 @@ def execute(filters=None):
 
     # Get workers — filter by employee_category only if the custom field exists
     emp_filters = {}
-    has_category = frappe.db.column_exists("Employee", "employee_category")
+    has_category = frappe.db.has_column("Employee", "employee_category")
     if has_category:
         emp_filters["employee_category"] = "Worker"
     if employee:

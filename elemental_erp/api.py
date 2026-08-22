@@ -1430,7 +1430,7 @@ def calculate_slip_ot(employee, start_date, end_date):
 	)
 	from frappe.utils import getdate, date_diff, add_days
 
-	has_cat = frappe.db.column_exists("Employee", "employee_category")
+	has_cat = frappe.db.has_column("Employee", "employee_category")
 	fields = ["ctc", "standard_shift_hours"]
 	if has_cat:
 		fields.append("employee_category")
@@ -1502,7 +1502,7 @@ def lookup_employee_by_qr(qr_or_code):
 	"""Look up employee by QR value or employee code.
 	Returns employee info for the self-checkin page."""
 	# Try QR value first
-	has_cat = frappe.db.column_exists("Employee", "employee_category")
+	has_cat = frappe.db.has_column("Employee", "employee_category")
 	_emp_fields = ["name", "employee_name", "department", "designation"]
 	if has_cat:
 		_emp_fields.append("employee_category")
