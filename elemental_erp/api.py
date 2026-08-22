@@ -3,6 +3,14 @@ import math
 import frappe
 
 from elemental_erp.utils.purchase import allocate_order_quantity
+from elemental_erp.utils.mobile_access import (
+	DESIGN_SCAN_ROLES,
+	DISPATCH_SCAN_ROLES,
+	GATE_SCAN_ROLES,
+	PACKAGING_SCAN_ROLES,
+	PRODUCTION_FLOOR_ROLES,
+	QC_SCAN_ROLES,
+)
 from elemental_erp.utils.transactions import (
 	JOB_STATUS_ORDER,
 	advance_job_status,
@@ -49,6 +57,7 @@ def scan_qr(qr_value, department=None, qty_scanned=1, remarks=None):
 	"""Called when a floor operator scans a part's QR code at a process
 	station. Requires login (department users). Creates a QR Scan Log,
 	which in turn advances the QR Code Master status via doc_events."""
+	_require_roles(*PRODUCTION_FLOOR_ROLES)
 	qr_name = frappe.db.get_value("QR Code Master", {"qr_value": qr_value}, "name")
 	if not qr_name:
 		frappe.throw("Invalid QR code")
@@ -83,6 +92,7 @@ def scan_qr(qr_value, department=None, qty_scanned=1, remarks=None):
 def lookup_part_qr(qr_value):
 	"""Used by the /transfer-out screen right after a camera scan, to show
 	the operator what part/job they just scanned before they enter qty."""
+	_require_roles(*(PRODUCTION_FLOOR_ROLES + PACKAGING_SCAN_ROLES))
 	qr = frappe.db.get_value(
 		"QR Code Master",
 		{"qr_value": qr_value},
@@ -100,6 +110,7 @@ def create_transfer(qr_value, from_department, to_department, transfer_qty, rema
 	"""Sending department: scanned the part QR, entered qty + destination
 	dept. Creates the Department Transfer doc and renders its own QR (a
 	different code from the part's QR) to print on the physical slip."""
+	_require_roles(*PRODUCTION_FLOOR_ROLES)
 	from elemental_erp.utils.qr_generator import generate_qr_image
 
 	qr_master_name = frappe.db.get_value("QR Code Master", {"qr_value": qr_value}, "name")
@@ -151,6 +162,7 @@ def create_transfer(qr_value, from_department, to_department, transfer_qty, rema
 def get_transfer(transfer_qr_value):
 	"""Used by the /transfer-in screen to show what's expected before the
 	receiving operator confirms qty."""
+	_require_roles(*PRODUCTION_FLOOR_ROLES)
 	transfer = frappe.db.get_value(
 		"Department Transfer",
 		{"transfer_qr_value": transfer_qr_value},
@@ -169,6 +181,7 @@ def receive_transfer(transfer_qr_value, received_qty, remarks=None):
 	actually received. Flags a mismatch if it doesn't match qty sent, and
 	logs a QR Scan Log against the original part QR so QR Code Master
 	progress reflects material that has actually landed in the next dept."""
+	_require_roles(*PRODUCTION_FLOOR_ROLES)
 	transfer_name = frappe.db.get_value(
 		"Department Transfer", {"transfer_qr_value": transfer_qr_value}, "name"
 	)
@@ -225,6 +238,7 @@ def get_department_job_summary(job, department):
 	"""Used by /transfer-in to show the receiving operator a running total
 	for their department on this Job, and whether it's already closed —
 	before they decide to close it out."""
+	_require_roles(*PRODUCTION_FLOOR_ROLES)
 	job_doc = frappe.get_doc("Job", job)
 	require_doc_permission(job_doc, "read")
 	assert_active_job(job)
@@ -254,6 +268,7 @@ def close_department(job, department, remarks=None):
 	they expect for this Job and closes their portion of the work.
 	Refuses to close if there are still transfers in transit / mismatched,
 	so it can't be closed out from under an incomplete handoff."""
+	_require_roles(*PRODUCTION_FLOOR_ROLES)
 	job_doc = frappe.get_doc("Job", job)
 	require_doc_permission(job_doc, "write")
 	assert_active_job(job)
@@ -385,8 +400,9 @@ def create_packing_labels(job, total_boxes):
 	return {"created": len(created), "box_names": created}
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def lookup_box(box_qr_value):
+	_require_roles(*(PACKAGING_SCAN_ROLES + DISPATCH_SCAN_ROLES))
 	box = frappe.db.get_value(
 		"Packing Box",
 		{"box_qr_value": box_qr_value},
@@ -408,6 +424,7 @@ def map_part_to_box(box_qr_value, part_qr_value, qty):
 	"""Packing operator: scan the BOX QR, then scan a PART QR, enter qty —
 	maps that part into this box's contents list. Blocked until QC has
 	Passed the part's Finished Good."""
+	_require_roles(*PACKAGING_SCAN_ROLES)
 	box_name = frappe.db.get_value("Packing Box", {"box_qr_value": box_qr_value}, "name")
 	if not box_name:
 		frappe.throw("Box QR not recognised")
@@ -467,6 +484,7 @@ def map_part_to_box(box_qr_value, part_qr_value, qty):
 
 @frappe.whitelist()
 def get_or_create_dispatch_entry(job, vehicle_no=None):
+	_require_roles(*DISPATCH_SCAN_ROLES)
 	job_doc = frappe.get_doc("Job", job)
 	require_doc_permission(job_doc, "write")
 	assert_active_job(job)
@@ -494,6 +512,7 @@ def get_job_box_progress(job):
 	packed (contents mapped) vs how many have actually been scanned onto
 	the vehicle vs the total \u2014 the "how many packaging was done and how
 	much till scanned" view."""
+	_require_roles(*DISPATCH_SCAN_ROLES)
 	total = frappe.db.get_value("Job", job, "total_packing_boxes") or frappe.db.count("Packing Box", {"job": job})
 	packed = frappe.db.count(
 		"Packing Box",
@@ -512,6 +531,7 @@ def scan_box_dispatch(box_qr_value, dispatch_entry):
 	moment every box is loaded, a Draft Sales Invoice is created
 	automatically — invoicing is never possible before this point (see
 	create_sales_invoice_for_job)."""
+	_require_roles(*DISPATCH_SCAN_ROLES)
 	box_name = frappe.db.get_value("Packing Box", {"box_qr_value": box_qr_value}, "name")
 	if not box_name:
 		frappe.throw("Box QR not recognised")
@@ -558,6 +578,7 @@ def scan_box_dispatch(box_qr_value, dispatch_entry):
 @frappe.whitelist()
 def scan_box_received(box_qr_value, received_by=None):
 	"""Site scan: box has arrived and been received at the installation site."""
+	_require_roles(*DISPATCH_SCAN_ROLES)
 	box_name = frappe.db.get_value("Packing Box", {"box_qr_value": box_qr_value}, "name")
 	if not box_name:
 		frappe.throw("Box QR not recognised")
@@ -577,6 +598,7 @@ def scan_box_received(box_qr_value, received_by=None):
 @frappe.whitelist()
 def scan_box_installed(box_qr_value, installed_by=None):
 	"""Site scan: confirms installation actually happened for this box's contents."""
+	_require_roles(*DISPATCH_SCAN_ROLES)
 	box_name = frappe.db.get_value("Packing Box", {"box_qr_value": box_qr_value}, "name")
 	if not box_name:
 		frappe.throw("Box QR not recognised")
@@ -1136,8 +1158,9 @@ def create_po_from_initiation(rows, job=None):
 # once the issue is corrected on the floor.
 # ---------------------------------------------------------------------------
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def lookup_qc_inspection(qr_value):
+	_require_roles(*QC_SCAN_ROLES)
 	insp = frappe.db.get_value(
 		"QC Inspection",
 		{"qr_value": qr_value},
@@ -1154,6 +1177,7 @@ def record_qc_result(qr_value, result, inspector=None, remarks=None):
 	"""result is 'Pass' or 'Fail'. Overwrites this QC Inspection's status —
 	there's no separate rework/reinspection doctype, QC just re-scans once
 	the issue is fixed."""
+	_require_roles(*QC_SCAN_ROLES)
 	name = frappe.db.get_value("QC Inspection", {"qr_value": qr_value}, "name")
 	if not name:
 		frappe.throw("QC QR not recognised")
@@ -1178,8 +1202,9 @@ def record_qc_result(qr_value, result, inspector=None, remarks=None):
 # time and cost calculated from the gap between the two scans.
 # ---------------------------------------------------------------------------
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def lookup_design_task(qr_value):
+	_require_roles(*DESIGN_SCAN_ROLES)
 	task = frappe.db.get_value(
 		"Design Task",
 		{"qr_value": qr_value},
@@ -1193,6 +1218,7 @@ def lookup_design_task(qr_value):
 
 @frappe.whitelist()
 def start_design(qr_value, designer=None):
+	_require_roles(*DESIGN_SCAN_ROLES)
 	name = frappe.db.get_value("Design Task", {"qr_value": qr_value}, "name")
 	if not name:
 		frappe.throw("Design QR not recognised")
@@ -1218,6 +1244,7 @@ def start_design(qr_value, designer=None):
 
 @frappe.whitelist()
 def complete_design(qr_value):
+	_require_roles(*DESIGN_SCAN_ROLES)
 	name = frappe.db.get_value("Design Task", {"qr_value": qr_value}, "name")
 	if not name:
 		frappe.throw("Design QR not recognised")
@@ -1326,6 +1353,7 @@ def create_sales_invoice_for_job(job):
 
 @frappe.whitelist()
 def confirm_job_installation_complete(job, confirmed_by=None):
+	_require_roles(*DISPATCH_SCAN_ROLES)
 	job_doc = frappe.get_doc("Job", job)
 	require_doc_permission(job_doc, "write")
 	assert_active_job(job)
@@ -1362,6 +1390,7 @@ def confirm_job_installation_complete(job, confirmed_by=None):
 def lookup_employee_qr(qr_value):
 	"""Used by /gate-scan right after a scan, to show who it is and what
 	the next action will be, before actually logging it."""
+	_require_roles(*GATE_SCAN_ROLES)
 	employee = frappe.db.get_value(
 		"Employee",
 		{"employee_qr_value": qr_value},
@@ -1390,7 +1419,7 @@ def gate_scan(qr_value):
 	bypassed (a second gate device, a client bug, a slow network retry),
 	this refuses to log a second checkin for the same employee within a
 	short window and just returns the existing one instead."""
-	_require_roles("Elemental HR Gate User", "Elemental HR Gate HOD")
+	_require_roles(*GATE_SCAN_ROLES)
 	employee = frappe.db.get_value(
 		"Employee", {"employee_qr_value": qr_value}, ["name", "employee_name"], as_dict=True
 	)

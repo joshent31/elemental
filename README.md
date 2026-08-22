@@ -121,10 +121,8 @@ Then log in, open the **Elemental Fixtures** workspace, and:
 
 ## 4. Inter-department transfer (mobile scan → print → scan to receive → close dept)
 
-This is a **mobile-web** flow, not a native app — it's a phone-camera QR scanner running in
-any mobile browser (or inside the Frappe Mobile app's built-in webview), which is the
-practical way to get "scan with your phone" working without building/signing separate iOS
-and Android apps.
+This is a phone-camera QR flow implemented as mobile web pages. It works in a normal browser,
+the existing PWAs, or the `Elemental Production Scan` Android wrapper described in section 15.
 
 **Departments are not in a fixed sequence.** There is no hard-coded Metal → Powdercoat →
 Assembly → Packing pipeline — every transfer explicitly asks "from which department" and
@@ -204,7 +202,7 @@ installation.
 | **"Create Packing Box Labels"** button on Job | Prompts for a count (e.g. 20), calls `api.create_packing_labels` — generates that many `Packing Box` records with QR images, ready to print via the **Packing Box Label** print format |
 | `/pack-box` (mobile page) | Scan the box label's QR, then scan each part/FG QR going into it and enter qty — maps contents to that specific box as packing happens |
 | `/dispatch-scan` (mobile page) | Enter Job + vehicle, then scan each box as it's loaded — shows a running "X of N boxes loaded" count, updates each `Packing Box.status` to `Dispatched` |
-| `/site-scan` (mobile page, **guest-accessible**) | At the install site: scan the box QR, confirm **Received at Site**, then later confirm **Installed**. No ERP login needed — this runs on whatever device is at the customer's site. Once every box on a Job is `Installed`, the Job auto-flips to status `Installed` |
+| `/site-scan` (authenticated mobile page) | A signed-in Dispatch user scans the box QR, confirms **Received at Site**, then later confirms **Installed**. Once every box on a Job is `Installed`, the Job auto-flips to status `Installed` |
 | **Packing Box Label** (Print Format) | The physical label — Job, "Box N of Total", and the box's own QR, sized to print and stick on the box |
 
 **Flow in practice:**
@@ -214,7 +212,7 @@ installation.
    each part going into it (qty each) — building up that box's `contents` list.
 3. At dispatch, `/dispatch-scan` is used to scan every box being loaded onto the truck — gives
    a live loaded-count against the total.
-4. On site, whoever receives the delivery opens `/site-scan` (works on any phone, no login),
+4. On site, an assigned Dispatch user signs in and opens `/site-scan`,
    scans each box on arrival to confirm **Received at Site**, and again once it's physically
    installed to confirm **Installed** — closing the loop from Job Creation all the way through
    to the customer's floor.
@@ -297,7 +295,7 @@ attendance, no manual IN/OUT selection needed.
 | Piece | What it does |
 |---|---|
 | `Employee.employee_qr_value` / `employee_qr_image` (Custom Fields) | Auto-generated on `Employee.after_insert` (`employee_gate.generate_employee_qr`) — same QR pattern as everywhere else in this app |
-| `/gate-scan` (mobile page, **guest-accessible**) | **Kiosk mode**, not a one-shot scan — mount a phone at the gate, tap Start once, and the camera stays on continuously. Each employee just holds their badge up to it; the page auto-processes and goes straight back to waiting for the next person, no button presses per person. A client-side cooldown (8s per badge) stops one held-up badge from firing repeated scans across video frames |
+| `/gate-scan` (authenticated mobile page) | **Kiosk mode**, not a one-shot scan — an assigned `Elemental HR Gate User` or HOD signs in on the gate phone, taps Start once, and the camera stays on continuously. Each employee just holds their badge up to it; the page auto-processes and goes straight back to waiting for the next person. A client-side cooldown (8s per badge) stops one held-up badge from firing repeated scans across video frames |
 | `api.gate_scan` | Looks at the employee's **last** `Employee Checkin` (ERPNext's standard HR doctype) — if it was `IN`, this scan logs `OUT`; otherwise it logs `IN`. Alternates automatically, always |
 | `employee_gate.upsert_attendance_for_day` | Fires on every `OUT` scan — takes the day's first `IN` and last `OUT`, computes `working_hours`, and creates/updates that day's `Attendance` record (`Present`, or `Half Day` if under 4 hours). Attempts to **submit** it automatically; if that fails (approved leave, holiday, an existing conflicting record), it's left saved-but-unsubmitted for HR to sort out by hand rather than blocking the gate scan itself |
 | **Employee ID Badge** (Print Format) | Name, designation, department, and the QR — ready to print onto a badge |
@@ -318,11 +316,9 @@ attendance, no manual IN/OUT selection needed.
   payroll-relevant records with no human review step by default. If that's too automatic for
   your comfort, remove the `att.submit()` call in `upsert_attendance_for_day` and let HR submit
   Attendance manually instead.
-- Like `/site-scan`, `/gate-scan` is `allow_guest=True` so a gate device doesn't need its own
-  ERP login — which also means anyone with a valid `employee_qr_value` can check someone
-  else in/out from any browser, not just the physical gate device. Fine for an internal pilot
-  on a dedicated gate tablet; consider IP-restricting the route or adding a device PIN before
-  wider rollout.
+- `/gate-scan` and its lookup/write APIs require a signed-in user with `Elemental HR Gate User`
+  or `Elemental HR Gate HOD`. Keep a dedicated least-privilege account signed in on a fixed
+  gate device if kiosk operation is required.
 - This generates a **QR code**, consistent with every other scan point in this app — not a
   linear barcode (Code128/EAN etc). If your gate hardware is a dedicated laser barcode scanner
   rather than a phone camera, say so and I'll add a linear-barcode variant; QR scanners and
@@ -492,44 +488,42 @@ feature. The process for bringing someone onto the system:
   roles keep working exactly as before. The new Elemental roles are additive there. Migrate
   people onto the new roles at your own pace and remove the old rows once you're confident
   nobody still needs them.
-- Every scan-driven API endpoint (`scan_qr`, `gate_scan`, `map_part_to_box`, etc.) runs with
-  `ignore_permissions=True` internally, by design — that's what lets a phone camera at a gate
-  or a shop floor scanner work without every single scan needing a desk-level permission check.
-  The roles above govern **desk access** (who can open the doctype list, edit a record by hand,
-  run the report) — they don't gate the scan endpoints themselves. That's consistent with
-  every mobile page built earlier in this app, not a new gap introduced here.
+- Some scan-driven API endpoints use `ignore_permissions=True` for their internal linked-record
+  operations, but the mobile page and API entry points now enforce the matching Elemental role
+  first. A user cannot gain Production, Packaging, Dispatch, QC, Design, or Gate scan access
+  merely by installing an APK or calling an endpoint directly.
 
 ---
 
-## 15. Two installable mobile apps — Production Scan Menu and Gate
+## 15. Two Android apps — Production Scan Menu and Gate
 
-Two of the mobile pages are now the entry points to **installable PWAs (Progressive Web
-Apps)** — tap "Add to Home Screen" (or the in-page "Install" button on Android/Chrome) once,
-and from then on they open full-screen with their own icon, like a real app, instead of living
-inside a browser tab.
+The repository includes one Android WebView shell with two separately installable variants.
+Both use the normal Frappe login and persistent session cookies; authorization is still checked
+on the server for every page and scan action. The existing PWAs remain available as a browser
+alternative.
 
 | Piece | What it does |
 |---|---|
 | `/scan-menu` | A single hub screen listing every production-process scan flow as tappable tiles: Design, Quality Check, Send/Receive to Department, Pack a Box, Dispatch Loading, plus Site Receive/Install underneath. One app icon on a shared shop-floor device instead of six separate bookmarks |
-| `/gate-scan` | Unchanged in behaviour from before (continuous kiosk scanning) — now also installable as its own separate app, so the gate tablet can have just "Elemental Gate" on its home screen and nothing else |
+| `/gate-scan` | Continuous kiosk scanning for an authenticated Gate user, available as its own separate app |
+| `public/apk/Elemental-Production-Scan.apk` | Debug-signed pilot APK opening `/scan-menu`; Android application ID `com.elementalfixtures.mobile.production` |
+| `public/apk/Elemental-Gate-Scan.apk` | Debug-signed pilot APK opening `/gate-scan`; Android application ID `com.elementalfixtures.mobile.gate` |
+| `mobile/android/` | Android source and the PowerShell build helper; the server URL is a build-time setting |
 | `www/manifest-scan.json` / `www/manifest-gate.json` | The two PWA manifests — separate `start_url`, name, and icon per app, so they install and appear as two distinct apps, not one |
 | `www/sw.js` | A minimal shared service worker — required by Chrome/Android before it will treat a site as installable at all. Does light network-first caching so a flaky connection doesn't show a blank white screen; it is **not** offline support for the scan actions themselves, which still need the server |
 | `public/icons/icon-192.png` / `icon-512.png` | Generated app icons (simple "E" mark on the same navy/gold as the customer guide) used by both manifests and as the Apple touch icon |
 | `public/js/pwa_install.js` | Shared logic behind the in-page "Install this app" button — shows the native Android/Chrome install prompt when available, shows manual "tap Share → Add to Home Screen" instructions on iOS (which doesn't expose an install prompt at all), and hides itself once already installed |
 
-**Read this before assuming it works exactly like Frappe HRMS's app:** HRMS's mobile presence
-is either the Frappe Mobile native wrapper or a dedicated app build — genuinely native.
-Nothing in this environment can produce that (no native build tooling, no app-store signing).
-A PWA is the honest, practical equivalent: installable, full-screen, its own icon — but still
-a web page under the hood, running in the phone's browser engine rather than compiled native
-code. For everything this app actually needs to do (camera access for QR scanning, calling the
-server), a PWA covers it completely; the difference only shows up in things like deep OS
-integration or working fully offline, neither of which this system relies on.
+The APKs are native Android wrappers around the existing web pages, not offline rewrites of the
+ERP workflow. Camera access, navigation containment, and cookies are handled by the wrapper;
+an embedded ZXing scanner keeps QR capture working on the current local HTTP server. All business
+data and authorization remain on the Frappe server. The checked-in APKs use a debug/pilot
+signature. HTTP still leaves credentials and ERP data unencrypted, so use a protected release
+keystore and HTTPS server URL before managed or Play Store distribution.
 
-**Two separate installs, on purpose.** A shop-floor device installs "Elemental Scan"; a gate
-device installs "Elemental Gate." They're independent PWAs (separate manifests, separate
-`start_url`s) so a phone can have one, the other, or both, without them being tangled into a
-single app that tries to do everything.
+**Two separate installs, on purpose.** A shop-floor device installs `Elemental Production Scan`;
+a gate device installs `Elemental Gate Scan`. Their application IDs are different, so a phone
+can have one or both. The PWA manifests also remain separate for browser-based installation.
 
 **One correction worth flagging:** the service worker and manifests had to be placed under this
 app's `www/` folder (served at the site root — `/sw.js`, `/manifest-scan.json`) rather than
@@ -647,10 +641,9 @@ real inventory reservation (see the existing stock-check caveats in section 15 b
   standard ERPNext roles — create/assign them to your users, or swap in your own roles. There's
   still no dedicated `Costing` or `Design` role; both reuse `Manufacturing User`/`Purchase User`
   for now.
-- The public `/qr/<value>` page and `/site-scan` are deliberately `allow_guest=True` (so a
-  phone camera or a customer-site device can hit them without an ERP login) — that also means
-  anyone with the right QR value can hit them. Fine for an internal pilot; before wider
-  rollout, consider a short-lived signed token per QR instead of the raw value in the URL.
+- The public `/qr/<value>` page remains guest-readable for printed QR resolution. Scan workflow
+  pages and their sensitive lookup/write APIs require an authenticated user with the matching
+  Elemental functional role.
 - `/transfer-out`, `/transfer-in`, `/pack-box`, `/dispatch-scan`, and `/design-scan` require a
   logged-in Frappe session — make sure floor users have lightweight logins (not full desk
   access) so this stays fast on shared shop-floor devices.
