@@ -7,7 +7,7 @@
   "disabled": 0,
   "amount_field": "amount",
   "amount_based_on_formula": 1,
-  "formula": "OT Hours * Hourly Rate * 2",
+  "formula": "overtime_amount",
   "condition": "employee_category == 'Worker'",
   "statistical_component": 0,
   "depends_on_payment_days": 0,
@@ -16,7 +16,6 @@
   "module": "Payroll",
   "employee_field_name": "employee",
   "salary_component_abbr": "OT",
-  " Doyle": "",
   "description": "Overtime for Workers: min(Total OT, 15 hrs) × Hourly Rate × 2. Hourly Rate = Monthly Salary / Days in Month / 8. Government cap: 15 hrs/month."
  }
 ]
