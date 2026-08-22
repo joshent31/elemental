@@ -218,5 +218,29 @@
   "read_only": 1,
   "unique": 1,
   "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Purchase Order Item-elemental_material_indent",
+  "dt": "Purchase Order Item",
+  "fieldname": "elemental_material_indent",
+  "label": "Elemental Material Indent",
+  "fieldtype": "Link",
+  "options": "Material Indent",
+  "insert_after": "material_request_item",
+  "read_only": 1,
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Purchase Order Item-elemental_material_indent_item",
+  "dt": "Purchase Order Item",
+  "fieldname": "elemental_material_indent_item",
+  "label": "Elemental Material Indent Item",
+  "fieldtype": "Data",
+  "insert_after": "elemental_material_indent",
+  "read_only": 1,
+  "hidden": 1,
+  "module": "Elemental ERP"
  }
 ]

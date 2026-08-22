@@ -1,5 +1,8 @@
+import math
+
 import frappe
 
+from elemental_erp.utils.purchase import allocate_order_quantity
 from elemental_erp.utils.transactions import (
 	JOB_STATUS_ORDER,
 	advance_job_status,
@@ -709,6 +712,8 @@ def _create_po_from_indent_doc(indent, supplier=None):
 					"qty": row.shortfall_qty,
 					"uom": row.uom,
 					"schedule_date": frappe.utils.add_days(frappe.utils.nowdate(), 7),
+					"elemental_material_indent": indent.name,
+					"elemental_material_indent_item": row.name,
 				}
 				for row in shortfall_rows
 			],
@@ -716,6 +721,7 @@ def _create_po_from_indent_doc(indent, supplier=None):
 	)
 	po.insert(ignore_permissions=True, ignore_mandatory=True)
 	indent.db_set("purchase_order", po.name)
+	advance_job_status(indent.job, "In Purchase")
 	return po
 
 
@@ -737,6 +743,367 @@ def create_purchase_order_from_indent(material_indent, supplier=None):
 		frappe.throw("No shortfall on this Indent — nothing to purchase.")
 	frappe.db.commit()
 	return {"purchase_order": po.name}
+
+
+# ---------------------------------------------------------------------------
+# PO Initiation — outstanding indent workbench
+# ---------------------------------------------------------------------------
+
+PO_INITIATION_VIEW_ROLES = (
+	"Elemental Purchase User",
+	"Elemental Purchase HOD",
+	"Elemental Costing HOD",
+)
+PO_INITIATION_CREATE_ROLES = (
+	"Elemental Purchase User",
+	"Elemental Purchase HOD",
+)
+
+
+def _po_initiation_source_rows(job=None, item_group=None, item_codes=None):
+	"""Return submitted indent lines with their live, un-ordered balance.
+
+	New workbench POs carry the exact Material Indent child-row name.  The
+	header-level fallback keeps POs created before that linkage was introduced
+	(or by the automatic on-submit path) in the same balance calculation.
+	"""
+	conditions = [
+		"mi.docstatus = 1",
+		"COALESCE(mii.shortfall_qty, 0) > 0",
+		"j.status NOT IN ('Closed', 'Cancelled')",
+		"i.disabled = 0",
+		"i.is_purchase_item = 1",
+	]
+	values = {}
+	if job:
+		conditions.append("mi.job = %(job)s")
+		values["job"] = job
+	if item_group:
+		conditions.append("i.item_group = %(item_group)s")
+		values["item_group"] = item_group
+	if item_codes:
+		conditions.append("mii.raw_material IN %(item_codes)s")
+		values["item_codes"] = tuple(item_codes)
+
+	rows = frappe.db.sql(
+		f"""
+		SELECT
+			mii.name AS indent_item,
+			mi.name AS material_indent,
+			mi.job,
+			mii.raw_material AS item_code,
+			i.item_name,
+			COALESCE(mii.uom, i.stock_uom) AS uom,
+			COALESCE(mii.shortfall_qty, 0) AS shortfall_qty,
+			COALESCE(mii.reserved_other_jobs, 0) AS recorded_reserved_qty,
+			COALESCE(i.lead_time_days, 0) AS lead_time_days,
+			COALESCE((
+				SELECT SUM(poi.qty)
+				FROM `tabPurchase Order Item` poi
+				INNER JOIN `tabPurchase Order` po ON po.name = poi.parent
+				WHERE po.docstatus < 2
+				  AND poi.item_code = mii.raw_material
+				  AND (
+					poi.elemental_material_indent_item = mii.name
+					OR (
+						COALESCE(poi.elemental_material_indent_item, '') = ''
+						AND COALESCE(
+							NULLIF(poi.elemental_material_indent, ''),
+							po.elemental_material_indent
+						) = mi.name
+					)
+				  )
+			), 0) AS ordered_qty
+		FROM `tabMaterial Indent Item` mii
+		INNER JOIN `tabMaterial Indent` mi ON mi.name = mii.parent
+		INNER JOIN `tabJob` j ON j.name = mi.job
+		INNER JOIN `tabItem` i ON i.name = mii.raw_material
+		WHERE {' AND '.join(conditions)}
+		ORDER BY mi.indent_date ASC, mi.creation ASC, mii.idx ASC
+		""",
+		values,
+		as_dict=True,
+	)
+	for row in rows:
+		row["bal_indent_qty"] = max(
+			float(row.get("shortfall_qty") or 0) - float(row.get("ordered_qty") or 0),
+			0,
+		)
+	return [row for row in rows if row["bal_indent_qty"] > 1e-9]
+
+
+def _lock_outstanding_indent_items(item_code, job=None):
+	"""Serialize PO allocation for an Item so concurrent clicks cannot over-order."""
+	conditions = [
+		"mii.raw_material = %(item_code)s",
+		"mi.docstatus = 1",
+		"COALESCE(mii.shortfall_qty, 0) > 0",
+		"j.status NOT IN ('Closed', 'Cancelled')",
+	]
+	values = {"item_code": item_code}
+	if job:
+		conditions.append("mi.job = %(job)s")
+		values["job"] = job
+	frappe.db.sql(
+		f"""
+		SELECT mii.name
+		FROM `tabMaterial Indent Item` mii
+		INNER JOIN `tabMaterial Indent` mi ON mi.name = mii.parent
+		INNER JOIN `tabJob` j ON j.name = mi.job
+		WHERE {' AND '.join(conditions)}
+		ORDER BY mi.indent_date ASC, mi.creation ASC, mii.idx ASC
+		FOR UPDATE
+		""",
+		values,
+	)
+
+
+def _po_initiation_stock(item_codes):
+	if not item_codes:
+		return {}
+	rows = frappe.db.sql(
+		"""
+		SELECT
+			item_code,
+			COALESCE(SUM(actual_qty), 0) AS stock_qty,
+			COALESCE(SUM(projected_qty), 0) AS expected_stock
+		FROM `tabBin`
+		WHERE item_code IN %(item_codes)s
+		GROUP BY item_code
+		""",
+		{"item_codes": tuple(item_codes)},
+		as_dict=True,
+	)
+	return {row.item_code: row for row in rows}
+
+
+def _po_initiation_reserved_by_other_jobs(item_codes, job):
+	if not item_codes or not job:
+		return {}
+	rows = frappe.db.sql(
+		"""
+		SELECT
+			mii.raw_material AS item_code,
+			COALESCE(SUM(GREATEST(
+				COALESCE(mii.required_qty, 0) - COALESCE(mii.shortfall_qty, 0),
+				0
+			)), 0) AS reserved_qty
+		FROM `tabMaterial Indent Item` mii
+		INNER JOIN `tabMaterial Indent` mi ON mi.name = mii.parent
+		INNER JOIN `tabJob` j ON j.name = mi.job
+		WHERE mi.docstatus = 1
+		  AND mi.job != %(job)s
+		  AND j.status NOT IN ('Closed', 'Cancelled')
+		  AND mii.raw_material IN %(item_codes)s
+		GROUP BY mii.raw_material
+		""",
+		{"job": job, "item_codes": tuple(item_codes)},
+		as_dict=True,
+	)
+	return {row.item_code: float(row.reserved_qty or 0) for row in rows}
+
+
+def _po_initiation_suppliers(item_codes):
+	suppliers = {item_code: [] for item_code in item_codes}
+	if not item_codes:
+		return suppliers
+	for row in frappe.get_all(
+		"Item Supplier Elemental",
+		filters={"parent": ["in", item_codes], "parenttype": "Item"},
+		fields=["parent", "supplier", "supplier_part_no", "last_rate", "is_default"],
+		order_by="parent asc, is_default desc, idx asc",
+	):
+		suppliers.setdefault(row.parent, []).append(
+			{
+				"supplier": row.supplier,
+				"supplier_part_no": row.supplier_part_no,
+				"last_rate": float(row.last_rate or 0),
+				"is_default": int(row.is_default or 0),
+			}
+		)
+	return suppliers
+
+
+@frappe.whitelist()
+def get_po_initiation_data(job=None, item_group=None):
+	"""Return outstanding purchase demand for the PO Initiation page."""
+	_require_roles(*PO_INITIATION_VIEW_ROLES)
+	if bool(job) == bool(item_group):
+		frappe.throw("Select either a Job or an Item Group.")
+
+	if job:
+		job_doc = frappe.get_doc("Job", job)
+		require_doc_permission(job_doc, "read")
+		assert_active_job(job)
+	elif not frappe.db.exists("Item Group", item_group):
+		frappe.throw(f"Item Group {item_group} does not exist.", frappe.DoesNotExistError)
+
+	source_rows = _po_initiation_source_rows(job=job, item_group=item_group)
+	item_codes = list(dict.fromkeys(row.item_code for row in source_rows))
+	stock_by_item = _po_initiation_stock(item_codes)
+	reserved_by_item = _po_initiation_reserved_by_other_jobs(item_codes, job)
+	suppliers_by_item = _po_initiation_suppliers(item_codes)
+
+	result = {}
+	for source in source_rows:
+		row = result.setdefault(
+			source.item_code,
+			{
+				"item_code": source.item_code,
+				"item_name": source.item_name,
+				"uom": source.uom,
+				"bal_indent_qty": 0.0,
+				"job_bal_qty": 0.0,
+				"lead_time_days": int(source.lead_time_days or 0),
+			},
+		)
+		row["bal_indent_qty"] += source.bal_indent_qty
+		row["job_bal_qty"] += source.bal_indent_qty
+
+	for item_code, row in result.items():
+		stock = stock_by_item.get(item_code)
+		row["stock_qty"] = float(stock.stock_qty or 0) if stock else 0.0
+		row["expected_stock"] = float(stock.expected_stock or 0) if stock else 0.0
+		row["reserved_qty"] = reserved_by_item.get(item_code, 0.0)
+		row["suppliers"] = suppliers_by_item.get(item_code, [])
+		row["default_supplier"] = next(
+			(supplier["supplier"] for supplier in row["suppliers"] if supplier["is_default"]),
+			None,
+		)
+	return list(result.values())
+
+
+def _validated_po_initiation_rows(rows):
+	if isinstance(rows, str):
+		rows = frappe.parse_json(rows)
+	if not isinstance(rows, list) or not rows or len(rows) > 100:
+		frappe.throw("Provide between 1 and 100 Purchase Order rows.")
+
+	validated = []
+	seen_items = set()
+	for row in rows:
+		if not isinstance(row, dict):
+			frappe.throw("Each Purchase Order row must be an object.")
+		item_code = row.get("item_code")
+		supplier = row.get("supplier")
+		if not item_code or item_code in seen_items:
+			frappe.throw("Each Item must appear exactly once in the request.")
+		seen_items.add(item_code)
+
+		item = frappe.db.get_value(
+			"Item",
+			item_code,
+			["name", "disabled", "is_purchase_item"],
+			as_dict=True,
+		)
+		if not item or item.disabled or not item.is_purchase_item:
+			frappe.throw(f"Item {item_code} is missing, disabled, or not purchasable.")
+		if not supplier or not frappe.db.exists("Supplier", supplier):
+			frappe.throw(f"Select an existing Supplier for {item_code}.")
+
+		try:
+			rate = float(row.get("rate") or 0)
+		except (TypeError, ValueError):
+			rate = -1
+		if not math.isfinite(rate) or rate < 0:
+			frappe.throw(f"PO Rate for {item_code} must be a finite non-negative number.")
+
+		validated.append(
+			{
+				"item_code": item_code,
+				"supplier": supplier,
+				"po_qty": positive_quantity(row.get("po_qty"), f"PO Qty for {item_code}"),
+				"rate": rate,
+			}
+		)
+	return validated
+
+
+@frappe.whitelist()
+def create_po_from_initiation(rows, job=None):
+	"""Create draft POs while preserving exact Material Indent-line linkage."""
+	_require_roles(*PO_INITIATION_CREATE_ROLES)
+	if job:
+		job_doc = frappe.get_doc("Job", job)
+		require_doc_permission(job_doc, "read")
+		assert_active_job(job)
+	validated_rows = _validated_po_initiation_rows(rows)
+
+	allocations = []
+	# A stable lock order prevents deadlocks if a future client submits several
+	# Items in one request while another buyer submits the same set.
+	for requested in sorted(validated_rows, key=lambda row: row["item_code"]):
+		_lock_outstanding_indent_items(requested["item_code"], job=job)
+		outstanding = _po_initiation_source_rows(
+			job=job,
+			item_codes=[requested["item_code"]],
+		)
+		try:
+			item_allocations = allocate_order_quantity(outstanding, requested["po_qty"])
+		except ValueError as error:
+			frappe.throw(str(error))
+		for allocation in item_allocations:
+			allocation["supplier"] = requested["supplier"]
+			allocation["rate"] = requested["rate"]
+			allocations.append(allocation)
+
+	company = _default_company()
+	if not company:
+		frappe.throw("Configure a default Company before creating Purchase Orders.")
+
+	grouped = {}
+	for allocation in allocations:
+		key = (allocation["supplier"], allocation["job"])
+		grouped.setdefault(key, []).append(allocation)
+
+	purchase_orders = []
+	indent_purchase_orders = {}
+	for (supplier, allocation_job), group in grouped.items():
+		po_items = []
+		for allocation in group:
+			lead_time_days = max(int(allocation.get("lead_time_days") or 0), 0)
+			schedule_date = frappe.utils.add_days(
+				frappe.utils.nowdate(),
+				lead_time_days or 7,
+			)
+			po_items.append(
+				{
+					"item_code": allocation["item_code"],
+					"qty": allocation["po_qty"],
+					"uom": allocation["uom"],
+					"rate": allocation["rate"],
+					"schedule_date": schedule_date,
+					"elemental_material_indent": allocation["material_indent"],
+					"elemental_material_indent_item": allocation["indent_item"],
+				}
+			)
+
+		po = frappe.get_doc(
+			{
+				"doctype": "Purchase Order",
+				"company": company,
+				"supplier": supplier,
+				"elemental_job": allocation_job,
+				"transaction_date": frappe.utils.nowdate(),
+				"items": po_items,
+			}
+		)
+		po.insert(ignore_permissions=True, ignore_mandatory=True)
+		purchase_orders.append(po.name)
+		for allocation in group:
+			indent_purchase_orders.setdefault(allocation["material_indent"], set()).add(po.name)
+
+	for material_indent, linked_pos in indent_purchase_orders.items():
+		current_po = frappe.db.get_value("Material Indent", material_indent, "purchase_order")
+		updates = {"status": "Sent to Purchase"}
+		if not current_po and len(linked_pos) == 1:
+			updates["purchase_order"] = next(iter(linked_pos))
+		frappe.db.set_value("Material Indent", material_indent, updates, update_modified=False)
+
+	for allocation_job in {allocation["job"] for allocation in allocations}:
+		advance_job_status(allocation_job, "In Purchase")
+	frappe.db.commit()
+	return {"purchase_orders": purchase_orders}
 
 
 # ---------------------------------------------------------------------------

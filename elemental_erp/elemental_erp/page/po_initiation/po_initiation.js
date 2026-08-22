@@ -13,8 +13,15 @@ class POInitiation {
 		this.page = page;
 		this.mode = "job"; // "job" or "item_group"
 		this.rows = [];
+		this.can_place_orders = ["System Manager", "Elemental Purchase User", "Elemental Purchase HOD"].some(
+			(role) => (frappe.user_roles || []).includes(role)
+		);
 		this.make_filters();
 		this.make_table_area();
+	}
+
+	escape(value) {
+		return frappe.utils.escape_html(String(value ?? ""));
 	}
 
 	make_filters() {
@@ -119,8 +126,8 @@ class POInitiation {
 			const supplierCell = row.suppliers && row.suppliers.length
 				? `<option value="">-- select --</option>` +
 				  row.suppliers.map((s) =>
-					`<option value="${s.supplier}" data-rate="${s.last_rate || 0}" ${s.supplier === row.default_supplier ? "selected" : ""}>
-						${s.supplier}${s.supplier_part_no ? " (" + s.supplier_part_no + ")" : ""}
+					`<option value="${this.escape(s.supplier)}" data-rate="${s.last_rate || 0}" ${s.supplier === row.default_supplier ? "selected" : ""}>
+						${this.escape(s.supplier)}${s.supplier_part_no ? " (" + this.escape(s.supplier_part_no) + ")" : ""}
 					</option>`
 				  ).join("")
 				: null;
@@ -128,8 +135,8 @@ class POInitiation {
 			html += `
 				<tr data-idx="${i}">
 					<td>${i + 1}</td>
-					<td><b>${row.item_code}</b><br><span class="text-muted">${row.item_name || ""}</span></td>
-					<td>${row.bal_indent_qty} ${row.uom || ""}</td>
+					<td><b>${this.escape(row.item_code)}</b><br><span class="text-muted">${this.escape(row.item_name)}</span></td>
+					<td>${row.bal_indent_qty} ${this.escape(row.uom)}</td>
 					<td>
 						${supplierCell
 							? `<select class="form-control input-sm po-init-supplier-select" data-idx="${i}" style="width:170px;">${supplierCell}</select>`
@@ -143,7 +150,10 @@ class POInitiation {
 					<td>${row.expected_stock}</td>
 					${showJobCols ? `<td>${row.reserved_qty}</td><td>${row.job_bal_qty}</td>` : ""}
 					<td>${row.lead_time_days || "-"}</td>
-					<td><button class="btn btn-xs btn-primary po-init-place" data-idx="${i}">PO</button></td>
+					<td>${this.can_place_orders
+						? `<button class="btn btn-xs btn-primary po-init-place" data-idx="${i}">PO</button>`
+						: '<span class="text-muted">Read only</span>'
+					}</td>
 				</tr>
 			`;
 		});
@@ -208,7 +218,7 @@ class POInitiation {
 			freeze: true,
 			callback: (r) => {
 				if (r.message) {
-					frappe.show_alert(`Draft Purchase Order ${r.message.purchase_orders.join(", ")} updated.`);
+					frappe.show_alert(`Draft Purchase Order ${r.message.purchase_orders.join(", ")} created.`);
 					this.$table_wrap.find(`tr[data-idx="${idx}"]`).css("opacity", "0.4");
 					this.$table_wrap.find(`.po-init-place[data-idx="${idx}"]`).prop("disabled", true).text("Placed");
 				}

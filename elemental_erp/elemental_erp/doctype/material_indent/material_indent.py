@@ -101,8 +101,33 @@ class MaterialIndent(Document):
 
 	def on_cancel(self):
 		"""Release per-FG indent flags when no other submitted indent covers them."""
-		if self.purchase_order and frappe.db.exists("Purchase Order", self.purchase_order):
-			po = frappe.get_doc("Purchase Order", self.purchase_order)
+		purchase_orders = set()
+		if self.purchase_order:
+			purchase_orders.add(self.purchase_order)
+		purchase_orders.update(
+			frappe.get_all(
+				"Purchase Order",
+				filters={"elemental_material_indent": self.name, "docstatus": ["<", 2]},
+				pluck="name",
+			)
+		)
+		purchase_orders.update(
+			row[0]
+			for row in frappe.db.sql(
+				"""
+				SELECT DISTINCT poi.parent
+				FROM `tabPurchase Order Item` poi
+				INNER JOIN `tabPurchase Order` po ON po.name = poi.parent
+				WHERE poi.elemental_material_indent = %s
+				  AND po.docstatus < 2
+				""",
+				self.name,
+			)
+		)
+		for purchase_order in purchase_orders:
+			if not frappe.db.exists("Purchase Order", purchase_order):
+				continue
+			po = frappe.get_doc("Purchase Order", purchase_order)
 			if po.docstatus == 0:
 				frappe.delete_doc("Purchase Order", po.name, ignore_permissions=True)
 			elif po.docstatus == 1:
