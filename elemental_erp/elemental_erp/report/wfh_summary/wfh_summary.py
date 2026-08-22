@@ -6,7 +6,7 @@ for Employee, Department, Year, and Company.
 """
 import calendar
 import frappe
-from frappe.utils import getdate, add_months
+from frappe.utils import getdate, add_days
 
 
 def execute(filters=None):
@@ -143,17 +143,7 @@ def get_data(year, employee_filter=None, department_filter=None, company_filter=
 	while current <= end:
 		month_key = f"month_{current.month:02d}"
 		employee_data[key][month_key] += 1
-		current = add_months(current.replace(day=1), 1)
-		if current.month == 1 and current.day == 1:
-			# We've crossed into next year — shouldn't happen due to filters, but safety
-			break
-		# Move to next day
-		import datetime
-		current = current + datetime.timedelta(days=1)
-		# Skip to next month if we've passed the end of this month
-		if current.day != 1 and current.month != end.month:
-			current = current.replace(day=1)
-			current = add_months(current, 1)
+		current = add_days(current, 1)
 
 	employee_data[key]["total_days"] = row.total_days or 0
 	employee_data[key]["total_requests"] += 1

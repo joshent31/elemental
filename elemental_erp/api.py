@@ -1,5 +1,31 @@
 import frappe
 
+from elemental_erp.utils.transactions import (
+	JOB_STATUS_ORDER,
+	advance_job_status,
+	assert_active_job,
+	positive_quantity,
+	require_doc_permission,
+)
+
+
+def _require_roles(*allowed_roles):
+	roles = set(frappe.get_roles())
+	if "System Manager" not in roles and not roles.intersection(allowed_roles):
+		frappe.throw(
+			f"This action requires one of these roles: {', '.join(allowed_roles)}.",
+			frappe.PermissionError,
+		)
+
+
+def _require_employee_self_or_hr(employee):
+	roles = set(frappe.get_roles())
+	if "System Manager" in roles or "Elemental HR Gate HOD" in roles:
+		return
+	own_employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+	if not own_employee or own_employee != employee:
+		frappe.throw("You can only access your own employee transactions.", frappe.PermissionError)
+
 
 @frappe.whitelist(allow_guest=True)
 def get_qr_status(qr_value):
@@ -24,12 +50,16 @@ def scan_qr(qr_value, department=None, qty_scanned=1, remarks=None):
 	if not qr_name:
 		frappe.throw("Invalid QR code")
 
+	qty_scanned = positive_quantity(qty_scanned, "Scanned quantity")
+	qr = frappe.get_doc("QR Code Master", qr_name)
+	require_doc_permission(qr, "write")
+	assert_active_job(qr.job)
 	log = frappe.get_doc(
 		{
 			"doctype": "QR Scan Log",
 			"qr_code_master": qr_name,
 			"department": department,
-			"qty_scanned": float(qty_scanned),
+			"qty_scanned": qty_scanned,
 			"remarks": remarks,
 		}
 	)
@@ -74,6 +104,13 @@ def create_transfer(qr_value, from_department, to_department, transfer_qty, rema
 		frappe.throw("Part QR not recognised")
 
 	qr_master = frappe.get_doc("QR Code Master", qr_master_name)
+	require_doc_permission(qr_master, "write")
+	assert_active_job(qr_master.job)
+	transfer_qty = positive_quantity(transfer_qty, "Transfer Qty")
+	if from_department == to_department:
+		frappe.throw("From Department and To Department must be different.")
+	if transfer_qty > float(qr_master.total_qty or 0) + 1e-6:
+		frappe.throw(f"Transfer Qty cannot exceed the tracker total of {qr_master.total_qty}.")
 
 	doc = frappe.get_doc(
 		{
@@ -82,7 +119,7 @@ def create_transfer(qr_value, from_department, to_department, transfer_qty, rema
 			"qr_code_master": qr_master_name,
 			"from_department": from_department,
 			"to_department": to_department,
-			"transfer_qty": float(transfer_qty),
+			"transfer_qty": transfer_qty,
 			"status": "In Transit",
 			"dispatched_by": frappe.session.user,
 			"dispatched_on": frappe.utils.now_datetime(),
@@ -107,7 +144,7 @@ def create_transfer(qr_value, from_department, to_department, transfer_qty, rema
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_transfer(transfer_qr_value):
 	"""Used by the /transfer-in screen to show what's expected before the
 	receiving operator confirms qty."""
@@ -136,10 +173,13 @@ def receive_transfer(transfer_qr_value, received_qty, remarks=None):
 		frappe.throw("Transfer QR not recognised")
 
 	doc = frappe.get_doc("Department Transfer", transfer_name)
+	require_doc_permission(doc, "write")
+	assert_active_job(doc.job)
 	if doc.status == "Received":
 		frappe.throw("This transfer has already been received")
 
-	doc.received_qty = float(received_qty)
+	previous_received_qty = float(doc.received_qty or 0)
+	doc.received_qty = positive_quantity(received_qty, "Received Qty")
 	doc.compute_diff()
 	doc.status = "Received" if doc.qty_diff == 0 else "Qty Mismatch"
 	doc.received_by = frappe.session.user
@@ -166,7 +206,10 @@ def receive_transfer(transfer_qr_value, received_qty, remarks=None):
 	)
 
 	dept_status = get_or_create(doc.job, doc.to_department)
-	dept_status.total_qty_received = (dept_status.total_qty_received or 0) + doc.received_qty
+	dept_status.total_qty_received = max(
+		float(dept_status.total_qty_received or 0) + doc.received_qty - previous_received_qty,
+		0,
+	)
 	dept_status.save(ignore_permissions=True)
 
 	frappe.db.commit()
@@ -179,6 +222,9 @@ def get_department_job_summary(job, department):
 	"""Used by /transfer-in to show the receiving operator a running total
 	for their department on this Job, and whether it's already closed —
 	before they decide to close it out."""
+	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "read")
+	assert_active_job(job)
 	from elemental_erp.elemental_erp.doctype.job_department_status.job_department_status import (
 		get_or_create,
 	)
@@ -186,7 +232,11 @@ def get_department_job_summary(job, department):
 	dept_status = get_or_create(job, department)
 	pending_transfers = frappe.db.count(
 		"Department Transfer",
-		{"job": job, "to_department": department, "status": ["!=", "Received"]},
+		{
+			"job": job,
+			"to_department": department,
+			"status": ["in", ["Pending Dispatch", "In Transit", "Qty Mismatch"]],
+		},
 	)
 	return {
 		"status": dept_status.status,
@@ -201,6 +251,9 @@ def close_department(job, department, remarks=None):
 	they expect for this Job and closes their portion of the work.
 	Refuses to close if there are still transfers in transit / mismatched,
 	so it can't be closed out from under an incomplete handoff."""
+	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "write")
+	assert_active_job(job)
 	from elemental_erp.elemental_erp.doctype.job_department_status.job_department_status import (
 		get_or_create,
 	)
@@ -247,13 +300,30 @@ def mark_job_packaging_completed(job):
 	)
 
 	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "write")
+	assert_active_job(job)
 	if job_doc.packaging_completed:
 		frappe.throw("Packaging is already marked completed for this Job.")
+	box_count = frappe.db.count("Packing Box", {"job": job})
+	if not box_count:
+		frappe.throw("Create and pack at least one Packing Box before completing Packaging.")
+	unpacked = frappe.db.count(
+		"Packing Box",
+		{"job": job, "status": ["not in", ["Packed", "Dispatched", "Received at Site", "Installed"]]},
+	)
+	if unpacked:
+		frappe.throw(f"{unpacked} Packing Box(es) do not contain packed items.")
+	incomplete_qrs = frappe.db.count("QR Code Master", {"job": job, "status": ["!=", "Completed"]})
+	if incomplete_qrs:
+		frappe.throw(f"{incomplete_qrs} production tracker(s) are not Completed.")
+	failed_qc = frappe.db.count("QC Inspection", {"job": job, "status": ["!=", "Passed"]})
+	if failed_qc:
+		frappe.throw(f"{failed_qc} Finished Good QC inspection(s) have not Passed.")
 
 	job_doc.packaging_completed = 1
 	job_doc.packaging_completed_on = frappe.utils.now_datetime()
-	job_doc.status = "Material Consumption Pending"
 	job_doc.save(ignore_permissions=True)
+	advance_job_status(job, "Material Consumption Pending")
 
 	consumption = generate_for_job(job)
 	frappe.db.commit()
@@ -274,9 +344,17 @@ def create_packing_labels(job, total_boxes):
 	each with a unique QR image, ready to print and stick on the boxes."""
 	from elemental_erp.utils.qr_generator import generate_qr_image
 
+	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "write")
+	assert_active_job(job)
 	total_boxes = int(total_boxes)
 	if total_boxes <= 0:
 		frappe.throw("Total boxes must be a positive number")
+	if total_boxes > 1000:
+		frappe.throw("Total boxes cannot exceed 1000 in one operation.")
+	existing = frappe.db.count("Packing Box", {"job": job})
+	if existing:
+		frappe.throw(f"{existing} Packing Box label(s) already exist for this Job.")
 
 	frappe.db.set_value("Job", job, "total_packing_boxes", total_boxes)
 
@@ -335,6 +413,7 @@ def map_part_to_box(box_qr_value, part_qr_value, qty):
 	)
 	if not qr_master:
 		frappe.throw("Part QR not recognised")
+	qty = positive_quantity(qty, "Packed Qty")
 
 	from elemental_erp.elemental_erp.doctype.qc_inspection.qc_inspection import qc_passed
 
@@ -345,9 +424,30 @@ def map_part_to_box(box_qr_value, part_qr_value, qty):
 		)
 
 	box = frappe.get_doc("Packing Box", box_name)
+	require_doc_permission(box, "write")
+	assert_active_job(box.job)
+	if box.job != qr_master.job:
+		frappe.throw(f"Part QR belongs to Job {qr_master.job}, not box Job {box.job}.")
+	if box.status not in ("Label Created", "Packed"):
+		frappe.throw(f"Box {box.box_no} is already {box.status} and cannot be repacked.")
+	qr_status = frappe.db.get_value("QR Code Master", qr_master.name, "status")
+	if qr_status != "Completed":
+		frappe.throw(f"Part QR is {qr_status}; production must be Completed before packing.")
+	already_packed = frappe.db.sql(
+		"""
+		SELECT COALESCE(SUM(pbc.packed_qty), 0)
+		FROM `tabPacking Box Content` pbc
+		INNER JOIN `tabPacking Box` pb ON pb.name = pbc.parent
+		WHERE pb.job = %s AND pbc.qr_code_master = %s
+		""",
+		(box.job, qr_master.name),
+	)[0][0] or 0
+	total_qty = frappe.db.get_value("QR Code Master", qr_master.name, "total_qty") or 0
+	if already_packed + qty > total_qty + 1e-6:
+		frappe.throw(f"Packed Qty exceeds the remaining tracker quantity of {total_qty - already_packed}.")
 	box.append("contents", {
 		"qr_code_master": qr_master.name,
-		"packed_qty": float(qty),
+		"packed_qty": qty,
 		"scanned_on": frappe.utils.now_datetime(),
 	})
 	if box.status == "Label Created":
@@ -364,6 +464,9 @@ def map_part_to_box(box_qr_value, part_qr_value, qty):
 
 @frappe.whitelist()
 def get_or_create_dispatch_entry(job, vehicle_no=None):
+	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "write")
+	assert_active_job(job)
 	existing = frappe.db.get_value(
 		"Dispatch Entry", {"job": job, "dispatch_status": "Scheduled"}, "name"
 	)
@@ -411,8 +514,16 @@ def scan_box_dispatch(box_qr_value, dispatch_entry):
 		frappe.throw("Box QR not recognised")
 
 	box = frappe.get_doc("Packing Box", box_name)
-	if box.status == "Dispatched":
-		frappe.throw(f"Box {box.box_no} is already marked dispatched.")
+	require_doc_permission(box, "write")
+	assert_active_job(box.job)
+	dispatch = frappe.get_doc("Dispatch Entry", dispatch_entry)
+	require_doc_permission(dispatch, "write")
+	if dispatch.job != box.job:
+		frappe.throw(f"Dispatch Entry belongs to Job {dispatch.job}, not box Job {box.job}.")
+	if dispatch.docstatus != 0:
+		frappe.throw("Boxes can only be loaded against a Draft Dispatch Entry.")
+	if box.status != "Packed":
+		frappe.throw(f"Box {box.box_no} is {box.status}; only Packed boxes can be dispatched.")
 
 	box.status = "Dispatched"
 	box.dispatch_entry = dispatch_entry
@@ -441,36 +552,44 @@ def scan_box_dispatch(box_qr_value, dispatch_entry):
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def scan_box_received(box_qr_value, received_by=None):
 	"""Site scan: box has arrived and been received at the installation site."""
 	box_name = frappe.db.get_value("Packing Box", {"box_qr_value": box_qr_value}, "name")
 	if not box_name:
 		frappe.throw("Box QR not recognised")
 	box = frappe.get_doc("Packing Box", box_name)
+	require_doc_permission(box, "write")
+	assert_active_job(box.job)
+	if box.status != "Dispatched":
+		frappe.throw(f"Box {box.box_no} is {box.status}; only Dispatched boxes can be received.")
 	box.status = "Received at Site"
 	box.received_at_site_on = frappe.utils.now_datetime()
-	box.received_by = received_by or frappe.session.user
+	box.received_by = frappe.session.user
 	box.save(ignore_permissions=True)
 	frappe.db.commit()
 	return box.as_dict()
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def scan_box_installed(box_qr_value, installed_by=None):
 	"""Site scan: confirms installation actually happened for this box's contents."""
 	box_name = frappe.db.get_value("Packing Box", {"box_qr_value": box_qr_value}, "name")
 	if not box_name:
 		frappe.throw("Box QR not recognised")
 	box = frappe.get_doc("Packing Box", box_name)
+	require_doc_permission(box, "write")
+	assert_active_job(box.job)
+	if box.status != "Received at Site":
+		frappe.throw(f"Box {box.box_no} is {box.status}; it must be received before installation.")
 	box.status = "Installed"
 	box.installed_on = frappe.utils.now_datetime()
-	box.installed_by = installed_by or frappe.session.user
+	box.installed_by = frappe.session.user
 	box.save(ignore_permissions=True)
 
 	remaining = frappe.db.count("Packing Box", {"job": box.job, "status": ["!=", "Installed"]})
 	if remaining == 0:
-		frappe.db.set_value("Job", box.job, "status", "Installed")
+		advance_job_status(box.job, "Installed")
 	frappe.db.commit()
 	return box.as_dict()
 
@@ -488,6 +607,8 @@ def generate_indent_items_from_bom(job):
 	customer adds a new FG only pulls the NEW item's requirement, not a
 	re-total of everything already indented."""
 	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "write")
+	assert_active_job(job)
 	totals = {}
 	covered_fgs = []
 	for fg_row in job_doc.fg_items:
@@ -578,6 +699,8 @@ def _create_po_from_indent_doc(indent, supplier=None):
 			"doctype": "Purchase Order",
 			"company": _default_company(),
 			"supplier": resolved,
+			"elemental_job": indent.job,
+			"elemental_material_indent": indent.name,
 			"transaction_date": frappe.utils.nowdate(),
 			"schedule_date": frappe.utils.add_days(frappe.utils.nowdate(), 7),
 			"items": [
@@ -602,6 +725,8 @@ def create_purchase_order_from_indent(material_indent, supplier=None):
 	automatic Draft PO (created on Indent approval) was left blank.
 	`supplier` can be an existing Supplier name or a brand new vendor name."""
 	indent = frappe.get_doc("Material Indent", material_indent)
+	require_doc_permission(indent, "write")
+	assert_active_job(indent.job)
 	if indent.docstatus != 1:
 		frappe.throw("Material Indent must be submitted (Approved) first.")
 	if indent.purchase_order:
@@ -645,6 +770,8 @@ def record_qc_result(qr_value, result, inspector=None, remarks=None):
 		frappe.throw("Result must be 'Pass' or 'Fail'")
 
 	insp = frappe.get_doc("QC Inspection", name)
+	require_doc_permission(insp, "write")
+	assert_active_job(insp.job)
 	insp.status = "Passed" if result == "Pass" else "Failed"
 	insp.inspector = inspector
 	insp.inspected_on = frappe.utils.now_datetime()
@@ -679,6 +806,8 @@ def start_design(qr_value, designer=None):
 	if not name:
 		frappe.throw("Design QR not recognised")
 	task = frappe.get_doc("Design Task", name)
+	require_doc_permission(task, "write")
+	assert_active_job(task.job)
 	if task.status == "In Progress":
 		frappe.throw("This design task is already in progress.")
 	task.status = "In Progress"
@@ -686,6 +815,12 @@ def start_design(qr_value, designer=None):
 	if designer:
 		task.assigned_designer = designer
 	task.save(ignore_permissions=True)
+	frappe.db.set_value(
+		"Job FG Item",
+		{"parent": task.job, "finished_good": task.finished_good},
+		"status",
+		"In Design",
+	)
 	frappe.db.commit()
 	return task.as_dict()
 
@@ -696,6 +831,8 @@ def complete_design(qr_value):
 	if not name:
 		frappe.throw("Design QR not recognised")
 	task = frappe.get_doc("Design Task", name)
+	require_doc_permission(task, "write")
+	assert_active_job(task.job)
 	if not task.start_time:
 		frappe.throw("This design task was never started — scan Start first.")
 	task.status = "Completed"
@@ -713,10 +850,12 @@ def complete_design(qr_value):
 
 @frappe.whitelist()
 def complete_data_entry_task(job, hours_spent=None, remarks=None):
+	assert_active_job(job)
 	name = frappe.db.get_value("Data Entry Task", {"job": job}, "name")
 	if not name:
 		frappe.throw("No Data Entry Task found for this Job.")
 	task = frappe.get_doc("Data Entry Task", name)
+	require_doc_permission(task, "write")
 	task.status = "Completed"
 	task.fg_records_created = 1
 	task.completed_on = frappe.utils.now_datetime()
@@ -742,20 +881,23 @@ def create_sales_invoice_for_job(job):
 	scan_box_dispatch) and available as a manual fallback, but either way
 	this same check applies so it can never fire early."""
 	total_boxes = frappe.db.count("Packing Box", {"job": job})
-	if total_boxes:
-		not_yet_loaded = frappe.db.count(
-			"Packing Box", {"job": job, "status": ["not in", ["Dispatched", "Received at Site", "Installed"]]}
+	if not total_boxes:
+		frappe.throw("Cannot create a Sales Invoice before Packing Boxes are created and dispatched.")
+	not_yet_loaded = frappe.db.count(
+		"Packing Box", {"job": job, "status": ["not in", ["Dispatched", "Received at Site", "Installed"]]}
+	)
+	if not_yet_loaded:
+		frappe.throw(
+			f"Cannot create a Sales Invoice yet — {not_yet_loaded} of {total_boxes} box(es) "
+			f"have not been scanned as loaded/dispatched."
 		)
-		if not_yet_loaded:
-			frappe.throw(
-				f"Cannot create a Sales Invoice yet — {not_yet_loaded} of {total_boxes} box(es) "
-				f"have not been scanned as loaded/dispatched."
-			)
 
 	if frappe.db.exists("Sales Invoice", {"elemental_job": job}):
 		frappe.throw("A Sales Invoice already exists for this Job.")
 
 	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "write")
+	assert_active_job(job)
 	items = []
 	skipped = []
 	for fg_row in job_doc.fg_items:
@@ -765,10 +907,10 @@ def create_sales_invoice_for_job(job):
 			continue
 		items.append({"item_code": erpnext_item, "qty": fg_row.job_qty})
 
-	if not items:
+	if skipped:
 		frappe.throw(
-			"None of the Finished Goods on this Job are mapped to an ERPNext Item "
-			"(Finished Good \u2192 Linked ERPNext Item) — map at least one before invoicing."
+			"Every Finished Good must be mapped to an ERPNext Item before invoicing. "
+			f"Missing mappings: {', '.join(skipped)}"
 		)
 
 	si = frappe.get_doc(
@@ -791,8 +933,14 @@ def create_sales_invoice_for_job(job):
 # rather than it being purely inferred.
 # ---------------------------------------------------------------------------
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def confirm_job_installation_complete(job, confirmed_by=None):
+	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "write")
+	assert_active_job(job)
+	total_boxes = frappe.db.count("Packing Box", {"job": job})
+	if not total_boxes:
+		frappe.throw("Cannot close a Job with no Packing Boxes.")
 	remaining = frappe.db.count("Packing Box", {"job": job, "status": ["!=", "Installed"]})
 	if remaining:
 		frappe.throw(f"{remaining} box(es) are not yet marked Installed — cannot close the Job.")
@@ -805,7 +953,7 @@ def confirm_job_installation_complete(job, confirmed_by=None):
 				"qr_code_master": any_qr,
 				"department": "Installation",
 				"qty_scanned": 0,
-				"remarks": f"Job confirmed fully installed and closed by {confirmed_by or frappe.session.user}",
+				"remarks": f"Job confirmed fully installed and closed by {frappe.session.user}",
 			}
 		).insert(ignore_permissions=True)
 	frappe.db.commit()
@@ -819,7 +967,7 @@ def confirm_job_installation_complete(job, confirmed_by=None):
 # Employee Checkin, and rebuilds today's Attendance from the day's scans.
 # ---------------------------------------------------------------------------
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def lookup_employee_qr(qr_value):
 	"""Used by /gate-scan right after a scan, to show who it is and what
 	the next action will be, before actually logging it."""
@@ -839,7 +987,7 @@ def lookup_employee_qr(qr_value):
 	return employee
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def gate_scan(qr_value):
 	"""The actual gate scan: figures out IN vs OUT from the employee's last
 	checkin (no manual toggle needed), logs an Employee Checkin, and \u2014 on
@@ -851,6 +999,7 @@ def gate_scan(qr_value):
 	bypassed (a second gate device, a client bug, a slow network retry),
 	this refuses to log a second checkin for the same employee within a
 	short window and just returns the existing one instead."""
+	_require_roles("Elemental HR Gate User", "Elemental HR Gate HOD")
 	employee = frappe.db.get_value(
 		"Employee", {"employee_qr_value": qr_value}, ["name", "employee_name"], as_dict=True
 	)
@@ -913,15 +1062,21 @@ def mark_quotation_approved(quotation, approval_reference=None):
 	whatever it actually was) WITHOUT waiting for a formal PO. This is
 	what unlocks "Create Job from Quotation"."""
 	q = frappe.get_doc("Elemental Quotation", quotation)
+	require_doc_permission(q, "write")
 	if q.docstatus != 1:
 		frappe.throw("Quotation must be submitted (Sent to Customer) first.")
-	q.status = "Approved by Customer"
-	q.approval_reference = approval_reference
-	q.approved_on = frappe.utils.now_datetime()
-	q.approved_by = frappe.session.user
-	q.save(ignore_permissions=True)
+	frappe.db.set_value(
+		"Elemental Quotation",
+		q.name,
+		{
+			"status": "Approved by Customer",
+			"approval_reference": approval_reference,
+			"approved_on": frappe.utils.now_datetime(),
+			"approved_by": frappe.session.user,
+		},
+	)
 	frappe.db.commit()
-	return q.as_dict()
+	return frappe.get_doc("Elemental Quotation", q.name).as_dict()
 
 
 @frappe.whitelist()
@@ -932,6 +1087,7 @@ def create_job_from_quotation(quotation):
 	same as any other Job — this just seeds the FG list instead of
 	someone re-typing it."""
 	q = frappe.get_doc("Elemental Quotation", quotation)
+	require_doc_permission(q, "write")
 	if q.status != "Approved by Customer":
 		frappe.throw("Quotation must be marked Approved by Customer before creating a Job from it.")
 	if q.job:
@@ -952,9 +1108,9 @@ def create_job_from_quotation(quotation):
 	)
 	job.insert(ignore_permissions=True)
 
-	q.status = "Converted to Job"
-	q.job = job.name
-	q.save(ignore_permissions=True)
+	frappe.db.set_value(
+		"Elemental Quotation", q.name, {"status": "Converted to Job", "job": job.name}
+	)
 	frappe.db.commit()
 	return {"job": job.name}
 
@@ -1022,8 +1178,12 @@ def reopen_job(job, new_status="Job Created"):
 		frappe.throw("Only a System Manager or Sales HOD can reopen a Closed/Cancelled Job.")
 
 	current_status = frappe.db.get_value("Job", job, "status")
-	if current_status not in ("Closed", "Cancelled"):
-		frappe.throw("This Job isn't Closed or Cancelled — nothing to reopen.")
+	if current_status == "Cancelled":
+		frappe.throw("Cancelled Jobs cannot be reopened because their linked transactions were cancelled.")
+	if current_status != "Closed":
+		frappe.throw("This Job isn't Closed — nothing to reopen.")
+	if new_status not in JOB_STATUS_ORDER or new_status in ("Closed", "Cancelled"):
+		frappe.throw(f"Invalid reopen status: {new_status}")
 
 	frappe.db.set_value("Job", job, "status", new_status)
 	frappe.db.commit()
@@ -1177,6 +1337,7 @@ def get_dashboard_data():
 def apply_wfh(employee, from_date, to_date, reason):
 	"""Employee applies for Work from Home. Creates a WFH Request
 	in Open status, awaiting manager/HR approval."""
+	_require_employee_self_or_hr(employee)
 	doc = frappe.get_doc(
 		{
 			"doctype": "Work from Home Request",
@@ -1196,6 +1357,7 @@ def apply_wfh(employee, from_date, to_date, reason):
 def approve_wfh(wfh_request):
 	"""Approve a WFH Request. Creates Attendance records for each
 	approved WFH date, marking the employee as Present."""
+	_require_roles("Elemental HR Gate HOD")
 	from elemental_erp.elemental_erp.doctype.work_from_home_request.work_from_home_request import (
 		approve_wfh_request,
 	)
@@ -1205,6 +1367,7 @@ def approve_wfh(wfh_request):
 @frappe.whitelist()
 def reject_wfh(wfh_request, reason=None):
 	"""Reject a WFH Request."""
+	_require_roles("Elemental HR Gate HOD")
 	from elemental_erp.elemental_erp.doctype.work_from_home_request.work_from_home_request import (
 		reject_wfh_request,
 	)
@@ -1215,6 +1378,7 @@ def reject_wfh(wfh_request, reason=None):
 def cancel_wfh(wfh_request):
 	"""Cancel a WFH Request (employee or HR can cancel an Open request)."""
 	doc = frappe.get_doc("Work from Home Request", wfh_request)
+	_require_employee_self_or_hr(doc.employee)
 	if doc.status not in ("Open",):
 		frappe.throw(f"Cannot cancel — this request is {doc.status}.")
 	doc.status = "Cancelled"
@@ -1226,6 +1390,7 @@ def cancel_wfh(wfh_request):
 @frappe.whitelist()
 def get_my_wfh_requests(employee, limit=20):
 	"""Get the current employee's recent WFH requests."""
+	_require_employee_self_or_hr(employee)
 	return frappe.get_all(
 		"Work from Home Request",
 		filters={"employee": employee},
@@ -1239,6 +1404,7 @@ def get_my_wfh_requests(employee, limit=20):
 @frappe.whitelist()
 def get_pending_wfh_approvals():
 	"""Get WFH requests pending approval (for managers/HR)."""
+	_require_roles("Elemental HR Gate HOD")
 	return frappe.get_all(
 		"Work from Home Request",
 		filters={"status": "Open"},
@@ -1331,7 +1497,7 @@ def calculate_slip_ot(employee, start_date, end_date):
 # ── Installation Self-Checkin APIs ─────────────────────────────────────
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def lookup_employee_by_qr(qr_or_code):
 	"""Look up employee by QR value or employee code.
 	Returns employee info for the self-checkin page."""
@@ -1357,6 +1523,7 @@ def lookup_employee_by_qr(qr_or_code):
 		)
 	if not emp:
 		return {"found": False}
+	_require_employee_self_or_hr(emp.name)
 
 	return {
 		"found": True,
@@ -1390,6 +1557,7 @@ def installation_self_checkin(employee, action, photo=None, latitude=None, longi
 		emp_name = frappe.db.get_value("Employee", {"employee_qr_value": employee}, "name")
 	if not emp_name:
 		return {"success": False, "message": f"Employee not found: {employee}"}
+	_require_employee_self_or_hr(emp_name)
 
 	# Save photo as file if provided
 	photo_url = None
@@ -1406,21 +1574,17 @@ def installation_self_checkin(employee, action, photo=None, latitude=None, longi
 				data = photo
 				file_ext = "jpg"
 
-			file_data = base64.b64decode(data)
-			file_name = f"checkin_{emp_name}_{frappe.utils.now_datetime().strftime('%Y%m%d_%H%M%S')}.{file_ext}"
-
-			# Save to temp path and create File document
-			import os
-			tmp_path = os.path.join(frappe.get_site_path("private", "files"), file_name)
-			with open(tmp_path, "wb") as f:
-				f.write(file_data)
+			file_data = base64.b64decode(data, validate=True)
+			if len(file_data) > 5 * 1024 * 1024:
+				frappe.throw("Check-in photo cannot exceed 5 MB.")
+			file_name = f"checkin_{frappe.generate_hash(length=16)}.{file_ext}"
 
 			# Create File document
 			file_doc = frappe.get_doc({
 				"doctype": "File",
 				"file_name": file_name,
 				"is_private": 1,
-				"file_url": f"/private/files/{file_name}",
+				"content": file_data,
 				"attached_to_doctype": "Employee Checkin",
 			})
 			file_doc.insert(ignore_permissions=True)
@@ -1458,9 +1622,10 @@ def installation_self_checkin(employee, action, photo=None, latitude=None, longi
 	}
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_today_checkins():
 	"""Get today's checkins for the recent list on the self-checkin page."""
+	_require_roles("Elemental HR Gate User", "Elemental HR Gate HOD")
 	today = frappe.utils.nowdate()
 	checkins = frappe.get_all(
 		"Employee Checkin",

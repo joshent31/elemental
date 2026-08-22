@@ -193,5 +193,30 @@
   "insert_after": "section_suppliers_elemental",
   "description": "Suppliers for this item with part numbers and default flag. Used by Material Indent to auto-select supplier on Purchase Orders.",
   "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Purchase Order-elemental_job",
+  "dt": "Purchase Order",
+  "fieldname": "elemental_job",
+  "label": "Elemental Job",
+  "fieldtype": "Link",
+  "options": "Job",
+  "insert_after": "project",
+  "read_only": 1,
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Purchase Order-elemental_material_indent",
+  "dt": "Purchase Order",
+  "fieldname": "elemental_material_indent",
+  "label": "Elemental Material Indent",
+  "fieldtype": "Link",
+  "options": "Material Indent",
+  "insert_after": "elemental_job",
+  "read_only": 1,
+  "unique": 1,
+  "module": "Elemental ERP"
  }
 ]

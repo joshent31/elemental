@@ -47,8 +47,9 @@ class TestScanQR(unittest.TestCase):
 
                 result = scan_qr("abc123", department="Metal", qty_scanned=5)
 
-                mock_doc.assert_called_once()
-                args = mock_doc.call_args[0][0]
+                log_calls = [c for c in mock_doc.call_args_list if c.args and isinstance(c.args[0], dict)]
+                self.assertEqual(len(log_calls), 1)
+                args = log_calls[0].args[0]
                 self.assertEqual(args["doctype"], "QR Scan Log")
                 self.assertEqual(args["qr_code_master"], "QRC-001")
                 self.assertEqual(args["department"], "Metal")
@@ -91,6 +92,7 @@ class TestDepartmentTransfer(unittest.TestCase):
 
         mock_qr_master = MagicMock()
         mock_qr_master.job = "JOB-001"
+        mock_qr_master.total_qty = 100
 
         with patch("frappe.db.get_value", return_value="QRC-001"):
             with patch("frappe.get_doc", return_value=mock_qr_master):
@@ -232,18 +234,20 @@ class TestPackingLabels(unittest.TestCase):
         from elemental_erp.api import create_packing_labels
 
         with patch("frappe.db.set_value"):
-            with patch("frappe.db.commit"):
-                with patch("frappe.generate_hash", return_value="HASH123"):
-                    with patch("frappe.utils.get_url", return_value="https://example.com"):
-                        with patch("elemental_erp.utils.qr_generator.generate_qr_image", return_value="/files/HASH123.png"):
-                            with patch("frappe.get_doc") as mock_doc:
-                                mock_box = MagicMock()
-                                mock_doc.return_value = mock_box
+            with patch("frappe.db.get_value", return_value="Job Created"):
+                with patch("frappe.db.count", return_value=0):
+                    with patch("frappe.db.commit"):
+                        with patch("frappe.generate_hash", return_value="HASH123"):
+                            with patch("frappe.utils.get_url", return_value="https://example.com"):
+                                with patch("elemental_erp.utils.qr_generator.generate_qr_image", return_value="/files/HASH123.png"):
+                                    with patch("frappe.get_doc") as mock_doc:
+                                        mock_box = MagicMock()
+                                        mock_doc.return_value = mock_box
 
-                                result = create_packing_labels("JOB-001", 3)
-                                self.assertEqual(result["created"], 3)
-                                # Should have created 3 box documents
-                                self.assertEqual(mock_doc.call_count, 3)
+                                        result = create_packing_labels("JOB-001", 3)
+                                        self.assertEqual(result["created"], 3)
+                                        # One Job lookup plus three box documents.
+                                        self.assertEqual(mock_doc.call_count, 4)
 
 
 class TestSalesInvoice(unittest.TestCase):
@@ -260,8 +264,8 @@ class TestSalesInvoice(unittest.TestCase):
     def test_cannot_create_if_si_exists(self):
         from elemental_erp.api import create_sales_invoice_for_job
 
-        with patch("frappe.db.count", side_effect=[0]):
-            # No boxes, but SI already exists
+        with patch("frappe.db.count", side_effect=[1, 0]):
+            # One loaded box, but SI already exists
             with patch("frappe.db.exists", return_value="SI-001"):
                 with self.assertRaises(frappe.ValidationError):
                     create_sales_invoice_for_job("JOB-001")
@@ -269,7 +273,7 @@ class TestSalesInvoice(unittest.TestCase):
     def test_no_mapped_items_throws(self):
         from elemental_erp.api import create_sales_invoice_for_job
 
-        with patch("frappe.db.count", return_value=0):
+        with patch("frappe.db.count", side_effect=[1, 0]):
             with patch("frappe.db.exists", return_value=None):
                 mock_job = MagicMock()
                 mock_job.fg_items = [MagicMock(finished_good="FG-001")]

@@ -11,15 +11,9 @@ required_apps = ["erpnext"]
 app_include_js = "/assets/elemental_erp/js/job.js"
 
 # ------------------------------------------------------------------
-# Monkey-patch: Fix "Use of sub-query or function is restricted"
-# for doctypes whose table names contain SQL keywords like "from".
-#
-# ROOT CAUSE: The table name `tabWork from Home Request` contains
-# the word " from " which matches Frappe's IS_QUERY_PREDICATE_PATTERN
-# regex in sanitize_fields when fields get table-prefixed.
-#
-# FIX: Completely bypass sanitize_fields for affected doctypes.
-# All fields in these doctypes are known-safe simple column names.
+# Compatibility patch for Frappe's false positive on the word "from" in
+# `tabWork from Home Request`. Never bypass sanitization for arbitrary
+# fields: accept only simple identifiers from the DocType metadata.
 # ------------------------------------------------------------------
 import frappe
 from frappe.model.db_query import DatabaseQuery as _DQ
@@ -27,41 +21,29 @@ import re as _re
 
 _original_sanitize = _DQ.sanitize_fields
 
-# Doctypes whose table names contain SQL keywords
 _AFFECTED_DOCTYPES = frozenset(["Work from Home Request"])
 
-# Also patch the IS_QUERY_PREDICATE_PATTERN to not match " from " when
-# preceded by "tab" + doctype name (the table prefix pattern)
-_original_predicate = None
-try:
-    _original_predicate = _DQ.__module__  # module path
-except Exception:
-    pass
+_SAFE_FIELD = _re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 def _safe_sanitize_fields(self):
-    """Bypass sanitize_fields for doctypes whose table names contain
-    SQL keywords like 'from' — the table prefix triggers false positives.
+	"""Handle one known DocType while rejecting expressions and SQL tokens."""
+	dt = getattr(self, "doctype", "") or ""
+	if dt in _AFFECTED_DOCTYPES:
+		valid_fields = {"name", "owner", "creation", "modified", "modified_by", "docstatus", "idx"}
+		valid_fields.update(f.fieldname for f in frappe.get_meta(dt).fields if f.fieldname)
+		stripped = []
+		for f in (self.fields or []):
+			f_str = str(f).replace("`", "")
+			if "." in f_str:
+				f_str = f_str.split(".")[-1]
+			if not _SAFE_FIELD.fullmatch(f_str) or f_str not in valid_fields:
+				frappe.throw(f"Unsafe or unknown field requested for {dt}: {f_str}")
+			stripped.append(f_str)
+		self.fields = stripped
+		return
 
-    Also strip any table-prefixed fields (e.g. `tabWork from Home Request`.`name`)
-    before the original check runs, so even if we're wrong about skipping,
-    the fields are clean.
-    """
-    dt = getattr(self, "doctype", "") or ""
-    needs_bypass = dt in _AFFECTED_DOCTYPES or " from " in dt.lower()
-
-    if needs_bypass:
-        # Strip table prefixes: `tabWork from Home Request`.`name` → name
-        stripped = []
-        for f in (self.fields or []):
-            f_str = str(f).replace("`", "")
-            if "." in f_str:
-                f_str = f_str.split(".")[-1]
-            stripped.append(f_str)
-        self.fields = stripped
-        return  # Skip entirely — all fields are now safe column names
-
-    return _original_sanitize(self)
+	return _original_sanitize(self)
 
 
 _DQ.sanitize_fields = _safe_sanitize_fields

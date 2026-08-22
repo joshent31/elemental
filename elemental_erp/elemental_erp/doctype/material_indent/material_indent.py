@@ -1,6 +1,8 @@
 import frappe
 from frappe.model.document import Document
 
+from elemental_erp.utils.transactions import advance_job_status, assert_active_job, positive_quantity
+
 
 class MaterialIndent(Document):
 	def validate(self):
@@ -8,23 +10,33 @@ class MaterialIndent(Document):
 		total Bin qty minus whatever other still-open Jobs have already
 		claimed on their own submitted Indents. Without this, two Jobs can
 		both be told the same units are "available"."""
+		assert_active_job(self.job)
+		seen = set()
 		for row in self.items:
-			total_bin_qty = frappe.db.get_value(
-				"Bin", {"item_code": row.raw_material}, "actual_qty"
-			) or 0
+			if row.raw_material in seen:
+				frappe.throw(f"Raw Material {row.raw_material} is listed more than once.")
+			seen.add(row.raw_material)
+			row.required_qty = positive_quantity(row.required_qty, f"Required Qty for {row.raw_material}")
+
+			# Bin is one row per Item/Warehouse. Aggregate all warehouses until
+			# the transaction schema gains an explicit source warehouse.
+			total_bin_qty = frappe.db.sql(
+				"SELECT COALESCE(SUM(actual_qty), 0) FROM `tabBin` WHERE item_code = %s",
+				row.raw_material,
+			)[0][0] or 0
 
 			reserved_elsewhere = frappe.db.sql(
 				"""
-				SELECT COALESCE(SUM(mii.required_qty), 0)
+				SELECT COALESCE(SUM(GREATEST(mii.required_qty - COALESCE(mii.shortfall_qty, 0), 0)), 0)
 				FROM `tabMaterial Indent Item` mii
 				INNER JOIN `tabMaterial Indent` mi ON mi.name = mii.parent
 				INNER JOIN `tabJob` j ON j.name = mi.job
 				WHERE mii.raw_material = %s
 				  AND mi.docstatus = 1
-				  AND mi.job != %s
+				  AND mi.name != %s
 				  AND j.status NOT IN ('Closed', 'Cancelled')
 				""",
-				(row.raw_material, self.job or ""),
+				(row.raw_material, self.name or ""),
 			)[0][0] or 0
 
 			row.total_bin_qty = total_bin_qty
@@ -36,8 +48,8 @@ class MaterialIndent(Document):
 		self.total_indent_value = sum((row.amount or 0) for row in self.items)
 
 	def on_submit(self):
-		self.status = "Approved"
-		frappe.db.set_value("Job", self.job, "status", "Indent Raised")
+		self.db_set("status", "Approved", update_modified=False)
+		advance_job_status(self.job, "Indent Raised")
 		self._mark_covered_fg_items_indented()
 
 		# "once approved, it goes to Purchase Order in draft" — auto-create
@@ -86,3 +98,35 @@ class MaterialIndent(Document):
 				changed = True
 		if changed:
 			job_doc.save(ignore_permissions=True)
+
+	def on_cancel(self):
+		"""Release per-FG indent flags when no other submitted indent covers them."""
+		if self.purchase_order and frappe.db.exists("Purchase Order", self.purchase_order):
+			po = frappe.get_doc("Purchase Order", self.purchase_order)
+			if po.docstatus == 0:
+				frappe.delete_doc("Purchase Order", po.name, ignore_permissions=True)
+			elif po.docstatus == 1:
+				po.cancel()
+		if not self.covered_finished_goods:
+			return
+		try:
+			import json
+
+			fg_codes = set(json.loads(self.covered_finished_goods) or [])
+		except Exception:
+			return
+		covered_elsewhere = set()
+		for raw in frappe.get_all(
+			"Material Indent",
+			filters={"job": self.job, "docstatus": 1, "name": ["!=", self.name]},
+			pluck="covered_finished_goods",
+		):
+			try:
+				covered_elsewhere.update(json.loads(raw) or [])
+			except Exception:
+				continue
+		job_doc = frappe.get_doc("Job", self.job)
+		for row in job_doc.fg_items:
+			if row.finished_good in fg_codes and row.finished_good not in covered_elsewhere:
+				row.indent_raised = 0
+		job_doc.save(ignore_permissions=True)

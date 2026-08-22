@@ -1,9 +1,12 @@
 import frappe
 from frappe.model.document import Document
 
+from elemental_erp.utils.transactions import assert_active_job
+
 
 class QCInspection(Document):
-	pass
+	def validate(self):
+		assert_active_job(self.job)
 
 
 def qc_passed(job, finished_good):

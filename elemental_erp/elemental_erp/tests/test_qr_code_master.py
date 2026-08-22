@@ -16,7 +16,7 @@ class TestQRCodeMasterUpdateStatus(unittest.TestCase):
         doc.total_qty = total_qty
         doc.completed_qty = completed_qty
         doc.subpart_name = "Chair Leg"
-        doc.process = "Metal"
+        doc.process_name = "Metal"
         doc.job = "JOB-001"
         doc.update_status = QRCodeMaster.update_status.__get__(doc, QRCodeMaster)
         return doc
@@ -44,19 +44,17 @@ class TestQRCodeMasterUpdateStatus(unittest.TestCase):
         with self.assertRaises(frappe.ValidationError):
             doc.update_status(10)  # only 5 remaining
 
-    def test_scan_zero_sets_pending(self):
-        """Scanning 0 qty sets status to Pending."""
+    def test_scan_zero_is_rejected(self):
+        """Public scan quantities must be strictly positive."""
         doc = self._make_master(total_qty=100, completed_qty=0)
-        with patch("frappe.db.count", return_value=5):
+        with self.assertRaises(frappe.ValidationError):
             doc.update_status(0)
-            self.assertEqual(doc.status, "Pending")
 
     def test_over_scan_boundary(self):
-        """Small floating-point over-scan is allowed (within tolerance)."""
+        """A quantity beyond the 1e-6 tolerance is rejected."""
         doc = self._make_master(total_qty=100, completed_qty=99.9)
-        with patch("frappe.db.count", return_value=5):
-            doc.update_status(0.2)  # 100.1 — but within 1e-6 tolerance
-            self.assertAlmostEqual(doc.completed_qty, 100.1, places=1)
+        with self.assertRaises(frappe.ValidationError):
+            doc.update_status(0.2)
 
 
 class TestJobAutoCompletion(unittest.TestCase):
@@ -67,9 +65,11 @@ class TestJobAutoCompletion(unittest.TestCase):
         from elemental_erp.elemental_erp.doctype.qr_code_master.qr_code_master import check_job_fully_completed
 
         with patch("frappe.db.count", return_value=0):
-            with patch("frappe.db.set_value") as mock_set:
-                check_job_fully_completed("JOB-001")
-                mock_set.assert_called_once_with("Job", "JOB-001", "status", "In Packaging")
+            with patch("frappe.db.get_value", return_value="In Production"):
+                with patch("frappe.db.set_value") as mock_set:
+                    with patch("frappe.db.sql"):
+                        check_job_fully_completed("JOB-001")
+                        mock_set.assert_called_once_with("Job", "JOB-001", "status", "In Packaging")
 
     def test_pending_qr_remains(self):
         """When QRs are still pending, Job status is NOT changed."""
@@ -97,7 +97,7 @@ class TestCreateQRMaster(unittest.TestCase):
                         result = create_qr_master(
                             job="JOB-001", finished_good="FG-001",
                             subpart_code="SP-01", subpart_name="Leg",
-                            process="Metal", total_qty=50,
+                            process_name="Metal", total_qty=50,
                         )
                         # Verify doc was configured correctly
                         args = mock_doc.insert.call_args

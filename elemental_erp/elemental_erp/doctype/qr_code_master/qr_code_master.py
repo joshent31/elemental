@@ -11,14 +11,16 @@ class QRCodeMaster(Document):
 		of silently absorbing them — an over-scan is almost always a
 		mistake (wrong QR, duplicate scan, wrong qty typed) and should stop
 		the transaction rather than quietly break the completion %."""
-		if qty_scanned and qty_scanned > 0:
-			remaining = (self.total_qty or 0) - (self.completed_qty or 0)
-			if qty_scanned > remaining + 1e-6:
-				frappe.throw(
-					f"This scan ({qty_scanned}) would take {self.subpart_name} / {self.process_name} "
-					f"to {(self.completed_qty or 0) + qty_scanned}, past its total of {self.total_qty}. "
-					f"Only {remaining} remain \u2014 check the QR and quantity."
-				)
+		from elemental_erp.utils.transactions import positive_quantity
+
+		qty_scanned = positive_quantity(qty_scanned, "Scanned quantity")
+		remaining = (self.total_qty or 0) - (self.completed_qty or 0)
+		if qty_scanned > remaining + 1e-6:
+			frappe.throw(
+				f"This scan ({qty_scanned}) would take {self.subpart_name} / {self.process_name} "
+				f"to {(self.completed_qty or 0) + qty_scanned}, past its total of {self.total_qty}. "
+				f"Only {remaining} remain \u2014 check the QR and quantity."
+			)
 
 		self.completed_qty = (self.completed_qty or 0) + qty_scanned
 		if self.completed_qty <= 0:
@@ -29,6 +31,20 @@ class QRCodeMaster(Document):
 			self.status = "In Process"
 		self.save(ignore_permissions=True)
 		check_job_fully_completed(self.job)
+
+	def reverse_status(self, qty_to_reverse):
+		"""Reverse a submitted Production Entry without accepting public negative scans."""
+		from elemental_erp.utils.transactions import positive_quantity
+
+		qty_to_reverse = positive_quantity(qty_to_reverse, "Reversal quantity")
+		self.completed_qty = max((self.completed_qty or 0) - qty_to_reverse, 0)
+		if self.completed_qty <= 0:
+			self.status = "Pending"
+		elif self.completed_qty >= (self.total_qty or 0):
+			self.status = "Completed"
+		else:
+			self.status = "In Process"
+		self.save(ignore_permissions=True)
 
 
 def create_qr_master(job, finished_good, subpart_code, subpart_name, process_name, total_qty):
@@ -66,4 +82,6 @@ def check_job_fully_completed(job_name):
 		"QR Code Master", {"job": job_name, "status": ["!=", "Completed"]}
 	)
 	if pending == 0:
-		frappe.db.set_value("Job", job_name, "status", "In Packaging")
+		from elemental_erp.utils.transactions import advance_job_status
+
+		advance_job_status(job_name, "In Packaging")

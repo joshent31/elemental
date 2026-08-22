@@ -40,7 +40,8 @@
    "fieldname": "material_indent",
    "label": "Against Material Indent",
    "fieldtype": "Link",
-   "options": "Material Indent"
+   "options": "Material Indent",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_mi1",
