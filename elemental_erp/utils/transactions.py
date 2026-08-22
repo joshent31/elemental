@@ -51,6 +51,27 @@ def positive_quantity(value, label="Quantity"):
 	return value
 
 
+def resolve_department(value):
+	"""Return the canonical Department link for a legacy display name.
+
+	ERPNext names company departments as ``<department_name> - <company abbr>``.
+	Early Elemental Material Indents stored ``department`` as free text, so a
+	value such as ``Wood`` must resolve to ``Wood - EF`` before it is compared
+	with link fields on downstream documents. Ambiguous display names are left
+	unchanged so transactions cannot be linked to the wrong company silently.
+	"""
+	value = (value or "").strip()
+	if not value or frappe.db.exists("Department", value):
+		return value
+	matches = frappe.get_all(
+		"Department",
+		filters={"department_name": value},
+		pluck="name",
+		limit_page_length=2,
+	)
+	return matches[0] if len(matches) == 1 else value
+
+
 def assert_active_job(job):
 	"""Reject transactions against terminal or missing Jobs."""
 	status = frappe.db.get_value("Job", job, "status")

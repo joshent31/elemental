@@ -1,7 +1,12 @@
 import frappe
 from frappe.model.document import Document
 
-from elemental_erp.utils.transactions import advance_job_status, assert_active_job, positive_quantity
+from elemental_erp.utils.transactions import (
+	advance_job_status,
+	assert_active_job,
+	positive_quantity,
+	resolve_department,
+)
 
 
 class MaterialIssue(Document):
@@ -17,8 +22,21 @@ class MaterialIssue(Document):
 		)
 		if not indent or indent.docstatus != 1:
 			frappe.throw("Material Issue requires a submitted Material Indent.")
-		if indent.job != self.job or indent.department != self.department:
-			frappe.throw("Material Issue Job and Department must match the linked Material Indent.")
+		if indent.job != self.job:
+			frappe.throw(
+				f"Material Issue Job {self.job} does not match {self.material_indent}, "
+				f"which belongs to Job {indent.job}."
+			)
+		indent_department = resolve_department(indent.department)
+		issue_department = resolve_department(self.department)
+		if indent_department != issue_department:
+			frappe.throw(
+				f"Material Issue Department {self.department} does not match "
+				f"{self.material_indent} Department {indent.department}."
+			)
+		# Persist the canonical Link value even when this Issue was populated
+		# from an older free-text Material Indent.
+		self.department = issue_department
 
 		allowed = {
 			r.raw_material: float(r.required_qty or 0)

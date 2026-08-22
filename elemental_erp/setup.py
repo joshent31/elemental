@@ -17,3 +17,25 @@ def ensure_erpnext_address_and_contact_schema():
 	if not frappe.db.has_column("Contact", "is_billing_contact"):
 		frappe.clear_cache(doctype="Contact")
 		frappe.db.updatedb("Contact")
+
+
+def normalize_material_indent_departments():
+	"""Convert unambiguous legacy indent department labels to Link values."""
+	import frappe
+
+	from elemental_erp.utils.transactions import resolve_department
+
+	for indent in frappe.get_all(
+		"Material Indent",
+		filters={"department": ["!=", ""]},
+		fields=["name", "department"],
+	):
+		canonical = resolve_department(indent.department)
+		if canonical != indent.department and frappe.db.exists("Department", canonical):
+			frappe.db.set_value(
+				"Material Indent",
+				indent.name,
+				"department",
+				canonical,
+				update_modified=False,
+			)

@@ -18,7 +18,10 @@ before_request = ["elemental_erp.utils.db_query.install_database_query_compatibi
 # ERPNext creates Contact.is_billing_contact during app installation rather
 # than in the Contact DocType JSON. Restored or partially migrated sites can
 # retain the Custom Field record while losing the physical SQL column.
-after_migrate = ["elemental_erp.setup.ensure_erpnext_address_and_contact_schema"]
+after_migrate = [
+	"elemental_erp.setup.ensure_erpnext_address_and_contact_schema",
+	"elemental_erp.setup.normalize_material_indent_departments",
+]
 
 # Fixtures — exported so `bench get-app` installs already ship Notifications
 # and are safe to re-export any custom Property Setters etc. later
@@ -55,6 +58,7 @@ website_route_rules = [
 # Client scripts loaded per-doctype (in addition to app_include_js above)
 doctype_js = {
 	"Material Indent": "public/js/material_indent.js",
+	"Material Issue": "public/js/material_issue.js",
 	"Elemental Quotation": "public/js/quotation.js",
 	"Production Entry": "public/js/production_entry.js",
 	"Packaging Entry": "public/js/packaging_entry.js",
