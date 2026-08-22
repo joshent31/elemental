@@ -760,6 +760,28 @@ PO_INITIATION_CREATE_ROLES = (
 )
 
 
+def _require_po_initiation_schema():
+	required_columns = {
+		"Contact": ("is_billing_contact",),
+		"Purchase Order Item": (
+			"elemental_material_indent",
+			"elemental_material_indent_item",
+		),
+	}
+	missing = [
+		f"{doctype}.{fieldname}"
+		for doctype, fieldnames in required_columns.items()
+		for fieldname in fieldnames
+		if not frappe.db.has_column(doctype, fieldname)
+	]
+	if missing:
+		frappe.throw(
+			"Database schema is incomplete for PO Initiation: "
+			+ ", ".join(missing)
+			+ ". Pull the latest elemental_erp code and run bench --site <site> migrate."
+		)
+
+
 def _po_initiation_source_rows(job=None, item_group=None, item_codes=None):
 	"""Return submitted indent lines with their live, un-ordered balance.
 
@@ -928,6 +950,7 @@ def _po_initiation_suppliers(item_codes):
 def get_po_initiation_data(job=None, item_group=None):
 	"""Return outstanding purchase demand for the PO Initiation page."""
 	_require_roles(*PO_INITIATION_VIEW_ROLES)
+	_require_po_initiation_schema()
 	if bool(job) == bool(item_group):
 		frappe.throw("Select either a Job or an Item Group.")
 
@@ -1023,6 +1046,7 @@ def _validated_po_initiation_rows(rows):
 def create_po_from_initiation(rows, job=None):
 	"""Create draft POs while preserving exact Material Indent-line linkage."""
 	_require_roles(*PO_INITIATION_CREATE_ROLES)
+	_require_po_initiation_schema()
 	if job:
 		job_doc = frappe.get_doc("Job", job)
 		require_doc_permission(job_doc, "read")

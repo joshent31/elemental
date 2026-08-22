@@ -15,6 +15,11 @@ app_include_js = "/assets/elemental_erp/js/job.js"
 # Frappe reads cached hook metadata.
 before_request = ["elemental_erp.utils.db_query.install_database_query_compatibility"]
 
+# ERPNext creates Contact.is_billing_contact during app installation rather
+# than in the Contact DocType JSON. Restored or partially migrated sites can
+# retain the Custom Field record while losing the physical SQL column.
+after_migrate = ["elemental_erp.setup.ensure_erpnext_address_and_contact_schema"]
+
 # Fixtures — exported so `bench get-app` installs already ship Notifications
 # and are safe to re-export any custom Property Setters etc. later
 fixtures = [
