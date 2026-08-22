@@ -4,8 +4,16 @@ import frappe
 def execute(filters=None):
 	filters = filters or {}
 	columns = get_columns()
-	data = get_data(filters)
-	return columns, data
+	has_sales_invoice_job = frappe.db.has_column("Sales Invoice", "elemental_job")
+	data = get_data(filters, has_sales_invoice_job=has_sales_invoice_job)
+	message = None
+	if not has_sales_invoice_job:
+		message = (
+			"Sales Invoice job linkage is not installed on this site. "
+			"Run bench migrate to create the elemental_job custom field; "
+			"profitability is unavailable until then."
+		)
+	return columns, data, message
 
 
 def get_columns():
@@ -46,7 +54,10 @@ def _pct(done, total):
 	return round((done / total) * 100, 1)
 
 
-def get_data(filters):
+def get_data(filters, has_sales_invoice_job=None):
+	if has_sales_invoice_job is None:
+		has_sales_invoice_job = frappe.db.has_column("Sales Invoice", "elemental_job")
+
 	conditions = ""
 	if filters.get("job"):
 		conditions += " AND j.name = %(job)s"
@@ -221,20 +232,25 @@ def get_data(filters):
 		# Includes Draft invoices (not just submitted) since the point is an
 		# early profitability signal, not final accounting — cancelled
 		# invoices are excluded.
-		sales_invoice_value = frappe.db.sql(
-			"""
-			SELECT COALESCE(SUM(grand_total), 0)
-			FROM `tabSales Invoice`
-			WHERE elemental_job = %s AND docstatus != 2
-			""",
-			job.job,
-		)[0][0] or 0
+		if has_sales_invoice_job:
+			sales_invoice_value = frappe.db.sql(
+				"""
+				SELECT COALESCE(SUM(grand_total), 0)
+				FROM `tabSales Invoice`
+				WHERE `elemental_job` = %s AND docstatus != 2
+				""",
+				job.job,
+			)[0][0] or 0
+		else:
+			sales_invoice_value = 0
 
 		total_cost = total_indent_value + total_manpower_cost
 		profit = sales_invoice_value - total_cost if sales_invoice_value else 0
 		margin_pct = round((profit / sales_invoice_value) * 100, 1) if sales_invoice_value else 0
 
-		if not sales_invoice_value:
+		if not has_sales_invoice_job:
+			profitable = "Setup Required"
+		elif not sales_invoice_value:
 			profitable = "Pending Invoice"
 		elif profit > 0:
 			profitable = "Yes"
