@@ -11,6 +11,8 @@
 
   <div id="site-result" style="display:none; margin-top:16px;">
     <div class="alert alert-info" id="site-box-info"></div>
+    <h5>Material Inside This Box</h5>
+    <div id="site-box-contents" style="margin-bottom:14px;"></div>
     <label>Your Name</label>
     <input type="text" id="site-name" class="form-control" style="margin-bottom:10px;">
     <button id="confirm-received-btn" class="btn btn-secondary btn-block" style="margin-bottom:8px;">Confirm Received at Site</button>
@@ -41,7 +43,41 @@ function loadBox() {
 				const b = r.message;
 				currentJob = b.job;
 				document.getElementById("site-box-info").innerHTML =
-					`Job: <b>${b.job}</b><br>Box <b>${b.box_no}</b> of <b>${b.total_boxes}</b><br>Current Status: <b>${b.status}</b>`;
+					`Job: <b>${b.job}</b> — ${b.job_name || ""}<br>` +
+					`Location: <b>${b.job_location || "-"}</b><br>` +
+					(b.job_description ? `Description: ${b.job_description}<br>` : "") +
+					`Box <b>${b.box_no}</b> of <b>${b.total_boxes}</b><br>Current Status: <b>${b.status}</b>`;
+				const contents = document.getElementById("site-box-contents");
+				contents.innerHTML = "";
+				(b.contents || []).forEach((content) => {
+					const card = document.createElement("div");
+					card.style.cssText = "display:flex; gap:10px; padding:9px; border:1px solid #ddd; border-radius:6px; margin-bottom:7px;";
+					const visual = document.createElement("div");
+					visual.style.cssText = "width:84px; min-width:84px; height:74px; display:flex; align-items:center; justify-content:center; background:#f6f6f6; font-size:10px; text-align:center; overflow:hidden;";
+					if (content.diagram) {
+						const image = document.createElement("img");
+						image.src = content.diagram;
+						image.alt = content.description || content.item_code || "Packed item diagram";
+						image.style.cssText = "max-width:100%; max-height:100%; object-fit:contain;";
+						visual.appendChild(image);
+					} else {
+						visual.textContent = "Diagram not uploaded";
+					}
+					const text = document.createElement("div");
+					const title = document.createElement("strong");
+					title.textContent = `${content.content_type || "Subpart"}: ${content.item_code || ""}`;
+					const description = document.createElement("div");
+					description.textContent = content.description || content.subpart_label || "";
+					const qty = document.createElement("div");
+					qty.textContent = `Qty: ${content.packed_qty} ${content.uom || ""}`;
+					qty.style.fontWeight = "bold";
+					text.append(title, description, qty);
+					card.append(visual, text);
+					contents.appendChild(card);
+				});
+				if (!(b.contents || []).length) {
+					contents.textContent = "No contents have been mapped to this box.";
+				}
 				document.getElementById("site-result").style.display = "block";
 				document.getElementById("close-job-box").style.display = "none";
 			}

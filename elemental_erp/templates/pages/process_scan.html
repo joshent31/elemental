@@ -3,10 +3,21 @@
 {% block page_content %}
 <div style="max-width:520px; margin:0 auto; font-family:sans-serif; padding:12px;">
   <h3>Complete Subpart Process</h3>
-  <p style="color:#666; font-size:13px;">Scan the subpart traveller label after your department completes its work. The same QR follows the part through every department.</p>
+  <p style="color:#666; font-size:13px;">Activate the Job first, then scan the subpart traveller label after your department completes its work.</p>
+
+  <div style="padding:12px; border:2px solid #1a2942; border-radius:8px; margin-bottom:16px;">
+    <h5 style="margin-top:0;">Step 1 — Scan / Enter Job</h5>
+    <input id="job-context-code" class="form-control" placeholder="JOB-2026-00001" style="margin-bottom:8px;">
+    <div style="display:flex; gap:8px;">
+      <button id="enter-job-context" class="btn btn-secondary" style="flex:1;">Use Job Code</button>
+      <button id="scan-job-context" class="btn btn-primary" style="flex:1;">Scan Job QR</button>
+    </div>
+    <div id="scanner-job-context" style="width:100%; margin-top:10px;"></div>
+    <div id="job-context-info" style="display:none; margin:10px 0 0;"></div>
+  </div>
 
   <div id="scanner-part" style="width:100%; margin-bottom:12px;"></div>
-  <button id="start-scan" class="btn btn-primary btn-block">Scan Subpart Label</button>
+  <button id="start-scan" class="btn btn-primary btn-block" disabled>Step 2 — Scan Subpart Label</button>
 
   <div id="part-panel" style="display:none; margin-top:16px;">
     <div id="part-info" class="alert alert-info"></div>
@@ -24,6 +35,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/job_scan_context.js"></script>
 <script>
 let partQrValue = "{{ prefill_part }}";
 let currentLabel = null;
@@ -96,9 +108,10 @@ function updateSuggestedQty() {
 }
 
 function loadLabel() {
+	if (!jobContext.name) return;
 	frappe.call({
 		method: "elemental_erp.api.lookup_subpart_label",
-		args: { qr_value: partQrValue },
+		args: { qr_value: partQrValue, job: jobContext.name },
 		callback: (response) => {
 			if (response.message) renderLabel(response.message);
 		},
@@ -123,6 +136,7 @@ document.getElementById("complete-btn").onclick = function () {
 		method: "elemental_erp.api.complete_subpart_process",
 		args: {
 			label_qr_value: partQrValue,
+			job: jobContext.name,
 			process_name: document.getElementById("process-name").value,
 			qty_scanned: document.getElementById("completed-qty").value,
 			remarks: document.getElementById("remarks").value,
@@ -139,6 +153,12 @@ document.getElementById("complete-btn").onclick = function () {
 	});
 };
 
-if (partQrValue) loadLabel();
+const jobContext = new ElementalJobContext({
+	prefill: "{{ prefill_job }}",
+	onActivated: () => {
+		document.getElementById("start-scan").disabled = false;
+		if (partQrValue) loadLabel();
+	},
+});
 </script>
 {% endblock %}

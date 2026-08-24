@@ -76,16 +76,20 @@ class TestDepartmentTransfer(unittest.TestCase):
             "process": "Metal", "total_qty": 50, "completed_qty": 20,
             "status": "In Process",
         }
-        with patch("frappe.db.get_value", return_value=mock_qr):
-            result = lookup_part_qr("abc123")
+        with patch("elemental_erp.api._get_subpart_label", return_value=None), patch(
+            "frappe.db.get_value", side_effect=[None, frappe._dict(mock_qr)]
+        ), patch("elemental_erp.api._require_job_context"):
+            result = lookup_part_qr("abc123", job="JOB-001")
             self.assertEqual(result["job"], "JOB-001")
 
     def test_lookup_part_qr_invalid(self):
         from elemental_erp.api import lookup_part_qr
 
-        with patch("frappe.db.get_value", return_value=None):
+        with patch("elemental_erp.api._get_subpart_label", return_value=None), patch(
+            "frappe.db.get_value", return_value=None
+        ):
             with self.assertRaises(frappe.ValidationError):
-                lookup_part_qr("nonexistent")
+                lookup_part_qr("nonexistent", job="JOB-001")
 
     def test_create_transfer_generates_qr(self):
         from elemental_erp.api import create_transfer
@@ -99,8 +103,8 @@ class TestDepartmentTransfer(unittest.TestCase):
                 with patch("frappe.generate_hash", return_value="ABC123"):
                     with patch("frappe.utils.get_url", return_value="https://example.com"):
                         with patch("elemental_erp.utils.qr_generator.generate_qr_image", return_value="/files/ABC123.png"):
-                            with patch("frappe.db.commit"):
-                                result = create_transfer("abc123", "Metal", "Paint", 10)
+                            with patch("frappe.db.commit"), patch("elemental_erp.api._require_job_context"):
+                                result = create_transfer("abc123", "Metal", "Paint", 10, job="JOB-001")
                                 # Verify the transfer doc was created with correct fields
                                 mock_qr_master.insert.assert_called()
 
@@ -111,9 +115,11 @@ class TestDepartmentTransfer(unittest.TestCase):
         mock_transfer.status = "Received"
 
         with patch("frappe.db.get_value", return_value="DT-001"):
-            with patch("frappe.get_doc", return_value=mock_transfer):
+            with patch("frappe.get_doc", return_value=mock_transfer), patch(
+                "elemental_erp.api._require_job_context"
+            ):
                 with self.assertRaises(frappe.ValidationError):
-                    receive_transfer("transfer_qr", 10)
+                    receive_transfer("transfer_qr", 10, job="JOB-001")
 
 
 class TestMaterialFlow(unittest.TestCase):

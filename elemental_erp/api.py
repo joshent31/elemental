@@ -10,6 +10,7 @@ from elemental_erp.utils.mobile_access import (
 	GATE_SCAN_ROLES,
 	PACKAGING_SCAN_ROLES,
 	PRODUCTION_FLOOR_ROLES,
+	PRODUCTION_SCAN_ROLES,
 	QC_SCAN_ROLES,
 )
 from elemental_erp.utils.transactions import (
@@ -37,6 +38,51 @@ def _require_employee_self_or_hr(employee):
 	own_employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
 	if not own_employee or own_employee != employee:
 		frappe.throw("You can only access your own employee transactions.", frappe.PermissionError)
+
+
+def _resolve_job_context(job_code):
+	"""Resolve either a typed Job number or the value encoded by its Job QR."""
+	job_code = (job_code or "").strip()
+	if not job_code:
+		frappe.throw("Scan the Job QR or enter the Job code before scanning transactions.")
+	fields = [
+		"name",
+		"job_name",
+		"customer",
+		"job_location",
+		"job_description",
+		"status",
+		"job_qr_value",
+		"job_qr_image",
+	]
+	job = frappe.db.get_value("Job", {"name": job_code}, fields, as_dict=True)
+	if not job:
+		job = frappe.db.get_value("Job", {"job_qr_value": job_code}, fields, as_dict=True)
+	if not job:
+		frappe.throw("Job QR / Job code not recognised", frappe.DoesNotExistError)
+	job_doc = frappe.get_doc("Job", job.name)
+	require_doc_permission(job_doc, "read")
+	return frappe._dict(job)
+
+
+def _require_job_context(job_code, actual_job):
+	job = _resolve_job_context(job_code)
+	if job.name != actual_job:
+		frappe.throw(
+			f"Scanned item belongs to Job {actual_job}, but active Job is {job.name}. "
+			"Stop and scan the correct Job QR."
+		)
+	assert_active_job(job.name)
+	return job
+
+
+@frappe.whitelist()
+def lookup_job(job_code):
+	"""Unlock a scan session from either the Job QR token or typed Job number."""
+	_require_roles(*PRODUCTION_SCAN_ROLES)
+	job = _resolve_job_context(job_code)
+	assert_active_job(job.name)
+	return job
 
 
 @frappe.whitelist(allow_guest=True)
@@ -168,17 +214,18 @@ def _subpart_label_status(label):
 
 
 @frappe.whitelist()
-def lookup_subpart_label(qr_value):
+def lookup_subpart_label(qr_value, job=None):
 	"""Resolve the one physical Job subpart QR and show every department step."""
 	_require_roles(*(PRODUCTION_FLOOR_ROLES + PACKAGING_SCAN_ROLES))
 	label = _get_subpart_label(qr_value)
 	if not label:
 		frappe.throw("Job subpart label QR not recognised", frappe.DoesNotExistError)
+	_require_job_context(job, label.job)
 	return _subpart_label_status(label)
 
 
 @frappe.whitelist()
-def complete_subpart_process(label_qr_value, process_name, qty_scanned=1, remarks=None):
+def complete_subpart_process(label_qr_value, process_name, qty_scanned=1, remarks=None, job=None):
 	"""Advance one department step from the shared physical subpart label.
 
 	A downstream process may only complete the quantity already completed by
@@ -189,6 +236,7 @@ def complete_subpart_process(label_qr_value, process_name, qty_scanned=1, remark
 	label = _get_subpart_label(label_qr_value)
 	if not label:
 		frappe.throw("Job subpart label QR not recognised", frappe.DoesNotExistError)
+	_require_job_context(job, label.job)
 	if process_name == "Packing":
 		frappe.throw("Packing is completed by scanning the box label and this subpart label on Pack a Box.")
 
@@ -261,13 +309,39 @@ def prepare_job_production_traveller(job):
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
-def lookup_part_qr(qr_value):
+def lookup_part_qr(qr_value, job=None):
 	"""Used by the /transfer-out screen right after a camera scan, to show
 	the operator what part/job they just scanned before they enter qty."""
 	_require_roles(*(PRODUCTION_FLOOR_ROLES + PACKAGING_SCAN_ROLES))
 	label = _get_subpart_label(qr_value)
 	if label:
+		_require_job_context(job, label.job)
 		return _subpart_label_status(label)
+	inspection = frappe.db.get_value(
+		"QC Inspection",
+		{"qr_value": qr_value},
+		["name", "job", "finished_good", "status"],
+		as_dict=True,
+	)
+	if inspection:
+		_require_job_context(job, inspection.job)
+		fg = frappe.db.get_value(
+			"Finished Good",
+			inspection.finished_good,
+			["fg_code", "fg_name", "fg_image", "default_uom"],
+			as_dict=True,
+		) or frappe._dict()
+		return frappe._dict(
+			{
+				**inspection,
+				"is_finished_good": 1,
+				"subpart_code": fg.get("fg_code") or inspection.finished_good,
+				"subpart_name": fg.get("fg_name") or inspection.finished_good,
+				"diagram": fg.get("fg_image"),
+				"uom": fg.get("default_uom"),
+				"process_name": "Finished Good QC",
+			}
+		)
 	qr = frappe.db.get_value(
 		"QR Code Master",
 		{"qr_value": qr_value},
@@ -277,11 +351,12 @@ def lookup_part_qr(qr_value):
 	)
 	if not qr:
 		frappe.throw("Part QR not recognised")
+	_require_job_context(job, qr.job)
 	return qr
 
 
 @frappe.whitelist()
-def create_transfer(qr_value, from_department, to_department, transfer_qty, remarks=None):
+def create_transfer(qr_value, from_department, to_department, transfer_qty, remarks=None, job=None):
 	"""Sending department: scanned the part QR, entered qty + destination
 	dept. Creates the Department Transfer doc and renders its own QR (a
 	different code from the part's QR) to print on the physical slip."""
@@ -313,6 +388,7 @@ def create_transfer(qr_value, from_department, to_department, transfer_qty, rema
 
 	qr_master = frappe.get_doc("QR Code Master", qr_master_name)
 	require_doc_permission(qr_master, "read")
+	_require_job_context(job, qr_master.job)
 	assert_active_job(qr_master.job)
 	transfer_qty = positive_quantity(transfer_qty, "Transfer Qty")
 	if from_department == to_department:
@@ -353,7 +429,7 @@ def create_transfer(qr_value, from_department, to_department, transfer_qty, rema
 
 
 @frappe.whitelist()
-def get_transfer(transfer_qr_value):
+def get_transfer(transfer_qr_value, job=None):
 	"""Used by the /transfer-in screen to show what's expected before the
 	receiving operator confirms qty."""
 	_require_roles(*PRODUCTION_FLOOR_ROLES)
@@ -366,11 +442,12 @@ def get_transfer(transfer_qr_value):
 	)
 	if not transfer:
 		frappe.throw("Transfer QR not recognised", frappe.DoesNotExistError)
+	_require_job_context(job, transfer.job)
 	return transfer
 
 
 @frappe.whitelist()
-def receive_transfer(transfer_qr_value, received_qty, remarks=None):
+def receive_transfer(transfer_qr_value, received_qty, remarks=None, job=None):
 	"""Receiving department: scanned the TRANSFER slip's QR, enters the qty
 	actually received. Flags a mismatch if it doesn't match qty sent, and
 	logs a QR Scan Log against the original part QR so QR Code Master
@@ -384,6 +461,7 @@ def receive_transfer(transfer_qr_value, received_qty, remarks=None):
 
 	doc = frappe.get_doc("Department Transfer", transfer_name)
 	require_doc_permission(doc, "write")
+	_require_job_context(job, doc.job)
 	assert_active_job(doc.job)
 	if doc.status == "Received":
 		frappe.throw("This transfer has already been received")
@@ -619,9 +697,106 @@ def download_packing_labels(job):
 	)
 
 
+def _get_box_contents(box_name, job):
+	"""Return packed rows with the diagram and master data needed on mobile."""
+	rows = frappe.get_all(
+		"Packing Box Content",
+		filters={"parent": box_name, "parenttype": "Packing Box"},
+		fields=[
+			"name",
+			"content_type",
+			"finished_good",
+			"qc_inspection",
+			"job_subpart_label",
+			"qr_code_master",
+			"subpart_label",
+			"packed_qty",
+			"scanned_on",
+			"idx",
+		],
+		order_by="idx asc",
+		limit_page_length=0,
+	)
+	contents = []
+	for row in rows:
+		item = frappe._dict(row)
+		if row.finished_good or row.qc_inspection:
+			finished_good = row.finished_good or frappe.db.get_value(
+				"QC Inspection", row.qc_inspection, "finished_good"
+			)
+			fg = frappe.db.get_value(
+				"Finished Good",
+				finished_good,
+				["fg_code", "fg_name", "fg_image", "default_uom"],
+				as_dict=True,
+			) or frappe._dict()
+			item.update(
+				{
+					"content_type": "Finished Good",
+					"finished_good": finished_good,
+					"item_code": fg.get("fg_code") or finished_good,
+					"description": fg.get("fg_name") or row.subpart_label,
+					"diagram": fg.get("fg_image"),
+					"uom": fg.get("default_uom"),
+				}
+			)
+		elif row.job_subpart_label:
+			label = frappe.db.get_value(
+				"Job Subpart Label",
+				row.job_subpart_label,
+				["finished_good", "subpart_code", "subpart_name", "ref_image", "uom"],
+				as_dict=True,
+			) or frappe._dict()
+			item.update(
+				{
+					"content_type": "Subpart",
+					"finished_good": label.get("finished_good"),
+					"item_code": label.get("subpart_code"),
+					"description": label.get("subpart_name") or row.subpart_label,
+					"diagram": label.get("ref_image"),
+					"uom": label.get("uom"),
+				}
+			)
+		else:
+			tracker = frappe.db.get_value(
+				"QR Code Master",
+				row.qr_code_master,
+				["finished_good", "subpart_code", "subpart_name"],
+				as_dict=True,
+			) or frappe._dict()
+			label = frappe.db.get_value(
+				"Job Subpart Label",
+				{
+					"job": job,
+					"finished_good": tracker.get("finished_good"),
+					"subpart_code": tracker.get("subpart_code"),
+				},
+				["name", "ref_image", "uom"],
+				as_dict=True,
+			) or frappe._dict()
+			item.update(
+				{
+					"content_type": "Subpart",
+					"finished_good": tracker.get("finished_good"),
+					"job_subpart_label": label.get("name"),
+					"item_code": tracker.get("subpart_code"),
+					"description": tracker.get("subpart_name") or row.subpart_label,
+					"diagram": label.get("ref_image"),
+					"uom": label.get("uom"),
+				}
+			)
+		contents.append(item)
+	return contents
+
+
+def _lock_packing_box(box_name):
+	"""Serialize content additions so simultaneous scanners cannot lose rows."""
+	frappe.db.sql("SELECT name FROM `tabPacking Box` WHERE name = %s FOR UPDATE", (box_name,))
+
+
 @frappe.whitelist()
-def lookup_box(box_qr_value):
-	_require_roles(*(PACKAGING_SCAN_ROLES + DISPATCH_SCAN_ROLES))
+def lookup_box(box_qr_value, job=None):
+	_require_roles(*PRODUCTION_SCAN_ROLES)
 	box = frappe.db.get_value(
 		"Packing Box",
 		{"box_qr_value": box_qr_value},
@@ -630,15 +805,20 @@ def lookup_box(box_qr_value):
 	)
 	if not box:
 		frappe.throw("Box QR not recognised", frappe.DoesNotExistError)
-	box["contents"] = frappe.get_all(
-		"Packing Box Content",
-		filters={"parent": box["name"]},
-		fields=["subpart_label", "packed_qty"],
-	)
+	if job:
+		_require_job_context(job, box.job)
+	job_details = frappe.db.get_value(
+		"Job",
+		box.job,
+		["job_name", "job_location", "job_description", "customer"],
+		as_dict=True,
+	) or frappe._dict()
+	box.update(job_details)
+	box["contents"] = _get_box_contents(box.name, box.job)
 	return box
 
 
-def _map_legacy_part_to_box(box_qr_value, part_qr_value, qty):
+def _map_legacy_part_to_box(box_qr_value, part_qr_value, qty, job):
 	"""Packing operator: scan the BOX QR, then scan a PART QR, enter qty —
 	maps that part into this box's contents list. Blocked until QC has
 	Passed the part's Finished Good."""
@@ -663,6 +843,7 @@ def _map_legacy_part_to_box(box_qr_value, part_qr_value, qty):
 
 	box = frappe.get_doc("Packing Box", box_name)
 	require_doc_permission(box, "write")
+	_require_job_context(job, box.job)
 	assert_active_job(box.job)
 	if box.job != qr_master.job:
 		frappe.throw(f"Part QR belongs to Job {qr_master.job}, not box Job {box.job}.")
@@ -696,17 +877,76 @@ def _map_legacy_part_to_box(box_qr_value, part_qr_value, qty):
 
 
 @frappe.whitelist()
-def map_part_to_box(box_qr_value, part_qr_value, qty):
-	"""Map a shared Job subpart label into a box, with legacy QR support."""
+def map_part_to_box(box_qr_value, part_qr_value, qty, job=None):
+	"""Map a Passed FG or completed subpart label into one Job-matched box."""
 	_require_roles(*PACKAGING_SCAN_ROLES)
 	box_name = frappe.db.get_value("Packing Box", {"box_qr_value": box_qr_value}, "name")
 	if not box_name:
 		frappe.throw("Box QR not recognised")
 	qty = positive_quantity(qty, "Packed Qty")
+	_lock_packing_box(box_name)
+	box = frappe.get_doc("Packing Box", box_name)
+	require_doc_permission(box, "write")
+	_require_job_context(job, box.job)
+	assert_active_job(box.job)
+	if box.status not in ("Label Created", "Packed"):
+		frappe.throw(f"Box {box.box_no} is already {box.status} and cannot be repacked.")
+
+	inspection = frappe.db.get_value(
+		"QC Inspection",
+		{"qr_value": part_qr_value},
+		["name", "job", "finished_good", "status"],
+		as_dict=True,
+	)
+	if inspection:
+		frappe.db.sql(
+			"SELECT name FROM `tabQC Inspection` WHERE name = %s FOR UPDATE",
+			(inspection.name,),
+		)
+		if inspection.job != box.job:
+			frappe.throw(f"Finished Good QR belongs to Job {inspection.job}, not box Job {box.job}.")
+		if inspection.status != "Passed":
+			frappe.throw(
+				f"QC Inspection is {inspection.status}; Finished Good {inspection.finished_good} "
+				"can only be packed after QC Passed."
+			)
+		job_qty = frappe.db.get_value(
+			"Job FG Item",
+			{"parent": box.job, "parenttype": "Job", "finished_good": inspection.finished_good},
+			"job_qty",
+		) or 0
+		already_packed = frappe.db.sql(
+			"""
+			SELECT COALESCE(SUM(pbc.packed_qty), 0)
+			FROM `tabPacking Box Content` pbc
+			INNER JOIN `tabPacking Box` pb ON pb.name = pbc.parent
+			WHERE pb.job = %s AND pbc.finished_good = %s
+			""",
+			(box.job, inspection.finished_good),
+		)[0][0] or 0
+		if float(already_packed) + qty > float(job_qty) + 1e-6:
+			frappe.throw(f"Packed Qty exceeds the remaining Finished Good quantity of {job_qty - already_packed}.")
+		fg_name = frappe.db.get_value("Finished Good", inspection.finished_good, "fg_name")
+		box.append(
+			"contents",
+			{
+				"content_type": "Finished Good",
+				"finished_good": inspection.finished_good,
+				"qc_inspection": inspection.name,
+				"subpart_label": fg_name or inspection.finished_good,
+				"packed_qty": qty,
+				"scanned_on": frappe.utils.now_datetime(),
+			},
+		)
+		if box.status == "Label Created":
+			box.status = "Packed"
+		box.save(ignore_permissions=True)
+		frappe.db.commit()
+		return box.as_dict()
 
 	label = _get_subpart_label(part_qr_value)
 	if not label:
-		return _map_legacy_part_to_box(box_qr_value, part_qr_value, qty)
+		return _map_legacy_part_to_box(box_qr_value, part_qr_value, qty, job)
 
 	_lock_subpart_label(label.name)
 	processes = _get_label_processes(label.name)
@@ -733,13 +973,8 @@ def map_part_to_box(box_qr_value, part_qr_value, qty):
 			"this part cannot be packed until QC scans it Passed (see /qc-scan)."
 		)
 
-	box = frappe.get_doc("Packing Box", box_name)
-	require_doc_permission(box, "write")
-	assert_active_job(box.job)
 	if box.job != label.job:
 		frappe.throw(f"Part QR belongs to Job {label.job}, not box Job {box.job}.")
-	if box.status not in ("Label Created", "Packed"):
-		frappe.throw(f"Box {box.box_no} is already {box.status} and cannot be repacked.")
 
 	already_packed = frappe.db.sql(
 		"""
@@ -838,7 +1073,7 @@ def get_job_box_progress(job):
 
 
 @frappe.whitelist()
-def scan_box_dispatch(box_qr_value, dispatch_entry):
+def scan_box_dispatch(box_qr_value, dispatch_entry, job=None):
 	"""Scan each box's QR as it's loaded onto the vehicle. Shows a running
 	'X of N boxes loaded' count for the Job from the caller side. The
 	moment every box is loaded, a Draft Sales Invoice is created
@@ -851,6 +1086,7 @@ def scan_box_dispatch(box_qr_value, dispatch_entry):
 
 	box = frappe.get_doc("Packing Box", box_name)
 	require_doc_permission(box, "write")
+	_require_job_context(job, box.job)
 	assert_active_job(box.job)
 	dispatch = frappe.get_doc("Dispatch Entry", dispatch_entry)
 	require_doc_permission(dispatch, "write")

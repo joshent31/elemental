@@ -31,6 +31,16 @@ frappe.ui.form.on("Job", {
 				"View"
 			).addClass("btn-primary");
 		}
+		frm.add_custom_button(
+			"Print Job QR Label",
+			() => {
+				const url =
+					`/printview?doctype=Job&name=${encodeURIComponent(frm.doc.name)}` +
+					"&format=Job%20QR%20Label&no_letterhead=1";
+				window.open(url, "_blank");
+			},
+			"View"
+		);
 
 		if (isTerminal) {
 			frm.set_intro(

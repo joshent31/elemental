@@ -65,3 +65,20 @@ def sync_job_subpart_labels():
 	)
 
 	sync_labels(refresh_existing=False)
+
+
+def backfill_job_qr_codes():
+	"""Give Jobs created before the Job-first scan workflow their permanent QR."""
+	import frappe
+
+	if not frappe.db.has_column("Job", "job_qr_value"):
+		return
+	from elemental_erp.elemental_erp.doctype.job.job import ensure_job_qr
+
+	for job_name in frappe.get_all(
+		"Job",
+		filters={"job_qr_value": ["is", "not set"]},
+		pluck="name",
+		limit_page_length=0,
+	):
+		ensure_job_qr(job_name)

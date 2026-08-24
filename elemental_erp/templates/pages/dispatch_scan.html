@@ -3,15 +3,24 @@
 {% block page_content %}
 <div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
   <h3>Dispatch — Load Vehicle</h3>
-  <p style="color:#666; font-size: 13px;">Enter the Job and vehicle, then scan each box's QR as
+  <p style="color:#666; font-size: 13px;">Scan/enter the Job first, enter the vehicle, then scan each box's QR as
      it's loaded. Shows how many boxes are packed and ready vs. how many have actually been
      scanned onto the vehicle so far.</p>
 
-  <label>Job</label>
-  <input type="text" id="job-id" class="form-control" style="margin-bottom:10px;" placeholder="JOB-2026-00001">
+  <div style="padding:12px; border:2px solid #1a2942; border-radius:8px; margin-bottom:16px;">
+    <h5 style="margin-top:0;">Step 1 — Scan / Enter Job</h5>
+    <input id="job-context-code" class="form-control" placeholder="JOB-2026-00001" style="margin-bottom:8px;">
+    <div style="display:flex; gap:8px;">
+      <button id="enter-job-context" class="btn btn-secondary" style="flex:1;">Use Job Code</button>
+      <button id="scan-job-context" class="btn btn-primary" style="flex:1;">Scan Job QR</button>
+    </div>
+    <div id="scanner-job-context" style="width:100%; margin-top:10px;"></div>
+    <div id="job-context-info" style="display:none; margin:10px 0 0;"></div>
+  </div>
+
   <label>Vehicle No.</label>
   <input type="text" id="vehicle-no" class="form-control" style="margin-bottom:10px;">
-  <button id="start-dispatch-btn" class="btn btn-primary btn-block">Start / Resume Dispatch</button>
+  <button id="start-dispatch-btn" class="btn btn-primary btn-block" disabled>Start / Resume Dispatch</button>
 
   <div id="progress-panel" style="display:none; margin-top:16px; padding:14px; border:1px solid #dee2e6; border-radius:6px; background:#f8f9fa;">
     <table style="width:100%; font-size:14px; text-align:center;">
@@ -31,6 +40,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/job_scan_context.js"></script>
 <script>
 let dispatchEntry = null;
 let currentJob = null;
@@ -44,7 +54,6 @@ function renderProgress(p) {
 }
 
 document.getElementById("start-dispatch-btn").onclick = function () {
-	currentJob = document.getElementById("job-id").value;
 	frappe.call({
 		method: "elemental_erp.api.get_or_create_dispatch_entry",
 		args: { job: currentJob, vehicle_no: document.getElementById("vehicle-no").value },
@@ -71,11 +80,15 @@ document.getElementById("start-scan-dispatch").onclick = function () {
 		{ facingMode: "environment" },
 		{ fps: 10, qrbox: 220 },
 		(decodedText) => {
-			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
+			let value = decodedText.trim();
+			try {
+				const url = new URL(decodedText, window.location.origin);
+				value = url.searchParams.get("box") || url.pathname.split("/").filter(Boolean).pop();
+			} catch (error) {}
 			scanner.stop();
 			frappe.call({
 				method: "elemental_erp.api.scan_box_dispatch",
-				args: { box_qr_value: value, dispatch_entry: dispatchEntry },
+				args: { box_qr_value: value, dispatch_entry: dispatchEntry, job: currentJob },
 				callback: function (r) {
 					if (r.message) {
 						const d = r.message;
@@ -94,5 +107,13 @@ document.getElementById("start-scan-dispatch").onclick = function () {
 		}
 	);
 };
+
+const jobContext = new ElementalJobContext({
+	prefill: "{{ prefill_job }}",
+	onActivated: (job) => {
+		currentJob = job.name;
+		document.getElementById("start-dispatch-btn").disabled = false;
+	},
+});
 </script>
 {% endblock %}

@@ -22,8 +22,25 @@ class PackingBox(Document):
 		if existing:
 			frappe.throw(f"Box {self.box_no} already exists for Job {self.job}.")
 		for row in self.contents:
-			if row.job_subpart_label:
+			if row.finished_good or row.qc_inspection:
+				if not row.finished_good or not row.qc_inspection:
+					frappe.throw("Finished Good box rows need both Finished Good and FG / QC Label.")
+				inspection = frappe.db.get_value(
+					"QC Inspection",
+					row.qc_inspection,
+					["job", "finished_good"],
+					as_dict=True,
+				)
+				if not inspection or inspection.job != self.job or inspection.finished_good != row.finished_good:
+					frappe.throw(
+						f"FG / QC Label {row.qc_inspection} does not belong to "
+						f"Finished Good {row.finished_good} on Job {self.job}."
+					)
+				row.content_type = "Finished Good"
+				row.subpart_label = frappe.db.get_value("Finished Good", row.finished_good, "fg_name")
+			elif row.job_subpart_label:
 				label = assert_subpart_label_belongs_to_job(row.job_subpart_label, self.job)
+				row.content_type = "Subpart"
 				row.subpart_label = label.subpart_name
 				if row.qr_code_master:
 					qr = assert_qr_belongs_to_job(row.qr_code_master, self.job)
@@ -36,7 +53,11 @@ class PackingBox(Document):
 						)
 			elif row.qr_code_master:
 				qr = assert_qr_belongs_to_job(row.qr_code_master, self.job)
+				row.content_type = "Subpart"
 				row.subpart_label = qr.get("subpart_name") or row.subpart_label
 			else:
-				frappe.throw("Each Packing Box Content row needs a Job Subpart Label or legacy QR tracker.")
+				frappe.throw(
+					"Each Packing Box Content row needs a Finished Good label, "
+					"Job Subpart Label, or legacy QR tracker."
+				)
 			row.packed_qty = positive_quantity(row.packed_qty, "Packed Qty")

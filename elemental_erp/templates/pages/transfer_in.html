@@ -3,12 +3,21 @@
 {% block page_content %}
 <div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
   <h3>Receive from Department</h3>
-  <p style="color:#666; font-size: 13px;">Scan the QR printed on the transfer slip that came
-     with the box, confirm the qty you actually received, and close your department out on
-     this Job once everything expected has arrived.</p>
+  <p style="color:#666; font-size: 13px;">Activate the Job first, then scan the transfer slip. A slip from another Job is rejected before receipt is saved.</p>
+
+  <div style="padding:12px; border:2px solid #1a2942; border-radius:8px; margin-bottom:16px;">
+    <h5 style="margin-top:0;">Step 1 — Scan / Enter Job</h5>
+    <input id="job-context-code" class="form-control" placeholder="JOB-2026-00001" style="margin-bottom:8px;">
+    <div style="display:flex; gap:8px;">
+      <button id="enter-job-context" class="btn btn-secondary" style="flex:1;">Use Job Code</button>
+      <button id="scan-job-context" class="btn btn-primary" style="flex:1;">Scan Job QR</button>
+    </div>
+    <div id="scanner-job-context" style="width:100%; margin-top:10px;"></div>
+    <div id="job-context-info" style="display:none; margin:10px 0 0;"></div>
+  </div>
 
   <div id="scanner-in" style="width:100%; margin-bottom: 12px;"></div>
-  <button id="start-scan-in" class="btn btn-primary btn-block">Scan Transfer Slip QR</button>
+  <button id="start-scan-in" class="btn btn-primary btn-block" disabled>Step 2 — Scan Transfer Slip QR</button>
 
   <div id="scan-result-in" style="display:none; margin-top: 16px;">
     <div class="alert alert-info" id="transfer-info"></div>
@@ -36,6 +45,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/job_scan_context.js"></script>
 <script>
 let transferQrValue = "{{ prefill_qr }}";
 let currentJob = null;
@@ -43,14 +53,15 @@ let currentToDept = null;
 const scanner = new Html5Qrcode("scanner-in");
 
 function loadTransfer(value) {
+	if (!jobContext.name) return;
 	transferQrValue = value;
 	frappe.call({
 		method: "elemental_erp.api.get_transfer",
-		args: { transfer_qr_value: value },
+		args: { transfer_qr_value: value, job: jobContext.name },
 		callback: function (r) {
 			if (r.message) {
 				const t = r.message;
-				currentJob = t.job;
+			currentJob = jobContext.name;
 				currentToDept = t.to_department;
 				document.getElementById("transfer-info").innerHTML =
 					`Job: <b>${t.job}</b><br>Part: <b>${t.subpart_label || ""}</b><br>` +
@@ -70,22 +81,23 @@ document.getElementById("start-scan-in").onclick = function () {
 		{ facingMode: "environment" },
 		{ fps: 10, qrbox: 220 },
 		(decodedText) => {
-			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
+			let value = decodedText.trim();
+			try {
+				const url = new URL(decodedText, window.location.origin);
+				value = url.searchParams.get("qr") || url.pathname.split("/").filter(Boolean).pop();
+			} catch (error) {}
 			scanner.stop();
-			loadTransfer(decodedText.includes("qr=") ? decodedText.split("qr=")[1] : value);
+			loadTransfer(value);
 		}
 	);
 };
-
-if (transferQrValue) {
-	loadTransfer(transferQrValue);
-}
 
 document.getElementById("submit-receive").onclick = function () {
 	frappe.call({
 		method: "elemental_erp.api.receive_transfer",
 		args: {
 			transfer_qr_value: transferQrValue,
+			job: jobContext.name,
 			received_qty: document.getElementById("qty-in").value,
 			remarks: document.getElementById("remarks-in").value,
 		},
@@ -139,5 +151,14 @@ document.getElementById("close-dept-btn").onclick = function () {
 		},
 	});
 };
+
+const jobContext = new ElementalJobContext({
+	prefill: "{{ prefill_job }}",
+	onActivated: (job) => {
+		currentJob = job.name;
+		document.getElementById("start-scan-in").disabled = false;
+		if (transferQrValue) loadTransfer(transferQrValue);
+	},
+});
 </script>
 {% endblock %}

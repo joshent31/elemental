@@ -7,4 +7,5 @@ def get_context(context):
 	require_mobile_page("/process-scan", *PRODUCTION_FLOOR_ROLES)
 	context.no_cache = 1
 	context.prefill_part = frappe.form_dict.get("part") or ""
+	context.prefill_job = frappe.form_dict.get("job") or ""
 	return context

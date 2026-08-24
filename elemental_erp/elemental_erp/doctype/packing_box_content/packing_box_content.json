@@ -7,9 +7,12 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "fields": [
+  {"fieldname": "content_type", "label": "Type", "fieldtype": "Select", "options": "Subpart\nFinished Good", "read_only": 1, "in_list_view": 1, "columns": 1},
+  {"fieldname": "finished_good", "label": "Finished Good", "fieldtype": "Link", "options": "Finished Good", "read_only": 1, "in_list_view": 1, "columns": 2},
+  {"fieldname": "qc_inspection", "label": "FG / QC Label", "fieldtype": "Link", "options": "QC Inspection", "read_only": 1},
   {"fieldname": "job_subpart_label", "label": "Job Subpart Label", "fieldtype": "Link", "options": "Job Subpart Label", "in_list_view": 1, "columns": 3},
   {"fieldname": "qr_code_master", "label": "Legacy / Packing Process Tracker", "fieldtype": "Link", "options": "QR Code Master", "in_list_view": 1, "columns": 3},
-  {"fieldname": "subpart_label", "label": "Part", "fieldtype": "Data", "read_only": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "subpart_label", "label": "Item / Part Description", "fieldtype": "Data", "read_only": 1, "in_list_view": 1, "columns": 3},
   {"fieldname": "packed_qty", "label": "Packed Qty", "fieldtype": "Float", "reqd": 1, "in_list_view": 1, "columns": 1},
   {"fieldname": "scanned_on", "label": "Mapped On", "fieldtype": "Datetime", "read_only": 1, "in_list_view": 1, "columns": 2}
  ]

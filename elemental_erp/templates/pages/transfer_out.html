@@ -3,10 +3,20 @@
 {% block page_content %}
 <div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
   <h3>Send to Department</h3>
-  <p style="color:#666; font-size: 13px;">Departments are not in any fixed order — pick where
-     you're sending FROM, scan the part, choose where it's going TO, enter qty, confirm.</p>
+  <p style="color:#666; font-size: 13px;">Activate the Job first. Every later part scan is checked against that Job before a department transfer can be saved.</p>
 
-  <label>Step 1 — Sending FROM which department?</label>
+  <div style="padding:12px; border:2px solid #1a2942; border-radius:8px; margin-bottom:16px;">
+    <h5 style="margin-top:0;">Step 1 — Scan / Enter Job</h5>
+    <input id="job-context-code" class="form-control" placeholder="JOB-2026-00001" style="margin-bottom:8px;">
+    <div style="display:flex; gap:8px;">
+      <button id="enter-job-context" class="btn btn-secondary" style="flex:1;">Use Job Code</button>
+      <button id="scan-job-context" class="btn btn-primary" style="flex:1;">Scan Job QR</button>
+    </div>
+    <div id="scanner-job-context" style="width:100%; margin-top:10px;"></div>
+    <div id="job-context-info" style="display:none; margin:10px 0 0;"></div>
+  </div>
+
+  <label>Step 2 — Sending FROM which department?</label>
   <select id="from-dept" class="form-control" style="margin-bottom:14px;">
     <option value="">-- select department --</option>
     {% for d in departments %}
@@ -15,13 +25,13 @@
   </select>
 
   <div id="scanner-out" style="width:100%; margin-bottom: 12px;"></div>
-  <button id="start-scan-out" class="btn btn-primary btn-block" disabled>Step 2 — Scan Part QR</button>
-  <p id="scan-hint" style="font-size:12px; color:#999;">Select a department above to enable scanning.</p>
+  <button id="start-scan-out" class="btn btn-primary btn-block" disabled>Step 3 — Scan Part QR</button>
+  <p id="scan-hint" style="font-size:12px; color:#999;">Activate the Job and select a department to enable scanning.</p>
 
   <div id="scan-result-out" style="display:none; margin-top: 16px;">
     <div class="alert alert-info" id="part-info"></div>
 
-    <label>Step 3 — Sending TO which department?</label>
+    <label>Step 4 — Sending TO which department?</label>
     <select id="to-dept" class="form-control" style="margin-bottom:10px;">
       <option value="">-- select department --</option>
       {% for d in departments %}
@@ -29,7 +39,7 @@
       {% endfor %}
     </select>
 
-    <label>Step 4 — Qty to Transfer</label>
+    <label>Step 5 — Qty to Transfer</label>
     <input type="number" id="qty-out" class="form-control" style="margin-bottom:10px;" min="0" step="any">
 
     <label>Remarks (optional)</label>
@@ -45,6 +55,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/job_scan_context.js"></script>
 <script>
 let scannedQrValue = null;
 const scanner = new Html5Qrcode("scanner-out");
@@ -54,9 +65,18 @@ const startBtn = document.getElementById("start-scan-out");
 const scanHint = document.getElementById("scan-hint");
 
 fromDeptEl.onchange = function () {
-	startBtn.disabled = !fromDeptEl.value;
-	scanHint.style.display = fromDeptEl.value ? "none" : "block";
+	startBtn.disabled = !fromDeptEl.value || !jobContext.name;
+	scanHint.style.display = fromDeptEl.value && jobContext.name ? "none" : "block";
 };
+
+function extractPartValue(decodedText) {
+	try {
+		const url = new URL(decodedText, window.location.origin);
+		return url.searchParams.get("part") || url.pathname.split("/").filter(Boolean).pop();
+	} catch (error) {
+		return decodedText.trim();
+	}
+}
 
 startBtn.onclick = function () {
 	if (!fromDeptEl.value) return;
@@ -64,12 +84,12 @@ startBtn.onclick = function () {
 		{ facingMode: "environment" },
 		{ fps: 10, qrbox: 220 },
 		(decodedText) => {
-			const value = decodedText.split("/").filter(Boolean).pop();
+			const value = extractPartValue(decodedText);
 			scannedQrValue = value;
 			scanner.stop();
 			frappe.call({
 				method: "elemental_erp.api.lookup_part_qr",
-				args: { qr_value: value },
+				args: { qr_value: value, job: jobContext.name },
 				callback: function (r) {
 					if (r.message) {
 						const p = r.message;
@@ -92,6 +112,7 @@ document.getElementById("submit-transfer").onclick = function () {
 		method: "elemental_erp.api.create_transfer",
 		args: {
 			qr_value: scannedQrValue,
+			job: jobContext.name,
 			from_department: fromDeptEl.value,
 			to_department: toDept,
 			transfer_qty: document.getElementById("qty-out").value,
@@ -107,5 +128,10 @@ document.getElementById("submit-transfer").onclick = function () {
 		},
 	});
 };
+
+const jobContext = new ElementalJobContext({
+	prefill: "{{ prefill_job }}",
+	onActivated: () => fromDeptEl.onchange(),
+});
 </script>
 {% endblock %}

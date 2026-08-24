@@ -1,0 +1,10 @@
+{
+ "doctype": "Print Format",
+ "name": "Job QR Label",
+ "doc_type": "Job",
+ "module": "Elemental ERP",
+ "print_format_type": "Jinja",
+ "standard": "Yes",
+ "disabled": 0,
+ "html": "<style>\n.job-qr-label { width:90mm; min-height:55mm; border:2px solid #111; padding:6mm; box-sizing:border-box; text-align:center; font-family:Arial,sans-serif; }\n.job-qr-label h2 { margin:0 0 3mm; font-size:20px; }\n.job-qr-label img { width:34mm; height:34mm; object-fit:contain; }\n.job-qr-label .job-code { font-size:18px; font-weight:bold; margin-top:2mm; }\n.job-qr-label .detail { font-size:12px; margin-top:1mm; }\n</style>\n<div class=\"job-qr-label\">\n  <h2>ELEMENTAL FIXTURES — JOB QR</h2>\n  {% if doc.job_qr_image %}<img src=\"{{ doc.job_qr_image }}\">{% else %}<b>Save the Job once to generate its QR.</b>{% endif %}\n  <div class=\"job-code\">{{ doc.name }}</div>\n  <div class=\"detail\">{{ doc.job_name }}</div>\n  {% if doc.job_location %}<div class=\"detail\">Location: {{ doc.job_location }}</div>{% endif %}\n  <div class=\"detail\"><b>Scan this Job before any department transaction.</b></div>\n</div>"
+}

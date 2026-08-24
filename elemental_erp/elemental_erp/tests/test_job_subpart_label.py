@@ -135,7 +135,8 @@ class TestOrderedProcessCompletion(unittest.TestCase):
 
 		with patch("elemental_erp.api._require_roles"), patch(
 			"elemental_erp.api._get_subpart_label", return_value=self.label
-		), patch("elemental_erp.api._get_label_processes", return_value=self.processes), patch(
+		), patch("elemental_erp.api._require_job_context"), patch(
+			"elemental_erp.api._get_label_processes", return_value=self.processes), patch(
 			"elemental_erp.api.require_doc_permission"
 		), patch("elemental_erp.api.assert_active_job"), patch(
 			"elemental_erp.api._lock_subpart_label"
@@ -160,7 +161,8 @@ class TestOrderedProcessCompletion(unittest.TestCase):
 
 		with patch("elemental_erp.api._require_roles"), patch(
 			"elemental_erp.api._get_subpart_label", return_value=self.label
-		), patch("elemental_erp.api._get_label_processes", return_value=self.processes), patch(
+		), patch("elemental_erp.api._require_job_context"), patch(
+			"elemental_erp.api._get_label_processes", return_value=self.processes), patch(
 			"elemental_erp.api.require_doc_permission"
 		), patch("elemental_erp.api.assert_active_job"), patch(
 			"elemental_erp.api._lock_subpart_label"
@@ -177,7 +179,7 @@ class TestOrderedProcessCompletion(unittest.TestCase):
 
 		with patch("elemental_erp.api._require_roles"), patch(
 			"elemental_erp.api._get_subpart_label", return_value=self.label
-		):
+		), patch("elemental_erp.api._require_job_context"):
 			with self.assertRaises(frappe.ValidationError):
 				complete_subpart_process("LABELQR", "Packing", 1)
 
@@ -206,7 +208,12 @@ class TestPackingSharedLabel(unittest.TestCase):
 			)
 		]
 		with patch("elemental_erp.api._require_roles"), patch(
-			"frappe.db.get_value", return_value="BOX-001"
+			"frappe.db.get_value", side_effect=["BOX-001", None]
+		), patch("elemental_erp.api._lock_packing_box"), patch(
+			"elemental_erp.api._require_job_context"), patch(
+			"elemental_erp.api.require_doc_permission"
+		), patch("elemental_erp.api.assert_active_job"), patch(
+			"frappe.get_doc", return_value=MagicMock(status="Label Created", job="JOB-001")
 		), patch("elemental_erp.api._get_subpart_label", return_value=label), patch(
 			"elemental_erp.api._lock_subpart_label"
 		), patch("elemental_erp.api._get_label_processes", return_value=processes):

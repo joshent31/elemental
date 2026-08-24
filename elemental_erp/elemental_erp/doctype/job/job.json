@@ -94,6 +94,34 @@
    "columns": 2
   },
   {
+   "fieldname": "section_break_job_qr",
+   "label": "Job QR — Scan Before Department Transactions",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "job_qr_value",
+   "label": "Job QR Value",
+   "fieldtype": "Data",
+   "unique": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "job_scan_url",
+   "label": "Job Scan URL",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_job_qr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "job_qr_image",
+   "label": "Unique Job QR",
+   "fieldtype": "Attach Image",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_break_items",
    "label": "Finished Goods against this Job",
    "fieldtype": "Section Break"

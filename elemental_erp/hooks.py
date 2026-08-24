@@ -22,6 +22,7 @@ after_migrate = [
 	"elemental_erp.setup.ensure_erpnext_address_and_contact_schema",
 	"elemental_erp.setup.normalize_material_indent_departments",
 	"elemental_erp.setup.backfill_material_indent_excess_stock",
+	"elemental_erp.setup.backfill_job_qr_codes",
 	"elemental_erp.setup.sync_job_subpart_labels",
 ]
 

@@ -41,6 +41,12 @@ that QR (or posting to the `scan_qr` API method) creates a `QR Scan Log`, which 
 `Completed`, the Job auto-flips to **In Packaging** and fires a notification to the
 Manufacturing role.
 
+Every `Job` also receives one permanent `job_qr_value` / `job_qr_image`. Use **Print Job QR
+Label** on the Job form. Production completion, department transfer, packaging entry, and
+dispatch pages activate this Job QR (or a typed Job number) before accepting transaction
+scans; the server rejects a child QR if it belongs to a different Job. Existing Jobs are
+backfilled automatically during `bench migrate`.
+
 ---
 
 ## 2. Folder structure
@@ -135,17 +141,17 @@ departments in whatever order the job actually needs.
 |---|---|
 | `Department Transfer` doctype | The transfer record: from-dept, to-dept, qty sent, qty received, its own unique QR, status (`Pending Dispatch` / `In Transit` / `Received` / `Qty Mismatch`) |
 | `Job Department Status` doctype | One row per (Job, Department) — running total qty received, `Open`/`Closed` status, who closed it and when |
-| `/transfer-out` (mobile page) | **Step 1:** operator picks the **From department** first. **Step 2:** scans the part's QR. **Step 3:** picks the **To department**. **Step 4:** enters qty and confirms → creates a `Department Transfer` with a fresh QR and a **Print Transfer Slip** button |
+| `/transfer-out` (mobile page) | **Step 1:** scans/enters the Job. Then picks the **From department**, scans the part QR, picks **To department**, enters qty and confirms → creates a `Department Transfer` with a fresh QR and a **Print Transfer Slip** button. Cross-Job part scans are rejected. |
 | **Department Transfer Slip** (Print Format) | The physical slip that goes with the box — Job, part, from/to dept, qty, and the transfer's own QR image |
-| `/transfer-in` (mobile page) | Scans the slip's QR, sees expected qty, enters qty actually received, confirms (exact match → `Received`, mismatch → flagged). Then shows a **running total received for that department on that Job**, and a **"Close Department for this Job"** button |
+| `/transfer-in` (mobile page) | Scans/enters the Job first, then scans the slip QR. A slip from another Job is rejected. The page shows expected qty, records actual receipt, and offers **"Close Department for this Job"**. |
 | `api.close_department` | Explicit close action — refuses to close if any transfer into that department for that Job is still in transit or mismatched, so a department can't be marked done while material is still outstanding |
 
 **Flow in practice:**
 1. Any department finishes its work on a part and wants to hand it to another department —
-   opens `/transfer-out`, picks **From: (their department)**, scans the part's QR, picks
+   opens `/transfer-out`, scans the **Job QR**, picks **From: (their department)**, scans the part's QR, picks
    **To: (destination department)**, enters qty, confirms.
 2. Prints the **Department Transfer Slip** (has its own QR) and puts it in/on the box.
-3. The receiving department opens `/transfer-in`, scans the slip's QR, sees "Qty Sent",
+3. The receiving department opens `/transfer-in`, scans the **Job QR**, then scans the slip's QR, sees "Qty Sent",
    counts and enters what actually arrived. Exact match closes the transfer clean; a
    difference is flagged `Qty Mismatch` with both numbers on record.
 4. After confirming receipt, the operator sees their department's running total received for
@@ -198,11 +204,11 @@ installation.
 
 | Piece | What it does |
 |---|---|
-| `Packing Box` doctype | One row per physical box: `box_no` of `total_boxes`, its own unique QR, and a `contents` child table of which parts/FGs (by `QR Code Master`) and qty are packed inside |
+| `Packing Box` doctype | One row per physical box: `box_no` of `total_boxes`, its own unique QR, and a `contents` child table that explicitly supports Job Subpart Labels and Passed FG/QC labels with packed qty |
 | **"Create Packing Box Labels"** button on Job | Prompts for a count (e.g. 20), calls `api.create_packing_labels` — generates that many `Packing Box` records with QR images, ready to print via the **Packing Box Label** print format |
-| `/pack-box` (mobile page) | Scan the box label's QR, then scan each part/FG QR going into it and enter qty — maps contents to that specific box as packing happens |
-| `/dispatch-scan` (mobile page) | Enter Job + vehicle, then scan each box as it's loaded — shows a running "X of N boxes loaded" count, updates each `Packing Box.status` to `Dispatched` |
-| `/site-scan` (authenticated mobile page) | A signed-in Dispatch user scans the box QR, confirms **Received at Site**, then later confirms **Installed**. Once every box on a Job is `Installed`, the Job auto-flips to status `Installed` |
+| `/pack-box` (mobile page) | A box-label scan immediately lists everything inside with FG/subpart code, description, qty and uploaded diagram. Packaging users activate the Job before adding Passed FG QRs or completed subpart QRs. |
+| `/dispatch-scan` (mobile page) | Scan/enter the Job + vehicle, then scan each box as it's loaded. Cross-Job boxes are rejected and a running "X of N boxes loaded" count is shown. |
+| `/site-scan` (authenticated mobile page) | A signed-in Dispatch user scans the box QR and sees the same diagram-rich contents list without opening the box, then confirms **Received at Site** / **Installed**. |
 | **Packing Box Label** (Print Format) | The physical label — Job No above the QR, Job Location, Job Description, Customer, and "Label N of Total" |
 | **Print All Packing Labels** | Available on Job and Packaging Entry for Packaging users/HODs (and Dispatch HOD). Downloads one PDF containing every active label for that Job in box-number order. |
 

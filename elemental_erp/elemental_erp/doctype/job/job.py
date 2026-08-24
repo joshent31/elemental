@@ -25,6 +25,10 @@ class Job(Document):
 		so inserting child docs there would link them to the temporary
 		placeholder (new-job-xxxxx) instead of the real name.
 		"""
+		# Every Job has one permanent QR that establishes the Job context
+		# before operators scan subparts or department transfers.
+		ensure_job_qr(self)
+
 		# generate QR / Design / QC trackers for any FG row that doesn't
 		# have them yet — covers both the original items at Job creation
 		# AND any FG the customer adds later, mid-Job. Idempotent: rows
@@ -86,6 +90,41 @@ class Job(Document):
 						"Finished Good and Job Qty cannot be changed after trackers are generated "
 						f"for row {row.idx}. Add a new Finished Good instead."
 					)
+
+
+def ensure_job_qr(job):
+	"""Create the permanent Job QR once; safe for new and migrated Jobs."""
+	from elemental_erp.utils.qr_generator import generate_qr_image
+
+	job_name = job.name if hasattr(job, "name") else job
+	job_qr_value = getattr(job, "job_qr_value", None) if hasattr(job, "name") else None
+	job_qr_image = getattr(job, "job_qr_image", None) if hasattr(job, "name") else None
+	job_scan_url = getattr(job, "job_scan_url", None) if hasattr(job, "name") else None
+	if not job_qr_value:
+		job_qr_value = frappe.db.get_value("Job", job_name, "job_qr_value")
+	if not job_qr_image:
+		job_qr_image = frappe.db.get_value("Job", job_name, "job_qr_image")
+	if not job_scan_url:
+		job_scan_url = frappe.db.get_value("Job", job_name, "job_scan_url")
+
+	if not job_qr_value:
+		job_qr_value = frappe.generate_hash(length=16).upper()
+		while frappe.db.exists("Job", {"job_qr_value": job_qr_value}):
+			job_qr_value = frappe.generate_hash(length=16).upper()
+	job_scan_url = job_scan_url or frappe.utils.get_url(f"/process-scan?job={job_qr_value}")
+	if not job_qr_image:
+		job_qr_image = generate_qr_image(job_qr_value, job_scan_url, "Job", job_name)
+
+	values = {
+		"job_qr_value": job_qr_value,
+		"job_scan_url": job_scan_url,
+		"job_qr_image": job_qr_image,
+	}
+	frappe.db.set_value("Job", job_name, values, update_modified=False)
+	if hasattr(job, "name"):
+		for fieldname, value in values.items():
+			job.set(fieldname, value)
+	return values
 
 
 def generate_trackers_for_new_fg_rows(doc):

@@ -7,6 +7,7 @@ def get_context(context):
 	require_mobile_page("/transfer-in", *PRODUCTION_FLOOR_ROLES)
 	context.no_cache = 1
 	context.prefill_qr = frappe.form_dict.get("qr") or ""
+	context.prefill_job = frappe.form_dict.get("job") or ""
 	departments = frappe.get_all("Department", fields=["name"], limit_page_length=0)
 	context.departments = departments
 	return context

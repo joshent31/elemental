@@ -1,65 +1,118 @@
 {% extends "templates/web.html" %}
 
 {% block page_content %}
-<div style="max-width: 480px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
-  <h3>Pack Box — Map Parts to Label</h3>
-  <p style="color:#666; font-size: 13px;">Scan (or arrive via) the box label's QR, then scan each
-     part/FG going into this box and enter qty. Repeat for everything in the box.</p>
+<div style="max-width: 520px; margin: 0 auto; font-family: sans-serif; padding: 12px;">
+  <h3>Packing Box — Contents &amp; Mapping</h3>
+  <p style="color:#666; font-size:13px;">Scan a box label to see every FG/subpart and its diagram without opening the box. Packaging users must activate the Job before adding contents.</p>
 
-  <div id="scanner-box" style="width:100%; margin-bottom: 12px;"></div>
-  <button id="start-scan-box" class="btn btn-primary btn-block">Scan Box Label QR</button>
+  {% if can_pack %}<div style="padding:12px; border:2px solid #1a2942; border-radius:8px; margin-bottom:16px;">
+    <h5 style="margin-top:0;">Step 1 — Scan / Enter Job</h5>
+    <input id="job-context-code" class="form-control" placeholder="JOB-2026-00001" style="margin-bottom:8px;">
+    <div style="display:flex; gap:8px;">
+      <button id="enter-job-context" class="btn btn-secondary" style="flex:1;">Use Job Code</button>
+      <button id="scan-job-context" class="btn btn-primary" style="flex:1;">Scan Job QR</button>
+    </div>
+    <div id="scanner-job-context" style="width:100%; margin-top:10px;"></div>
+    <div id="job-context-info" style="display:none; margin:10px 0 0;"></div>
+  </div>{% endif %}
+
+  <div id="scanner-box" style="width:100%; margin-bottom:12px;"></div>
+  <button id="start-scan-box" class="btn btn-primary btn-block">Scan Box Label QR to View Contents</button>
 
   <div id="box-result" style="display:none; margin-top:16px;">
     <div class="alert alert-info" id="box-info"></div>
+    <h5>Material Inside This Box</h5>
+    <div id="box-contents"></div>
 
-    <h5>Contents so far</h5>
-    <ul id="box-contents" style="font-size:13px;"></ul>
-
-    <div id="scanner-part" style="width:100%; margin:10px 0;"></div>
-    <button id="start-scan-part" class="btn btn-secondary btn-block">Scan Part / FG QR to Add</button>
-
-    <div id="part-qty-row" style="display:none; margin-top:10px;">
-      <div class="alert alert-info" id="part-info"></div>
-      <label>Qty Packed</label>
-      <input type="number" id="part-qty" class="form-control" style="margin-bottom:10px;" min="0" step="any">
-      <button id="add-part-btn" class="btn btn-success btn-block">Add to Box</button>
-    </div>
+    {% if can_pack %}<div id="packing-controls" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid #ddd;">
+      <div id="scanner-part" style="width:100%; margin:10px 0;"></div>
+      <button id="start-scan-part" class="btn btn-secondary btn-block">Scan Part / FG QR to Add</button>
+      <div id="part-qty-row" style="display:none; margin-top:10px;">
+        <div class="alert alert-info" id="part-info"></div>
+        <label>Qty Packed</label>
+        <input type="number" id="part-qty" class="form-control" style="margin-bottom:10px;" min="0" step="any">
+        <button id="add-part-btn" class="btn btn-success btn-block">Add to Box</button>
+      </div>
+    </div>{% endif %}
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+{% if can_pack %}<script src="/assets/elemental_erp/js/job_scan_context.js"></script>{% endif %}
 <script>
 let boxQrValue = "{{ prefill_box }}";
 let scannedPartQr = null;
+const canPack = {{ "true" if can_pack else "false" }};
 const boxScanner = new Html5Qrcode("scanner-box");
-const partScanner = new Html5Qrcode("scanner-part");
+const partScanner = canPack ? new Html5Qrcode("scanner-part") : null;
+let jobContext = null;
 
 function extractQrValue(decodedText, queryParameter) {
 	try {
 		const url = new URL(decodedText, window.location.origin);
-		return url.searchParams.get(queryParameter) || url.pathname.split("/").filter(Boolean).pop();
+		return url.searchParams.get(queryParameter) || url.searchParams.get("qr") || url.pathname.split("/").filter(Boolean).pop();
 	} catch (error) {
 		return decodedText.trim();
 	}
 }
 
-function refreshBox() {
+function renderContents(contents) {
+	const list = document.getElementById("box-contents");
+	list.innerHTML = "";
+	(contents || []).forEach((content) => {
+		const card = document.createElement("div");
+		card.style.cssText = "display:flex; gap:12px; padding:10px; margin-bottom:8px; border:1px solid #ddd; border-radius:7px; background:#fff;";
+		const visual = document.createElement("div");
+		visual.style.cssText = "width:92px; min-width:92px; height:82px; display:flex; align-items:center; justify-content:center; background:#f6f6f6; border-radius:4px; overflow:hidden;";
+		if (content.diagram) {
+			const image = document.createElement("img");
+			image.src = content.diagram;
+			image.alt = content.description || content.item_code || "Packed item diagram";
+			image.style.cssText = "max-width:100%; max-height:100%; object-fit:contain;";
+			visual.appendChild(image);
+		} else {
+			visual.textContent = "Diagram not uploaded";
+			visual.style.fontSize = "11px";
+			visual.style.textAlign = "center";
+		}
+		const detail = document.createElement("div");
+		const title = document.createElement("strong");
+		title.textContent = `${content.content_type || "Subpart"}: ${content.item_code || ""}`;
+		const description = document.createElement("div");
+		description.textContent = content.description || content.subpart_label || "";
+		const quantity = document.createElement("div");
+		quantity.textContent = `Packed Qty: ${content.packed_qty} ${content.uom || ""}`;
+		quantity.style.cssText = "margin-top:5px; color:#1b5e20; font-weight:bold;";
+		detail.append(title, description, quantity);
+		card.append(visual, detail);
+		list.appendChild(card);
+	});
+	if (!(contents || []).length) {
+		const empty = document.createElement("div");
+		empty.className = "alert alert-warning";
+		empty.textContent = "No material has been mapped into this box yet.";
+		list.appendChild(empty);
+	}
+}
+
+function refreshBox(expectedJob) {
+	document.getElementById("box-result").style.display = "none";
+	if (canPack) document.getElementById("packing-controls").style.display = "none";
 	frappe.call({
 		method: "elemental_erp.api.lookup_box",
-		args: { box_qr_value: boxQrValue },
-		callback: function (r) {
-			if (r.message) {
-				const b = r.message;
-				document.getElementById("box-info").innerHTML =
-					`Job: <b>${b.job}</b><br>Box <b>${b.box_no}</b> of <b>${b.total_boxes}</b><br>Status: <b>${b.status}</b>`;
-				const list = document.getElementById("box-contents");
-				list.innerHTML = "";
-				(b.contents || []).forEach((c) => {
-					const li = document.createElement("li");
-					li.innerText = `${c.subpart_label} \u00d7 ${c.packed_qty}`;
-					list.appendChild(li);
-				});
-				document.getElementById("box-result").style.display = "block";
+		args: { box_qr_value: boxQrValue, job: expectedJob || null },
+		callback: function (response) {
+			if (!response.message) return;
+			const box = response.message;
+			document.getElementById("box-info").innerHTML =
+				`Job: <b>${box.job}</b> — ${box.job_name || ""}<br>` +
+				`Location: <b>${box.job_location || "-"}</b><br>` +
+				(box.job_description ? `Description: ${box.job_description}<br>` : "") +
+				`Box <b>${box.box_no}</b> of <b>${box.total_boxes}</b> | Status: <b>${box.status}</b>`;
+			renderContents(box.contents);
+			document.getElementById("box-result").style.display = "block";
+			if (canPack && jobContext && jobContext.name) {
+				document.getElementById("packing-controls").style.display = "block";
 			}
 		},
 	});
@@ -72,55 +125,68 @@ document.getElementById("start-scan-box").onclick = function () {
 		(decodedText) => {
 			boxQrValue = extractQrValue(decodedText, "box");
 			boxScanner.stop();
-			refreshBox();
+			refreshBox(canPack && jobContext ? jobContext.name : null);
 		}
 	);
 };
 
-if (boxQrValue) { refreshBox(); }
+if (boxQrValue) refreshBox(null);
 
-document.getElementById("start-scan-part").onclick = function () {
-	partScanner.start(
-		{ facingMode: "environment" },
-		{ fps: 10, qrbox: 220 },
-		(decodedText) => {
-			const value = extractQrValue(decodedText, "part");
-			scannedPartQr = value;
-			partScanner.stop();
-			frappe.call({
-				method: "elemental_erp.api.lookup_part_qr",
-				args: { qr_value: value },
-				callback: function (r) {
-					if (r.message) {
-						const p = r.message;
-						const processSummary = (p.processes || [])
+if (canPack) {
+	document.getElementById("start-scan-part").onclick = function () {
+		if (!jobContext.name) {
+			frappe.msgprint("Activate the Job before adding box contents.");
+			return;
+		}
+		partScanner.start(
+			{ facingMode: "environment" },
+			{ fps: 10, qrbox: 220 },
+			(decodedText) => {
+				const value = extractQrValue(decodedText, "part");
+				scannedPartQr = value;
+				partScanner.stop();
+				frappe.call({
+					method: "elemental_erp.api.lookup_part_qr",
+					args: { qr_value: value, job: jobContext.name },
+					callback: function (response) {
+						if (!response.message) return;
+						const part = response.message;
+						const processSummary = (part.processes || [])
 							.map((process) => `${process.process_name}: ${process.status}`)
 							.join("<br>");
 						document.getElementById("part-info").innerHTML =
-							`Part: <b>${p.subpart_name}</b> (${p.subpart_code})<br>` +
-							(processSummary || `Process: ${p.process_name}`);
+							`${part.is_finished_good ? "Finished Good" : "Part"}: <b>${part.subpart_name}</b> (${part.subpart_code})<br>` +
+							(processSummary || `Status / Process: ${part.status || part.process_name}`);
 						document.getElementById("part-qty").value = "";
 						document.getElementById("part-qty-row").style.display = "block";
-					}
-				},
-			});
-		}
-	);
-};
+					},
+				});
+			}
+		);
+	};
 
-document.getElementById("add-part-btn").onclick = function () {
-	frappe.call({
-		method: "elemental_erp.api.map_part_to_box",
-		args: {
-			box_qr_value: boxQrValue,
-			part_qr_value: scannedPartQr,
-			qty: document.getElementById("part-qty").value,
-		},
-		callback: function () {
-			document.getElementById("part-qty-row").style.display = "none";
-			refreshBox();
+	document.getElementById("add-part-btn").onclick = function () {
+		frappe.call({
+			method: "elemental_erp.api.map_part_to_box",
+			args: {
+				box_qr_value: boxQrValue,
+				part_qr_value: scannedPartQr,
+				job: jobContext.name,
+				qty: document.getElementById("part-qty").value,
+			},
+			callback: function () {
+				document.getElementById("part-qty-row").style.display = "none";
+				refreshBox(jobContext.name);
+			},
+		});
+	};
+
+	jobContext = new ElementalJobContext({
+		prefill: "{{ prefill_job }}",
+		onActivated: () => {
+			if (boxQrValue) refreshBox(jobContext.name);
 		},
 	});
-};
+}
 </script>
 {% endblock %}
