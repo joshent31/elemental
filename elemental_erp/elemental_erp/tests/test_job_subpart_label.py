@@ -28,6 +28,18 @@ class TestJobSubpartLabelSchema(unittest.TestCase):
 		self.assertEqual(fields["processes"]["options"], "Job Subpart Label Process")
 		self.assertEqual(fields["qr_value"]["unique"], 1)
 
+	def test_parent_and_child_doctypes_have_importable_controller_files(self):
+		for doctype_name in ("job_subpart_label", "job_subpart_label_process"):
+			with self.subTest(doctype=doctype_name):
+				controller = (
+					APP_ROOT
+					/ "elemental_erp"
+					/ "doctype"
+					/ doctype_name
+					/ f"{doctype_name}.py"
+				)
+				self.assertTrue(controller.exists())
+
 	def test_box_content_links_the_shared_label(self):
 		doctype = json.loads(
 			(
