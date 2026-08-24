@@ -908,7 +908,7 @@ def scan_box_installed(box_qr_value, installed_by=None):
 
 
 # ---------------------------------------------------------------------------
-# BOM-driven Material Indent + auto Purchase Order from shortfall
+# BOM-driven Material Indent
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
@@ -947,7 +947,7 @@ def generate_indent_items_from_bom(job):
 
 
 def _default_company():
-	"""Best-effort default company for auto-created ERPNext documents
+	"""Best-effort default company for generated ERPNext documents
 	(Purchase Order, Sales Invoice) — falls back to the first Company in the
 	system if the user has no default set. Still a DRAFT either way, so a
 	human confirms/corrects it before submitting."""
@@ -955,105 +955,6 @@ def _default_company():
 	if company:
 		return company
 	return frappe.db.get_value("Company", {}, "name", order_by="creation asc")
-
-
-def _resolve_supplier(supplier):
-	"""Accepts either an existing Supplier name, or a new vendor name to
-	create on the fly — 'existing supplier or any new vendor' per the
-	client's requirement."""
-	if not supplier:
-		return None
-	if frappe.db.exists("Supplier", supplier):
-		return supplier
-	new_supplier = frappe.get_doc(
-		{
-			"doctype": "Supplier",
-			"supplier_name": supplier,
-			"supplier_group": frappe.db.get_value("Supplier Group", {}, "name"),
-			"supplier_type": "Company",
-		}
-	)
-	new_supplier.insert(ignore_permissions=True, ignore_mandatory=True)
-	return new_supplier.name
-
-
-def _resolve_supplier_for_items(shortfall_rows):
-	"""Look up the default supplier from the Item Supplier Elemental
-	child table on the first shortfall item. Returns the supplier name
-	or None if no default is configured."""
-	for row in shortfall_rows:
-		supplier = frappe.db.get_value(
-			"Item Supplier Elemental",
-			{"parent": row.raw_material, "is_default": 1},
-			"supplier",
-		)
-		if supplier:
-			return supplier
-	return None
-
-
-def _create_po_from_indent_doc(indent, supplier=None):
-	"""Core logic shared by the manual API call and the automatic creation
-	that fires the moment a Material Indent is approved (submitted). Takes
-	the already-validated in-memory indent doc, since its shortfall_qty
-	values were just computed in validate(). Returns None if there's no
-	shortfall to buy, or if no supplier can be resolved."""
-	shortfall_rows = [row for row in indent.items if (row.shortfall_qty or 0) > 0]
-	if not shortfall_rows:
-		return None
-
-	# Resolve supplier: explicit arg > Item's default supplier > bail out
-	resolved = _resolve_supplier(supplier) if supplier else _resolve_supplier_for_items(shortfall_rows)
-	if not resolved:
-		return None
-
-	po = frappe.get_doc(
-		{
-			"doctype": "Purchase Order",
-			"company": _default_company(),
-			"supplier": resolved,
-			"elemental_job": indent.job,
-			"elemental_material_indent": indent.name,
-			"transaction_date": frappe.utils.nowdate(),
-			"schedule_date": frappe.utils.add_days(frappe.utils.nowdate(), 7),
-			"items": [
-				{
-					"item_code": row.raw_material,
-					"qty": row.shortfall_qty,
-					"uom": row.uom,
-					"schedule_date": frappe.utils.add_days(frappe.utils.nowdate(), 7),
-					"elemental_material_indent": indent.name,
-					"elemental_material_indent_item": row.name,
-				}
-				for row in shortfall_rows
-			],
-		}
-	)
-	po.insert(ignore_permissions=True, ignore_mandatory=True)
-	indent.db_set("purchase_order", po.name)
-	advance_job_status(indent.job, "In Purchase")
-	return po
-
-
-@frappe.whitelist()
-def create_purchase_order_from_indent(material_indent, supplier=None):
-	"""Manual fallback / re-trigger — e.g. to attach a supplier after the
-	automatic Draft PO (created on Indent approval) was left blank.
-	`supplier` can be an existing Supplier name or a brand new vendor name."""
-	indent = frappe.get_doc("Material Indent", material_indent)
-	require_doc_permission(indent, "write")
-	assert_active_job(indent.job)
-	if indent.docstatus != 1:
-		frappe.throw("Material Indent must be submitted (Approved) first.")
-	if indent.purchase_order:
-		frappe.throw(f"Purchase Order {indent.purchase_order} already exists for this Indent.")
-
-	po = _create_po_from_indent_doc(indent, supplier)
-	if not po:
-		frappe.throw("No shortfall on this Indent — nothing to purchase.")
-	frappe.db.commit()
-	return {"purchase_order": po.name}
-
 
 # ---------------------------------------------------------------------------
 # PO Initiation — outstanding indent workbench
@@ -1095,9 +996,9 @@ def _require_po_initiation_schema():
 def _po_initiation_source_rows(job=None, item_group=None, item_codes=None):
 	"""Return submitted indent lines with their live, un-ordered balance.
 
-	New workbench POs carry the exact Material Indent child-row name.  The
-	header-level fallback keeps POs created before that linkage was introduced
-	(or by the automatic on-submit path) in the same balance calculation.
+	New workbench POs carry the exact Material Indent child-row name. The
+	header-level fallback also covers Purchase Orders entered manually from the
+	standard ERPNext form.
 	"""
 	conditions = [
 		"mi.docstatus = 1",

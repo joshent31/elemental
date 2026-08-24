@@ -84,10 +84,11 @@
   },
   {
    "fieldname": "purchase_order",
-   "label": "Linked Purchase Order",
+   "label": "First Linked Purchase Order",
    "fieldtype": "Link",
    "options": "Purchase Order",
-   "description": "Set once Purchase raises a PO for the shortfall qty (flow note #3)"
+   "read_only": 1,
+   "description": "Set after Purchase raises a PO through PO Initiation or the normal Purchase Order form."
   },
   {
    "fieldname": "covered_finished_goods",

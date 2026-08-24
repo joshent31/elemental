@@ -226,7 +226,7 @@ installation.
 | `Finished Good.bom_items` (Raw Material BOM) | Per-1-unit raw material recipe for an FG. `Material Indent` can now pull from this instead of being typed from memory |
 | **"Pull Items from Job BOM"** button on `Material Indent` | Calls `api.generate_indent_items_from_bom` — sums every FG's BOM × its Job Qty across the whole Job, grouped by raw material, and fills the Indent's item rows |
 | `Material Indent` stock check (rewritten) | Now computes `available_qty = total_bin_qty − reserved_by_other_running_jobs`, where "reserved" is the sum of this material on other Jobs' submitted Indents whose Job isn't `Closed`/`Cancelled` — so two Jobs can no longer both be told the same units are free |
-| **"Create Purchase Order (Shortfall)"** button on submitted `Material Indent` | Calls `api.create_purchase_order_from_indent` — creates a **Draft** Purchase Order from the shortfall lines. Left as Draft on purpose: supplier, rates, and terms still need Purchase's judgment |
+| Submitted `Material Indent` handoff | Submission is Costing's approval only and never creates a Purchase Order. Purchase uses **PO Initiation** or the normal ERPNext Purchase Order form; both retain Material Indent/Job linkage and check ordered quantities against the live shortfall. |
 | `Design Task` doctype | One per (Job, Finished Good), auto-created on Job submit, each with its own QR. Has a `design_files` table (2D/3D drawings, reference images) |
 | `/design-scan` (mobile page) | Design team scans the Job/FG's Design QR to **Start Design**, and scans again to **Complete Design** — `hours_spent` and `design_cost` are calculated from the gap between the two timestamps |
 | `Data Entry Task` doctype | One per Job, auto-created on Job submit. Tracks the handoff from CS's uploaded diagram/BOQ Excel to the `Finished Good`/`FG Subpart` records actually existing in the system (`fg_records_created` flag), plus hours/cost |
@@ -249,7 +249,7 @@ The `Job Consumption Report` now reports, per Job:
   approximation via `elemental_erp/utils/costing.py`), plus a **Total Manpower Cost** column
   summing all five
 
-## 9. QC gate, invoicing-after-loading, and PO-on-approval (no rework flow)
+## 9. QC gate, invoicing-after-loading, and Purchase handoff (no rework flow)
 
 Three explicit business rules, added deliberately without a rework/return workflow — a Fail
 just sits there until QC re-scans with a new result:
@@ -258,7 +258,7 @@ just sits there until QC re-scans with a new result:
 |---|---|
 | **QC must Pass before Packaging** | `QC Inspection` — one per (Job, Finished Good), auto-created with its own QR when the Job is submitted (same pattern as `Design Task`). `Packaging Entry.validate()` and `api.map_part_to_box` both check `qc_passed(job, finished_good)` and throw if it isn't `Passed` yet. `/qc-scan` is where QC actually records Pass/Fail — no separate rework doctype; if it Fails, the same QR gets scanned again once fixed, and the new result just overwrites the old one. |
 | **Sales Invoice only after loading scan is fully complete** | `create_sales_invoice_for_job` now throws unless every `Packing Box` for the Job is at least `Dispatched` — i.e. the whole vehicle-loading scan is done. It's also auto-triggered from `scan_box_dispatch` the instant the last box is scanned, so in practice you won't even need the manual button — it just appears as a Draft the moment loading finishes. |
-| **Purchase Order created in Draft the moment the Indent is approved** | `Material Indent.on_submit` now calls the same PO-creation logic automatically (`_create_po_from_indent_doc`) right after status flips to `Approved`, with no supplier chosen yet. The **"Create Purchase Order"** button on the Indent becomes a fallback/re-trigger, and now prompts for a **supplier name — matches an existing Supplier if it exists, or creates a new vendor on the fly** if it doesn't (`api._resolve_supplier`). Once a PO exists, the button switches to "Open Purchase Order" instead. |
+| **Costing approval does not create a Purchase Order** | `Material Indent.on_submit` only marks the Indent Approved and advances the Job to Indent Raised. Users with an Elemental Purchase role then use **Open PO Initiation** or **New Purchase Order**. A manual PO can select the submitted Material Indent; the server fills its Job/exact child-row links and rejects mismatched items, UOMs, Jobs, or quantities above the remaining shortfall. |
 
 ---
 
@@ -598,7 +598,8 @@ support the customer adding more Finished Goods mid-Job, so:
 1. Costing pulls BOM items — covers whichever FG rows are still un-indented.
 2. On submitting that Material Indent, every FG row it covered gets `indent_raised` set, so the
    *next* BOM pull (after the customer adds another FG) only includes the new item.
-3. Purchase procures as before — nothing about the PO/supplier flow changed.
+3. Purchase opens PO Initiation or creates a normal Purchase Order manually; submitting the
+   Material Indent itself never creates one.
 
 **Worth knowing:** this reconciliation is at FG-row granularity, not exact material-quantity
 granularity — if a raw material is shared across multiple FGs and only some of them have been
@@ -634,8 +635,9 @@ real inventory reservation (see the existing stock-check caveats in section 15 b
   tables, in parallel with (not yet posting to) ERPNext's real stock ledger. Wiring
   `Material Issue.on_submit` → Stock Entry (store → WIP) and `Job Material Consumption.on_submit`
   → Stock Entry (Material Consumption for Manufacture) is the next step to make them agree.
-- `create_purchase_order_from_indent` creates a **Draft** PO with no supplier — Purchase still
-  has to pick a supplier, rates, and submit it. That's deliberate, not an oversight.
+- Material Indent submission deliberately creates **no** Purchase Order. Purchase must use PO
+  Initiation or the standard Purchase Order form, where supplier, rate, terms, and quantities
+  remain a Purchase-team decision.
 - The "reserved by other jobs" stock calculation is an approximation: it sums *indented*
   quantities on other open Jobs, not actual reserved stock in a warehouse sense (since there's
   no real Stock Entry integration yet — see above). Once stock entries are wired in, this

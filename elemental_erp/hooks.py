@@ -49,6 +49,12 @@ doc_events = {
 	"Leave Application": {
 		"validate": "elemental_erp.utils.leave_validation.validate_leave_application",
 	},
+	"Purchase Order": {
+		"validate": "elemental_erp.utils.purchase_order.validate_material_indent_linkage",
+		"after_insert": "elemental_erp.utils.purchase_order.mark_material_indents_in_purchase",
+		"on_cancel": "elemental_erp.utils.purchase_order.refresh_material_indent_purchase_status",
+		"on_trash": "elemental_erp.utils.purchase_order.refresh_material_indent_purchase_status",
+	},
 }
 
 # Website Route Rules — public QR scan landing page: elemental.com/qr/<qr_value>
@@ -67,4 +73,5 @@ doctype_js = {
 	"Work from Home Request": "public/js/work_from_home_request.js",
 	"Salary Slip": "public/js/salary_slip.js",
 	"Leave Application": "public/js/leave_application.js",
+	"Purchase Order": "public/js/purchase_order.js",
 }

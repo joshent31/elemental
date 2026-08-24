@@ -191,7 +191,7 @@
   "fieldtype": "Table",
   "options": "Item Supplier Elemental",
   "insert_after": "section_suppliers_elemental",
-  "description": "Suppliers for this item with part numbers and default flag. Used by Material Indent to auto-select supplier on Purchase Orders.",
+  "description": "Suppliers for this item with part numbers and default flag. Shown to Purchase on the PO Initiation workbench.",
   "module": "Elemental ERP"
  },
  {
@@ -203,7 +203,8 @@
   "fieldtype": "Link",
   "options": "Job",
   "insert_after": "project",
-  "read_only": 1,
+  "read_only": 0,
+  "description": "Select the Job when creating a Purchase Order manually. PO Initiation fills it automatically.",
   "module": "Elemental ERP"
  },
  {
@@ -215,8 +216,9 @@
   "fieldtype": "Link",
   "options": "Material Indent",
   "insert_after": "elemental_job",
-  "read_only": 1,
-  "unique": 1,
+  "read_only": 0,
+  "unique": 0,
+  "description": "Optional for a manual Purchase Order; select a submitted Material Indent to link and validate its items.",
   "module": "Elemental ERP"
  },
  {

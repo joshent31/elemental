@@ -5,7 +5,11 @@ frappe.pages["po-initiation"].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
-	new POInitiation(page);
+	wrapper.po_initiation = new POInitiation(page);
+};
+
+frappe.pages["po-initiation"].on_page_show = function (wrapper) {
+	if (wrapper.po_initiation) wrapper.po_initiation.apply_route_options();
 };
 
 class POInitiation {
@@ -18,6 +22,7 @@ class POInitiation {
 		);
 		this.make_filters();
 		this.make_table_area();
+		this.apply_route_options();
 	}
 
 	escape(value) {
@@ -72,6 +77,15 @@ class POInitiation {
 
 	make_table_area() {
 		this.$table_wrap = $("#po-init-table-wrap");
+	}
+
+	apply_route_options() {
+		const options = frappe.route_options || {};
+		frappe.route_options = null;
+		if (!options.job) return;
+		this.mode = "job";
+		this.job_control.set_value(options.job);
+		setTimeout(() => this.fetch(), 0);
 	}
 
 	fetch() {

@@ -8,6 +8,12 @@ from elemental_erp.utils.purchase import allocate_order_quantity
 
 
 FIXTURE_PATH = Path(__file__).resolve().parents[2] / "fixtures" / "custom_field.json"
+APP_ROOT = Path(__file__).resolve().parents[2]
+MATERIAL_INDENT_CONTROLLER = (
+	APP_ROOT / "elemental_erp" / "doctype" / "material_indent" / "material_indent.py"
+)
+MATERIAL_INDENT_CLIENT = APP_ROOT / "public" / "js" / "material_indent.js"
+HOOKS_PATH = APP_ROOT / "hooks.py"
 
 
 class TestAllocateOrderQuantity(unittest.TestCase):
@@ -49,6 +55,42 @@ class TestPurchaseOrderLinkageFixture(unittest.TestCase):
 			"Material Indent",
 		)
 		self.assertIn(("Purchase Order Item", "elemental_material_indent_item"), fields)
+
+	def test_manual_purchase_order_header_links_are_editable(self):
+		fixtures = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+		fields = {
+			(row.get("dt"), row.get("fieldname")): row
+			for row in fixtures
+			if row.get("doctype") == "Custom Field"
+		}
+
+		for fieldname in ("elemental_job", "elemental_material_indent"):
+			with self.subTest(fieldname=fieldname):
+				field = fields[("Purchase Order", fieldname)]
+				self.assertFalse(field.get("read_only"))
+		self.assertFalse(fields[("Purchase Order", "elemental_material_indent")].get("unique"))
+
+
+class TestMaterialIndentPurchaseHandoff(unittest.TestCase):
+	def test_submit_does_not_create_purchase_order(self):
+		controller = MATERIAL_INDENT_CONTROLLER.read_text(encoding="utf-8")
+		on_submit = controller.split("def on_submit", 1)[1].split("def ", 1)[0]
+		self.assertNotIn("_create_po_from_indent_doc", controller)
+		self.assertNotIn('frappe.get_doc("Purchase Order"', on_submit)
+		self.assertNotIn(".insert(", on_submit)
+
+	def test_only_purchase_actions_are_exposed_after_submit(self):
+		client = MATERIAL_INDENT_CLIENT.read_text(encoding="utf-8")
+		self.assertNotIn("create_purchase_order_from_indent", client)
+		self.assertIn('"Elemental Purchase User"', client)
+		self.assertIn('"Open PO Initiation"', client)
+		self.assertIn('"New Purchase Order"', client)
+
+	def test_standard_purchase_order_has_server_side_linkage_hooks(self):
+		hooks = HOOKS_PATH.read_text(encoding="utf-8")
+		self.assertIn('"Purchase Order": {', hooks)
+		self.assertIn("validate_material_indent_linkage", hooks)
+		self.assertIn("mark_material_indents_in_purchase", hooks)
 
 
 if __name__ == "__main__":

@@ -25,38 +25,27 @@ frappe.ui.form.on("Material Indent", {
 
 		if (!frm.is_new() && frm.doc.docstatus === 1) {
 			if (frm.doc.purchase_order) {
-				// Draft PO was already auto-created when this Indent was
-				// approved — jump straight to it to add a supplier / rates.
 				frm.add_custom_button("Open Purchase Order", () => {
 					frappe.set_route("Form", "Purchase Order", frm.doc.purchase_order);
 				}, "View");
-			} else {
-				const hasShortfall = (frm.doc.items || []).some((row) => (row.shortfall_qty || 0) > 0);
-				if (hasShortfall) {
-					frm.add_custom_button("Create Purchase Order (Shortfall)", () => {
-						frappe.prompt(
-							{
-								fieldname: "supplier",
-								label: "Supplier (existing name, or type a new vendor name)",
-								fieldtype: "Data",
-								description: "Matches an existing Supplier if the name exists, otherwise creates a new one.",
-							},
-							(values) => {
-								frappe.call({
-									method: "elemental_erp.api.create_purchase_order_from_indent",
-									args: { material_indent: frm.doc.name, supplier: values.supplier },
-									callback: (r) => {
-										if (r.message) {
-											frappe.show_alert(`Draft Purchase Order ${r.message.purchase_order} created.`);
-											frm.reload_doc();
-										}
-									},
-								});
-							},
-							"Create Purchase Order"
-						);
-					}).addClass("btn-primary");
-				}
+			}
+
+			const canPurchase = ["System Manager", "Elemental Purchase User", "Elemental Purchase HOD"].some(
+				(role) => (frappe.user_roles || []).includes(role)
+			);
+			const hasShortfall = (frm.doc.items || []).some((row) => (row.shortfall_qty || 0) > 0);
+			if (canPurchase && hasShortfall) {
+				frm.add_custom_button("Open PO Initiation", () => {
+					frappe.route_options = { job: frm.doc.job };
+					frappe.set_route("po-initiation");
+				}, "Purchase").addClass("btn-primary");
+
+				frm.add_custom_button("New Purchase Order", () => {
+					frappe.new_doc("Purchase Order", {
+						elemental_job: frm.doc.job,
+						elemental_material_indent: frm.doc.name,
+					});
+				}, "Purchase");
 			}
 		}
 	},

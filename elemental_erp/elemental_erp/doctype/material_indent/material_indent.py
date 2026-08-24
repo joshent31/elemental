@@ -51,28 +51,9 @@ class MaterialIndent(Document):
 		self.db_set("status", "Approved", update_modified=False)
 		advance_job_status(self.job, "Indent Raised")
 		self._mark_covered_fg_items_indented()
-
-		# "once approved, it goes to Purchase Order in draft" — auto-create
-		# immediately if a supplier can be resolved from the Item's default
-		# supplier table. If no supplier is configured, skip auto-PO and
-		# let the user create one manually via the "Create Purchase Order"
-		# button.
-		from elemental_erp.api import _create_po_from_indent_doc
-
-		po = _create_po_from_indent_doc(self)
-		if po:
-			frappe.msgprint(
-				f"Shortfall detected \u2014 Draft Purchase Order {po.name} created automatically.",
-				alert=True,
-			)
-		else:
-			shortfall_count = sum(1 for r in self.items if (r.shortfall_qty or 0) > 0)
-			if shortfall_count:
-				frappe.msgprint(
-					"Shortfall detected but no default supplier configured on the items. "
-					"Please create the Purchase Order manually.",
-					alert=True,
-				)
+		# Submission is Costing's approval boundary only. Purchase decides when,
+		# from whom, and for how much to order later through PO Initiation or a
+		# normal ERPNext Purchase Order. Never create a Draft PO here.
 
 	def _mark_covered_fg_items_indented(self):
 		"""If this Indent was built via "Pull Items from Job BOM", flag the
