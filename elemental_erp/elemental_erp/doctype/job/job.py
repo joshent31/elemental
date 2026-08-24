@@ -95,6 +95,9 @@ def generate_trackers_for_new_fg_rows(doc):
 	Task, and QC Inspection, then marks the row done. Rows already
 	processed are skipped, so this is safe to run on every single save."""
 	from elemental_erp.elemental_erp.doctype.qr_code_master.qr_code_master import create_qr_master
+	from elemental_erp.elemental_erp.doctype.qc_inspection.qc_inspection import (
+		get_or_create_qc_inspection,
+	)
 	from elemental_erp.elemental_erp.doctype.job_subpart_label.job_subpart_label import (
 		_process_names,
 		create_or_update_label,
@@ -139,17 +142,8 @@ def generate_trackers_for_new_fg_rows(doc):
 			task.qr_image = generate_qr_image(task.qr_value, scan_url, task.doctype, task.name)
 			task.save(ignore_permissions=True)
 
-		# --- QC Inspection (one per FG) ---
-		if not frappe.db.exists("QC Inspection", {"job": doc.name, "finished_good": fg_row.finished_good}):
-			insp = frappe.get_doc({
-				"doctype": "QC Inspection", "job": doc.name,
-				"finished_good": fg_row.finished_good, "status": "Pending",
-			})
-			insp.qr_value = frappe.generate_hash(length=12).upper()
-			insp.insert(ignore_permissions=True)
-			scan_url = frappe.utils.get_url(f"/qc-scan?qr={insp.qr_value}")
-			insp.qr_image = generate_qr_image(insp.qr_value, scan_url, insp.doctype, insp.name)
-			insp.save(ignore_permissions=True)
+		# --- QC Inspection / Finished Good QR (one per Job x FG) ---
+		get_or_create_qc_inspection(doc.name, fg_row.finished_good)
 
 		fg_row.trackers_generated = 1
 		# on_update runs after the parent database write; persist this flag or

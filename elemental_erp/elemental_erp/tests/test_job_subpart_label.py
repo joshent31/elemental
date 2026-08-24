@@ -19,6 +19,16 @@ class TestJobSubpartLabelSchema(unittest.TestCase):
 		self.assertIn("def before_print(", job_controller)
 		self.assertIn("reconcile_job_subpart_trackers(self.name)", job_controller)
 
+	def test_reconciliation_guarantees_one_fg_qc_qr(self):
+		label_controller = (
+			APP_ROOT
+			/ "elemental_erp"
+			/ "doctype"
+			/ "job_subpart_label"
+			/ "job_subpart_label.py"
+		).read_text(encoding="utf-8")
+		self.assertIn("get_or_create_qc_inspection(job, fg_row.finished_good)", label_controller)
+
 	def test_label_is_job_specific_and_has_one_unique_qr(self):
 		doctype = json.loads(
 			(
@@ -75,6 +85,8 @@ class TestJobSubpartLabelSchema(unittest.TestCase):
 		self.assertEqual(print_format["doc_type"], "Job")
 		self.assertIn("Job Subpart Label", html)
 		self.assertIn("qr_image", html)
+		self.assertIn("QC Inspection", html)
+		self.assertIn("FG QR (QC)", html)
 		self.assertIn("ref_image", html)
 		self.assertIn("process.process_name", html)
 

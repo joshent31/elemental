@@ -210,11 +210,15 @@ def reconcile_job_subpart_trackers(job):
 	rejected so transaction history can never be relinked silently.
 	"""
 	from elemental_erp.elemental_erp.doctype.qr_code_master.qr_code_master import create_qr_master
+	from elemental_erp.elemental_erp.doctype.qc_inspection.qc_inspection import (
+		get_or_create_qc_inspection,
+	)
 
 	job_doc = frappe.get_doc("Job", job)
 	expected = {}
 	for fg_row in job_doc.fg_items:
 		fg = frappe.get_doc("Finished Good", fg_row.finished_good)
+		get_or_create_qc_inspection(job, fg_row.finished_good)
 		if fg.subparts:
 			for subpart in fg.subparts:
 				expected[(fg.name, subpart.get("part_code"))] = {
