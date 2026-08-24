@@ -41,6 +41,23 @@ def normalize_material_indent_departments():
 			)
 
 
+def backfill_material_indent_excess_stock():
+	"""Populate the new display field on Material Indents saved before MOQ support."""
+	import frappe
+
+	if not frappe.db.has_column("Material Indent Item", "excess_stock_qty"):
+		return
+	frappe.db.sql(
+		"""
+		UPDATE `tabMaterial Indent Item`
+		SET excess_stock_qty = GREATEST(
+			COALESCE(available_qty, 0) - COALESCE(required_qty, 0),
+			0
+		)
+		"""
+	)
+
+
 def sync_job_subpart_labels():
 	"""Create the one-label-per-subpart traveller records for existing Jobs."""
 	from elemental_erp.elemental_erp.doctype.job_subpart_label.job_subpart_label import (

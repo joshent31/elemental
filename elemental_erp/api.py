@@ -3,7 +3,7 @@ from urllib.parse import quote
 
 import frappe
 
-from elemental_erp.utils.purchase import allocate_order_quantity
+from elemental_erp.utils.purchase import allocate_order_quantity, split_moq_order_quantity
 from elemental_erp.utils.mobile_access import (
 	DESIGN_SCAN_ROLES,
 	DISPATCH_SCAN_ROLES,
@@ -974,9 +974,14 @@ PO_INITIATION_CREATE_ROLES = (
 def _require_po_initiation_schema():
 	required_columns = {
 		"Contact": ("is_billing_contact",),
+		"Item Supplier Elemental": ("minimum_order_qty",),
+		"Material Indent Item": ("excess_stock_qty",),
 		"Purchase Order Item": (
 			"elemental_material_indent",
 			"elemental_material_indent_item",
+			"elemental_indent_required_qty",
+			"elemental_moq_qty",
+			"elemental_excess_qty",
 		),
 	}
 	missing = [
@@ -1031,7 +1036,13 @@ def _po_initiation_source_rows(job=None, item_group=None, item_codes=None):
 			COALESCE(mii.reserved_other_jobs, 0) AS recorded_reserved_qty,
 			COALESCE(i.lead_time_days, 0) AS lead_time_days,
 			COALESCE((
-				SELECT SUM(poi.qty)
+				SELECT SUM(
+					CASE
+						WHEN COALESCE(poi.elemental_indent_required_qty, 0) > 0
+						THEN LEAST(poi.elemental_indent_required_qty, poi.qty)
+						ELSE poi.qty
+					END
+				)
 				FROM `tabPurchase Order Item` poi
 				INNER JOIN `tabPurchase Order` po ON po.name = poi.parent
 				WHERE po.docstatus < 2
@@ -1143,7 +1154,14 @@ def _po_initiation_suppliers(item_codes):
 	for row in frappe.get_all(
 		"Item Supplier Elemental",
 		filters={"parent": ["in", item_codes], "parenttype": "Item"},
-		fields=["parent", "supplier", "supplier_part_no", "last_rate", "is_default"],
+		fields=[
+			"parent",
+			"supplier",
+			"supplier_part_no",
+			"last_rate",
+			"minimum_order_qty",
+			"is_default",
+		],
 		order_by="parent asc, is_default desc, idx asc",
 	):
 		suppliers.setdefault(row.parent, []).append(
@@ -1151,6 +1169,7 @@ def _po_initiation_suppliers(item_codes):
 				"supplier": row.supplier,
 				"supplier_part_no": row.supplier_part_no,
 				"last_rate": float(row.last_rate or 0),
+				"minimum_order_qty": float(row.minimum_order_qty or 0),
 				"is_default": int(row.is_default or 0),
 			}
 		)
@@ -1234,6 +1253,11 @@ def _validated_po_initiation_rows(rows):
 			frappe.throw(f"Item {item_code} is missing, disabled, or not purchasable.")
 		if not supplier or not frappe.db.exists("Supplier", supplier):
 			frappe.throw(f"Select an existing Supplier for {item_code}.")
+		minimum_order_qty = frappe.db.get_value(
+			"Item Supplier Elemental",
+			{"parent": item_code, "parenttype": "Item", "supplier": supplier},
+			"minimum_order_qty",
+		) or 0
 
 		try:
 			rate = float(row.get("rate") or 0)
@@ -1248,6 +1272,7 @@ def _validated_po_initiation_rows(rows):
 				"supplier": supplier,
 				"po_qty": positive_quantity(row.get("po_qty"), f"PO Qty for {item_code}"),
 				"rate": rate,
+				"minimum_order_qty": float(minimum_order_qty),
 			}
 		)
 	return validated
@@ -1274,12 +1299,20 @@ def create_po_from_initiation(rows, job=None):
 			item_codes=[requested["item_code"]],
 		)
 		try:
-			item_allocations = allocate_order_quantity(outstanding, requested["po_qty"])
+			quantity_split = split_moq_order_quantity(
+				sum(float(row.get("bal_indent_qty") or 0) for row in outstanding),
+				requested["po_qty"],
+				requested["minimum_order_qty"],
+			)
+			item_allocations = allocate_order_quantity(outstanding, quantity_split["indent_qty"])
 		except ValueError as error:
 			frappe.throw(str(error))
-		for allocation in item_allocations:
+		for index, allocation in enumerate(item_allocations):
 			allocation["supplier"] = requested["supplier"]
 			allocation["rate"] = requested["rate"]
+			allocation["minimum_order_qty"] = requested["minimum_order_qty"]
+			allocation["excess_qty"] = quantity_split["excess_qty"] if index == 0 else 0
+			allocation["order_qty"] = allocation["po_qty"] + allocation["excess_qty"]
 			allocations.append(allocation)
 
 	company = _default_company()
@@ -1288,7 +1321,11 @@ def create_po_from_initiation(rows, job=None):
 
 	grouped = {}
 	for allocation in allocations:
-		key = (allocation["supplier"], allocation["job"])
+		# Job mode keeps one PO per Job. Item Group mode intentionally
+		# consolidates the selected supplier's demand across Jobs so MOQ is
+		# applied once to the supplier order, while exact row links still retain
+		# each Job's allocation.
+		key = (allocation["supplier"], allocation["job"] if job else None)
 		grouped.setdefault(key, []).append(allocation)
 
 	purchase_orders = []
@@ -1304,12 +1341,15 @@ def create_po_from_initiation(rows, job=None):
 			po_items.append(
 				{
 					"item_code": allocation["item_code"],
-					"qty": allocation["po_qty"],
+					"qty": allocation["order_qty"],
 					"uom": allocation["uom"],
 					"rate": allocation["rate"],
 					"schedule_date": schedule_date,
 					"elemental_material_indent": allocation["material_indent"],
 					"elemental_material_indent_item": allocation["indent_item"],
+					"elemental_indent_required_qty": allocation["po_qty"],
+					"elemental_moq_qty": allocation["minimum_order_qty"],
+					"elemental_excess_qty": allocation["excess_qty"],
 				}
 			)
 

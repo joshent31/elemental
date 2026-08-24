@@ -4,7 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
-from elemental_erp.utils.purchase import allocate_order_quantity
+from elemental_erp.utils.purchase import allocate_order_quantity, split_moq_order_quantity
 
 
 FIXTURE_PATH = Path(__file__).resolve().parents[2] / "fixtures" / "custom_field.json"
@@ -14,6 +14,12 @@ MATERIAL_INDENT_CONTROLLER = (
 )
 MATERIAL_INDENT_CLIENT = APP_ROOT / "public" / "js" / "material_indent.js"
 HOOKS_PATH = APP_ROOT / "hooks.py"
+MATERIAL_INDENT_ITEM_SCHEMA = (
+	APP_ROOT / "elemental_erp" / "doctype" / "material_indent_item" / "material_indent_item.json"
+)
+ITEM_SUPPLIER_SCHEMA = (
+	APP_ROOT / "elemental_erp" / "doctype" / "item_supplier_elemental" / "item_supplier_elemental.json"
+)
 
 
 class TestAllocateOrderQuantity(unittest.TestCase):
@@ -39,6 +45,30 @@ class TestAllocateOrderQuantity(unittest.TestCase):
 			with self.subTest(quantity=quantity):
 				with self.assertRaises(ValueError):
 					allocate_order_quantity([], quantity)
+
+
+class TestMOQOrderQuantity(unittest.TestCase):
+	def test_moq_above_requirement_becomes_excess(self):
+		self.assertEqual(
+			split_moq_order_quantity(required_qty=14, po_qty=20, minimum_order_qty=20),
+			{"indent_qty": 14, "excess_qty": 6},
+		)
+
+	def test_partial_order_is_allowed_when_it_meets_moq(self):
+		self.assertEqual(
+			split_moq_order_quantity(required_qty=100, po_qty=20, minimum_order_qty=20),
+			{"indent_qty": 20, "excess_qty": 0},
+		)
+
+	def test_quantity_below_moq_is_rejected(self):
+		with self.assertRaisesRegex(ValueError, "at least the supplier MOQ of 20"):
+			split_moq_order_quantity(required_qty=14, po_qty=18, minimum_order_qty=20)
+
+	def test_over_order_without_moq_reason_is_rejected(self):
+		for moq in (0, 10):
+			with self.subTest(moq=moq):
+				with self.assertRaisesRegex(ValueError, "higher PO quantity"):
+					split_moq_order_quantity(required_qty=14, po_qty=20, minimum_order_qty=moq)
 
 
 class TestPurchaseOrderLinkageFixture(unittest.TestCase):
@@ -69,6 +99,33 @@ class TestPurchaseOrderLinkageFixture(unittest.TestCase):
 				field = fields[("Purchase Order", fieldname)]
 				self.assertFalse(field.get("read_only"))
 		self.assertFalse(fields[("Purchase Order", "elemental_material_indent")].get("unique"))
+
+	def test_purchase_order_records_indent_and_moq_portions(self):
+		fixtures = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+		fieldnames = {
+			row.get("fieldname")
+			for row in fixtures
+			if row.get("doctype") == "Custom Field" and row.get("dt") == "Purchase Order Item"
+		}
+		self.assertTrue(
+			{
+				"elemental_indent_required_qty",
+				"elemental_moq_qty",
+				"elemental_excess_qty",
+			}.issubset(fieldnames)
+		)
+
+	def test_indent_and_supplier_schemas_expose_stock_and_moq(self):
+		indent_fields = {
+			row["fieldname"]
+			for row in json.loads(MATERIAL_INDENT_ITEM_SCHEMA.read_text(encoding="utf-8"))["fields"]
+		}
+		supplier_fields = {
+			row["fieldname"]
+			for row in json.loads(ITEM_SUPPLIER_SCHEMA.read_text(encoding="utf-8"))["fields"]
+		}
+		self.assertIn("excess_stock_qty", indent_fields)
+		self.assertIn("minimum_order_qty", supplier_fields)
 
 
 class TestMaterialIndentPurchaseHandoff(unittest.TestCase):

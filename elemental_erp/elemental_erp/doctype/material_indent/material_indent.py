@@ -42,6 +42,7 @@ class MaterialIndent(Document):
 			row.total_bin_qty = total_bin_qty
 			row.reserved_other_jobs = reserved_elsewhere
 			row.available_qty = max(total_bin_qty - reserved_elsewhere, 0)
+			row.excess_stock_qty = max(row.available_qty - (row.required_qty or 0), 0)
 			row.shortfall_qty = max((row.required_qty or 0) - row.available_qty, 0)
 			row.amount = (row.required_qty or 0) * (row.rate or 0)
 

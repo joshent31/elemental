@@ -77,6 +77,7 @@ class POInitiation {
 
 	make_table_area() {
 		this.$table_wrap = $("#po-init-table-wrap");
+		this.$table_wrap.css("overflow-x", "auto");
 	}
 
 	apply_route_options() {
@@ -128,8 +129,8 @@ class POInitiation {
 			<table class="table table-bordered" style="font-size:12px;">
 				<thead>
 					<tr>
-						<th>#</th><th>Item</th><th>Bal. Indent Qty</th><th>Supplier</th>
-						<th>PO Qty</th><th>PO Rate</th><th>Stock</th><th>Expected Stock</th>
+						<th>#</th><th>Item</th><th>Qty to Procure</th><th>Supplier</th>
+						<th>MOQ</th><th>PO Qty</th><th>MOQ Excess</th><th>PO Rate</th><th>Stock on Hand</th><th>Expected Stock</th>
 						${showJobCols ? "<th>Res. Qty (other Jobs)</th><th>Job Bal Qty</th>" : ""}
 						<th>Lead Time</th><th>Place Order</th>
 					</tr>
@@ -137,10 +138,14 @@ class POInitiation {
 				<tbody>
 		`;
 		this.rows.forEach((row, i) => {
+			const defaultSupplier = (row.suppliers || []).find((s) => s.supplier === row.default_supplier);
+			const initialMoq = Number(defaultSupplier ? defaultSupplier.minimum_order_qty : 0) || 0;
+			const initialPoQty = Math.max(Number(row.bal_indent_qty) || 0, initialMoq);
+			const initialExcess = Math.max(initialPoQty - (Number(row.bal_indent_qty) || 0), 0);
 			const supplierCell = row.suppliers && row.suppliers.length
 				? `<option value="">-- select --</option>` +
 				  row.suppliers.map((s) =>
-					`<option value="${this.escape(s.supplier)}" data-rate="${s.last_rate || 0}" ${s.supplier === row.default_supplier ? "selected" : ""}>
+					`<option value="${this.escape(s.supplier)}" data-rate="${s.last_rate || 0}" data-moq="${s.minimum_order_qty || 0}" ${s.supplier === row.default_supplier ? "selected" : ""}>
 						${this.escape(s.supplier)}${s.supplier_part_no ? " (" + this.escape(s.supplier_part_no) + ")" : ""}
 					</option>`
 				  ).join("")
@@ -158,7 +163,9 @@ class POInitiation {
 							   <div class="text-muted" style="font-size:10px;">No suppliers mapped on this Item \u2014 pick any</div>`
 						}
 					</td>
-					<td><input type="number" class="form-control input-sm po-init-qty" data-idx="${i}" value="${row.bal_indent_qty}" style="width:90px;"></td>
+					<td class="po-init-moq" data-idx="${i}">${initialMoq}</td>
+					<td><input type="number" class="form-control input-sm po-init-qty" data-idx="${i}" value="${initialPoQty}" min="0" step="any" style="width:90px;"></td>
+					<td class="po-init-excess" data-idx="${i}">${initialExcess}</td>
 					<td><input type="number" class="form-control input-sm po-init-rate" data-idx="${i}" value="0" style="width:90px;"></td>
 					<td>${row.stock_qty}</td>
 					<td>${row.expected_stock}</td>
@@ -190,20 +197,35 @@ class POInitiation {
 			this.supplier_controls[i] = ctrl;
 		});
 
-		// pre-fill the rate box from the default supplier's last known rate,
-		// and keep it in sync if the operator switches supplier in the dropdown
+		// Supplier selection drives both the last rate and MOQ. When MOQ is
+		// above the Job requirement, PO Qty is raised automatically and the
+		// unavoidable excess is shown separately for future stock.
 		this.rows.forEach((row, i) => {
 			const $select = this.$table_wrap.find(`.po-init-supplier-select[data-idx="${i}"]`);
 			if (!$select.length) return;
-			const applyRate = () => {
-				const rate = $select.find("option:selected").data("rate") || 0;
+			const applySupplierDefaults = () => {
+				const $selected = $select.find("option:selected");
+				const rate = Number($selected.data("rate")) || 0;
+				const moq = Number($selected.data("moq")) || 0;
 				this.$table_wrap.find(`.po-init-rate[data-idx="${i}"]`).val(rate);
+				this.$table_wrap.find(`.po-init-moq[data-idx="${i}"]`).text(moq);
+				this.$table_wrap
+					.find(`.po-init-qty[data-idx="${i}"]`)
+					.val(Math.max(Number(row.bal_indent_qty) || 0, moq));
+				this.update_excess(i);
 			};
-			applyRate();
-			$select.on("change", applyRate);
+			applySupplierDefaults();
+			$select.on("change", applySupplierDefaults);
 		});
 
+		this.$table_wrap.find(".po-init-qty").on("input", (e) => this.update_excess($(e.currentTarget).data("idx")));
 		this.$table_wrap.find(".po-init-place").on("click", (e) => this.place_order($(e.currentTarget).data("idx")));
+	}
+
+	update_excess(idx) {
+		const required = Number(this.rows[idx].bal_indent_qty) || 0;
+		const poQty = Number(this.$table_wrap.find(`.po-init-qty[data-idx="${idx}"]`).val()) || 0;
+		this.$table_wrap.find(`.po-init-excess[data-idx="${idx}"]`).text(Math.max(poQty - required, 0));
 	}
 
 	get_supplier_for_row(idx) {
@@ -212,14 +234,29 @@ class POInitiation {
 		return this.supplier_controls[idx] ? this.supplier_controls[idx].get_value() : null;
 	}
 
+	get_moq_for_row(idx) {
+		const $select = this.$table_wrap.find(`.po-init-supplier-select[data-idx="${idx}"]`);
+		return $select.length ? Number($select.find("option:selected").data("moq")) || 0 : 0;
+	}
+
 	place_order(idx) {
 		const row = this.rows[idx];
 		const supplier = this.get_supplier_for_row(idx);
 		const qty = this.$table_wrap.find(`.po-init-qty[data-idx="${idx}"]`).val();
 		const rate = this.$table_wrap.find(`.po-init-rate[data-idx="${idx}"]`).val();
+		const numericQty = Number(qty);
+		const moq = this.get_moq_for_row(idx);
 
 		if (!supplier) {
 			frappe.msgprint("Set a Supplier for this item first.");
+			return;
+		}
+		if (!Number.isFinite(numericQty) || numericQty <= 0) {
+			frappe.msgprint("PO Qty must be greater than zero.");
+			return;
+		}
+		if (moq > 0 && numericQty < moq) {
+			frappe.msgprint(`PO Qty must be at least the selected supplier's MOQ of ${moq}.`);
 			return;
 		}
 

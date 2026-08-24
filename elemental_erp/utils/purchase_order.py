@@ -5,10 +5,8 @@ from collections import defaultdict
 import frappe
 from frappe.utils import flt
 
+from elemental_erp.utils.purchase import split_moq_order_quantity
 from elemental_erp.utils.transactions import advance_job_status
-
-
-QUANTITY_TOLERANCE = 1e-9
 
 
 def _linked_indent_names(doc):
@@ -30,6 +28,19 @@ def _submitted_indent(name, cache):
 	return cache[name]
 
 
+def _minimum_order_qty(item_code, supplier):
+	if not supplier:
+		frappe.throw("Select a Supplier before linking a Purchase Order to a Material Indent.")
+	return flt(
+		frappe.db.get_value(
+			"Item Supplier Elemental",
+			{"parent": item_code, "parenttype": "Item", "supplier": supplier},
+			"minimum_order_qty",
+		)
+		or 0
+	)
+
+
 def validate_material_indent_linkage(doc, method=None):
 	"""Link manual PO rows to exact Indent rows and reject over-ordering.
 
@@ -47,6 +58,7 @@ def validate_material_indent_linkage(doc, method=None):
 	indent_cache = {}
 	indent_rows = {}
 	requested_by_indent_row = defaultdict(float)
+	po_rows_by_indent_row = defaultdict(list)
 	jobs = set()
 
 	for row in doc.get("items") or []:
@@ -90,11 +102,16 @@ def validate_material_indent_linkage(doc, method=None):
 
 		row.elemental_material_indent = indent_name
 		row.elemental_material_indent_item = child.name
-		requested_by_indent_row[(indent_name, child.name, row.item_code)] += flt(row.qty)
+		key = (indent_name, child.name, row.item_code)
+		requested_by_indent_row[key] += flt(row.qty)
+		po_rows_by_indent_row[key].append(row)
 
-	if len(jobs) > 1:
-		frappe.throw("One Purchase Order cannot combine Material Indents from different Jobs.")
-	if jobs:
+	if len(jobs) > 1 and doc.get("elemental_job"):
+		frappe.throw(
+			"A Purchase Order linked to multiple Jobs must leave Elemental Job blank; "
+			"each item row retains its exact Material Indent and Job allocation."
+		)
+	if len(jobs) == 1:
 		indent_job = next(iter(jobs))
 		if doc.get("elemental_job") and doc.elemental_job != indent_job:
 			frappe.throw(
@@ -112,12 +129,18 @@ def validate_material_indent_linkage(doc, method=None):
 			indent_item,
 		)
 
+	remaining_by_indent_row = {}
 	for indent_name, indent_item, item_code in linked_rows:
-		requested_qty = requested_by_indent_row[(indent_name, indent_item, item_code)]
 		child = indent_rows[indent_name][indent_item]
 		ordered_elsewhere = frappe.db.sql(
 			"""
-			SELECT COALESCE(SUM(poi.qty), 0)
+			SELECT COALESCE(SUM(
+				CASE
+					WHEN COALESCE(poi.elemental_indent_required_qty, 0) > 0
+					THEN LEAST(poi.elemental_indent_required_qty, poi.qty)
+					ELSE poi.qty
+				END
+			), 0)
 			FROM `tabPurchase Order Item` poi
 			INNER JOIN `tabPurchase Order` po ON po.name = poi.parent
 			WHERE po.docstatus < 2
@@ -141,12 +164,40 @@ def validate_material_indent_linkage(doc, method=None):
 				"material_indent": indent_name,
 			},
 		)[0][0] or 0
-		remaining = max(flt(child.shortfall_qty) - flt(ordered_elsewhere), 0)
-		if requested_qty > remaining + QUANTITY_TOLERANCE:
-			frappe.throw(
-				f"Only {remaining:g} {child.uom or ''} of {item_code} remains to order "
-				f"against Material Indent {indent_name}; this Purchase Order requests {requested_qty:g}."
+		remaining_by_indent_row[(indent_name, indent_item, item_code)] = max(
+			flt(child.shortfall_qty) - flt(ordered_elsewhere),
+			0,
+		)
+
+	requested_by_item = defaultdict(float)
+	remaining_by_item = defaultdict(float)
+	minimum_by_item = {}
+	for key in linked_rows:
+		item_code = key[2]
+		requested_by_item[item_code] += requested_by_indent_row[key]
+		remaining_by_item[item_code] += remaining_by_indent_row[key]
+		minimum_by_item[item_code] = _minimum_order_qty(item_code, doc.supplier)
+
+	for item_code, requested_qty in requested_by_item.items():
+		try:
+			split_moq_order_quantity(
+				remaining_by_item[item_code],
+				requested_qty,
+				minimum_by_item[item_code],
 			)
+		except ValueError as error:
+			frappe.throw(f"{item_code}: {error}")
+
+	for key in linked_rows:
+		item_code = key[2]
+		coverage_remaining = remaining_by_indent_row[key]
+		for row in po_rows_by_indent_row[key]:
+			row_qty = flt(row.qty)
+			covered_qty = min(row_qty, coverage_remaining)
+			row.elemental_indent_required_qty = covered_qty
+			row.elemental_moq_qty = minimum_by_item[item_code]
+			row.elemental_excess_qty = max(row_qty - covered_qty, 0)
+			coverage_remaining = max(coverage_remaining - covered_qty, 0)
 
 
 def mark_material_indents_in_purchase(doc, method=None):

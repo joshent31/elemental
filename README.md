@@ -226,7 +226,9 @@ installation.
 | `Finished Good.bom_items` (Raw Material BOM) | Per-1-unit raw material recipe for an FG. `Material Indent` can now pull from this instead of being typed from memory |
 | **"Pull Items from Job BOM"** button on `Material Indent` | Calls `api.generate_indent_items_from_bom` — sums every FG's BOM × its Job Qty across the whole Job, grouped by raw material, and fills the Indent's item rows |
 | `Material Indent` stock check (rewritten) | Now computes `available_qty = total_bin_qty − reserved_by_other_running_jobs`, where "reserved" is the sum of this material on other Jobs' submitted Indents whose Job isn't `Closed`/`Cancelled` — so two Jobs can no longer both be told the same units are free |
+| Material Indent stock split | Each row saves **Required Qty**, **Total in Store**, **Reserved by Other Jobs**, **Available for This Job**, **Excess Stock after Requirement**, and the final **Qty to Procure**. Only Qty to Procure becomes Purchase demand. |
 | Submitted `Material Indent` handoff | Submission is Costing's approval only and never creates a Purchase Order. Purchase uses **PO Initiation** or the normal ERPNext Purchase Order form; both retain Material Indent/Job linkage and check ordered quantities against the live shortfall. |
+| Supplier MOQ | Enter `Minimum Order Qty (MOQ)` on the Item's **Preferred Suppliers (Elemental)** row. PO Initiation shows that supplier-specific MOQ, defaults PO Qty to `max(Qty to Procure, MOQ)`, and records the difference as MOQ Excess for future stock. |
 | `Design Task` doctype | One per (Job, Finished Good), auto-created on Job submit, each with its own QR. Has a `design_files` table (2D/3D drawings, reference images) |
 | `/design-scan` (mobile page) | Design team scans the Job/FG's Design QR to **Start Design**, and scans again to **Complete Design** — `hours_spent` and `design_cost` are calculated from the gap between the two timestamps |
 | `Data Entry Task` doctype | One per Job, auto-created on Job submit. Tracks the handoff from CS's uploaded diagram/BOQ Excel to the `Finished Good`/`FG Subpart` records actually existing in the system (`fg_records_created` flag), plus hours/cost |
@@ -258,7 +260,7 @@ just sits there until QC re-scans with a new result:
 |---|---|
 | **QC must Pass before Packaging** | `QC Inspection` — one per (Job, Finished Good), auto-created with its own QR when the Job is submitted (same pattern as `Design Task`). `Packaging Entry.validate()` and `api.map_part_to_box` both check `qc_passed(job, finished_good)` and throw if it isn't `Passed` yet. `/qc-scan` is where QC actually records Pass/Fail — no separate rework doctype; if it Fails, the same QR gets scanned again once fixed, and the new result just overwrites the old one. |
 | **Sales Invoice only after loading scan is fully complete** | `create_sales_invoice_for_job` now throws unless every `Packing Box` for the Job is at least `Dispatched` — i.e. the whole vehicle-loading scan is done. It's also auto-triggered from `scan_box_dispatch` the instant the last box is scanned, so in practice you won't even need the manual button — it just appears as a Draft the moment loading finishes. |
-| **Costing approval does not create a Purchase Order** | `Material Indent.on_submit` only marks the Indent Approved and advances the Job to Indent Raised. Users with an Elemental Purchase role then use **Open PO Initiation** or **New Purchase Order**. A manual PO can select the submitted Material Indent; the server fills its Job/exact child-row links and rejects mismatched items, UOMs, Jobs, or quantities above the remaining shortfall. |
+| **Costing approval does not create a Purchase Order** | `Material Indent.on_submit` only marks the Indent Approved and advances the Job to Indent Raised. Users with an Elemental Purchase role then use **Open PO Initiation** or **New Purchase Order**. A manual PO can select the submitted Material Indent; the server fills its Job/exact child-row links and rejects mismatched items, UOMs, Jobs, or unjustified over-ordering. When a supplier MOQ exceeds the live shortfall, only the shortfall is allocated to the Job and the rest is recorded as MOQ Excess. |
 
 ---
 
@@ -904,7 +906,7 @@ bench run-tests --module elemental_erp.elemental_erp.tests.test_qr_code_master
 | **WFH Summary Report** | ✅ | Employee × Month matrix |
 | **Saturday Off Leave Type** | ✅ | Paid, 1/month, earned, Saturday only |
 | **Client Scripts** | ✅ | Production/Packaging/Dispatch/WFH/SL |
-| **PO Initiation** | ✅ | Supplier dropdown, rate auto-fill |
+| **PO Initiation** | ✅ | Supplier dropdown, rate/MOQ auto-fill, editable PO Qty, excess-stock tracking |
 | **Salary Slip OT** | ✅ | Auto-populate OT for Workers |
 | **OT Calculation Engine** | ✅ | Sunday/Holiday = full OT, 15h cap |
 | **Test Suite** | ✅ | 28 unit tests |
