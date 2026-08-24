@@ -4,11 +4,33 @@
 // gated on "!frm.is_new()", not docstatus (Job has no submit lifecycle),
 // and disappear once the Job reaches a terminal status.
 
+window.elemental_print_all_packing_labels = function (job) {
+	if (!job) {
+		frappe.msgprint("Select a Job first.");
+		return;
+	}
+	const url = `/api/method/elemental_erp.api.download_packing_labels?job=${encodeURIComponent(job)}`;
+	window.open(url, "_blank");
+};
+
 frappe.ui.form.on("Job", {
 	refresh(frm) {
 		if (frm.is_new()) return;
 
 		const isTerminal = frm.doc.status === "Closed" || frm.doc.status === "Cancelled";
+		const canPrintPackingLabels = [
+			"System Manager",
+			"Elemental Packaging User",
+			"Elemental Packaging HOD",
+			"Elemental Dispatch HOD",
+		].some((role) => (frappe.user_roles || []).includes(role));
+		if (canPrintPackingLabels) {
+			frm.add_custom_button(
+				"Print All Packing Labels",
+				() => window.elemental_print_all_packing_labels(frm.doc.name),
+				"View"
+			).addClass("btn-primary");
+		}
 
 		if (isTerminal) {
 			frm.set_intro(

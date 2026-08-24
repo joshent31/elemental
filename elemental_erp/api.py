@@ -595,6 +595,31 @@ def create_packing_labels(job, total_boxes):
 
 
 @frappe.whitelist()
+def download_packing_labels(job):
+	"""Download every Packing Box Label for a Job as one ordered PDF."""
+	from frappe.utils.print_format import download_multi_pdf
+
+	_require_roles(*PACKAGING_SCAN_ROLES, "Elemental Dispatch HOD")
+	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "read")
+	box_names = frappe.get_all(
+		"Packing Box",
+		filters={"job": job, "status": ["!=", "Cancelled"]},
+		pluck="name",
+		order_by="box_no asc",
+		limit_page_length=0,
+	)
+	if not box_names:
+		frappe.throw(f"No active Packing Box labels exist for Job {job}.")
+	return download_multi_pdf(
+		"Packing Box",
+		frappe.as_json(box_names),
+		format="Packing Box Label",
+		no_letterhead=True,
+	)
+
+
+@frappe.whitelist()
 def lookup_box(box_qr_value):
 	_require_roles(*(PACKAGING_SCAN_ROLES + DISPATCH_SCAN_ROLES))
 	box = frappe.db.get_value(
@@ -1754,6 +1779,7 @@ def create_job_from_quotation(quotation):
 			"customer": q.customer,
 			"brand": q.brand,
 			"quotation": q.name,
+			"job_description": q.remarks,
 			"fg_items": [
 				{"finished_good": row.finished_good, "job_qty": row.qty}
 				for row in q.items

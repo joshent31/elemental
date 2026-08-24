@@ -61,6 +61,18 @@
    "description": "e.g. BOQ 260226"
   },
   {
+   "fieldname": "job_location",
+   "label": "Job Location",
+   "fieldtype": "Data",
+   "description": "Site, city, store, or installation location printed on every Packing Box Label."
+  },
+  {
+   "fieldname": "job_description",
+   "label": "Job Description",
+   "fieldtype": "Small Text",
+   "description": "Short description printed on every Packing Box Label; Job / Project Name is used when this is blank."
+  },
+  {
    "fieldname": "start_date",
    "label": "Job Start Date",
    "fieldtype": "Date",

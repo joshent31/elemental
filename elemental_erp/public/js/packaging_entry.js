@@ -13,6 +13,11 @@ frappe.ui.form.on("Packaging Entry", {
 				() => frappe.set_route("Form", "Job", frm.doc.job),
 				"View"
 			);
+			frm.add_custom_button(
+				"Print All Packing Labels",
+				() => window.elemental_print_all_packing_labels(frm.doc.job),
+				"View"
+			).addClass("btn-primary");
 		}
 		if (frm.doc.qr_code_master) {
 			frm.add_custom_button(

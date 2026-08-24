@@ -203,7 +203,8 @@ installation.
 | `/pack-box` (mobile page) | Scan the box label's QR, then scan each part/FG QR going into it and enter qty — maps contents to that specific box as packing happens |
 | `/dispatch-scan` (mobile page) | Enter Job + vehicle, then scan each box as it's loaded — shows a running "X of N boxes loaded" count, updates each `Packing Box.status` to `Dispatched` |
 | `/site-scan` (authenticated mobile page) | A signed-in Dispatch user scans the box QR, confirms **Received at Site**, then later confirms **Installed**. Once every box on a Job is `Installed`, the Job auto-flips to status `Installed` |
-| **Packing Box Label** (Print Format) | The physical label — Job, "Box N of Total", and the box's own QR, sized to print and stick on the box |
+| **Packing Box Label** (Print Format) | The physical label — Job No above the QR, Job Location, Job Description, Customer, and "Label N of Total" |
+| **Print All Packing Labels** | Available on Job and Packaging Entry for Packaging users/HODs (and Dispatch HOD). Downloads one PDF containing every active label for that Job in box-number order. |
 
 **Flow in practice:**
 1. On the Job, tap **Create Packing Box Labels**, enter `20` → 20 `Packing Box` records with
@@ -300,7 +301,7 @@ attendance, no manual IN/OUT selection needed.
 | `/gate-scan` (authenticated mobile page) | **Kiosk mode**, not a one-shot scan — an assigned `Elemental HR Gate User` or HOD signs in on the gate phone, taps Start once, and the camera stays on continuously. Each employee just holds their badge up to it; the page auto-processes and goes straight back to waiting for the next person. A client-side cooldown (8s per badge) stops one held-up badge from firing repeated scans across video frames |
 | `api.gate_scan` | Looks at the employee's **last** `Employee Checkin` (ERPNext's standard HR doctype) — if it was `IN`, this scan logs `OUT`; otherwise it logs `IN`. Alternates automatically, always |
 | `employee_gate.upsert_attendance_for_day` | Fires on every `OUT` scan — takes the day's first `IN` and last `OUT`, computes `working_hours`, and creates/updates that day's `Attendance` record (`Present`, or `Half Day` if under 4 hours). Attempts to **submit** it automatically; if that fails (approved leave, holiday, an existing conflicting record), it's left saved-but-unsubmitted for HR to sort out by hand rather than blocking the gate scan itself |
-| **Employee ID Badge** (Print Format) | Name, designation, department, and the QR — ready to print onto a badge |
+| **Employee ID Badge** (Print Format) | Name, designation, department, QR, and the Employee Code immediately below the QR — ready to print onto a badge |
 
 **Worth knowing before relying on this for payroll:**
 
