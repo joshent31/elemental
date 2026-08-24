@@ -36,6 +36,22 @@ class Job(Document):
 		if self.fg_items:
 			generate_data_entry_task_for_job(self)
 
+	def before_print(self, print_settings=None):
+		"""Ensure standard Print also sees subparts added after Job creation.
+
+		The dedicated form action already prepares the traveller through the API,
+		but users may select the format from Frappe's normal Print menu. Reconcile
+		here as well so both entry points render the same Job-specific labels.
+		"""
+		if self.is_new():
+			return
+		from elemental_erp.elemental_erp.doctype.job_subpart_label.job_subpart_label import (
+			reconcile_job_subpart_trackers,
+		)
+
+		reconcile_job_subpart_trackers(self.name)
+		frappe.db.commit()
+
 	def _block_edits_if_closed(self):
 		if self.is_new():
 			return

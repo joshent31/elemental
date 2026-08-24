@@ -12,6 +12,13 @@ APP_ROOT = Path(__file__).resolve().parents[2]
 
 
 class TestJobSubpartLabelSchema(unittest.TestCase):
+	def test_standard_job_print_reconciles_late_subparts(self):
+		job_controller = (
+			APP_ROOT / "elemental_erp" / "doctype" / "job" / "job.py"
+		).read_text(encoding="utf-8")
+		self.assertIn("def before_print(", job_controller)
+		self.assertIn("reconcile_job_subpart_trackers(self.name)", job_controller)
+
 	def test_label_is_job_specific_and_has_one_unique_qr(self):
 		doctype = json.loads(
 			(
