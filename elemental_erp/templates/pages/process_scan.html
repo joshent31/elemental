@@ -1,0 +1,144 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div style="max-width:520px; margin:0 auto; font-family:sans-serif; padding:12px;">
+  <h3>Complete Subpart Process</h3>
+  <p style="color:#666; font-size:13px;">Scan the subpart traveller label after your department completes its work. The same QR follows the part through every department.</p>
+
+  <div id="scanner-part" style="width:100%; margin-bottom:12px;"></div>
+  <button id="start-scan" class="btn btn-primary btn-block">Scan Subpart Label</button>
+
+  <div id="part-panel" style="display:none; margin-top:16px;">
+    <div id="part-info" class="alert alert-info"></div>
+    <h5>Process Progress</h5>
+    <div id="process-list" style="font-size:13px; margin-bottom:14px;"></div>
+
+    <label for="process-name">Department Process Completed</label>
+    <select id="process-name" class="form-control" style="margin-bottom:10px;"></select>
+    <label for="completed-qty">Completed Qty</label>
+    <input id="completed-qty" type="number" class="form-control" min="0" step="any" style="margin-bottom:10px;">
+    <label for="remarks">Remarks (optional)</label>
+    <textarea id="remarks" class="form-control" style="margin-bottom:10px;"></textarea>
+    <button id="complete-btn" class="btn btn-success btn-block">Save Department Completion</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+let partQrValue = "{{ prefill_part }}";
+let currentLabel = null;
+const scanner = new Html5Qrcode("scanner-part");
+
+function extractQrValue(decodedText) {
+	try {
+		const url = new URL(decodedText, window.location.origin);
+		return url.searchParams.get("part") || url.pathname.split("/").filter(Boolean).pop();
+	} catch (error) {
+		return decodedText.trim();
+	}
+}
+
+function renderLabel(label) {
+	currentLabel = label;
+	document.getElementById("part-info").textContent =
+		`Job: ${label.job} | FG: ${label.finished_good} | Part: ${label.subpart_code} — ${label.subpart_name} | Total: ${label.total_qty} ${label.uom || ""}`;
+
+	const list = document.getElementById("process-list");
+	list.innerHTML = "";
+	(label.processes || []).forEach((process, index) => {
+		const row = document.createElement("div");
+		row.style.cssText = "display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:7px 2px;";
+		const name = document.createElement("span");
+		name.textContent = `${index + 1}. ${process.process_name}`;
+		const progress = document.createElement("strong");
+		progress.textContent = `${process.completed_qty}/${process.total_qty} — ${process.status}`;
+		progress.style.color = process.status === "Completed" ? "#1b5e20" : "#8a5a00";
+		row.append(name, progress);
+		list.appendChild(row);
+	});
+
+	const select = document.getElementById("process-name");
+	select.innerHTML = "";
+	(label.processes || []).forEach((process, index) => {
+		if (process.process_name === "Packing" || process.status === "Completed") return;
+		const option = document.createElement("option");
+		option.value = process.process_name;
+		option.textContent = process.process_name;
+		option.dataset.index = index;
+		select.appendChild(option);
+	});
+	if (!select.options.length) {
+		const option = document.createElement("option");
+		option.textContent = "No production process pending";
+		option.value = "";
+		select.appendChild(option);
+		document.getElementById("complete-btn").disabled = true;
+	} else {
+		document.getElementById("complete-btn").disabled = false;
+	}
+	updateSuggestedQty();
+	document.getElementById("part-panel").style.display = "block";
+}
+
+function updateSuggestedQty() {
+	const select = document.getElementById("process-name");
+	if (!currentLabel || !select.value) return;
+	const index = Number(select.options[select.selectedIndex].dataset.index);
+	const process = currentLabel.processes[index];
+	let available = Number(process.total_qty) - Number(process.completed_qty);
+	if (index > 0) {
+		available = Math.min(
+			available,
+			Number(currentLabel.processes[index - 1].completed_qty) - Number(process.completed_qty)
+		);
+	}
+	document.getElementById("completed-qty").value = Math.max(available, 0);
+}
+
+function loadLabel() {
+	frappe.call({
+		method: "elemental_erp.api.lookup_subpart_label",
+		args: { qr_value: partQrValue },
+		callback: (response) => {
+			if (response.message) renderLabel(response.message);
+		},
+	});
+}
+
+document.getElementById("process-name").onchange = updateSuggestedQty;
+document.getElementById("start-scan").onclick = function () {
+	scanner.start(
+		{ facingMode: "environment" },
+		{ fps: 10, qrbox: 220 },
+		(decodedText) => {
+			partQrValue = extractQrValue(decodedText);
+			scanner.stop();
+			loadLabel();
+		}
+	);
+};
+
+document.getElementById("complete-btn").onclick = function () {
+	frappe.call({
+		method: "elemental_erp.api.complete_subpart_process",
+		args: {
+			label_qr_value: partQrValue,
+			process_name: document.getElementById("process-name").value,
+			qty_scanned: document.getElementById("completed-qty").value,
+			remarks: document.getElementById("remarks").value,
+		},
+		freeze: true,
+		freeze_message: "Saving department completion...",
+		callback: (response) => {
+			if (response.message) {
+				frappe.show_alert({ message: "Process completion saved.", indicator: "green" });
+				document.getElementById("remarks").value = "";
+				renderLabel(response.message);
+			}
+		},
+	});
+};
+
+if (partQrValue) loadLabel();
+</script>
+{% endblock %}

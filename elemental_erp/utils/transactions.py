@@ -104,7 +104,17 @@ def assert_qr_belongs_to_job(qr_code_master, job):
 	qr = frappe.db.get_value(
 		"QR Code Master",
 		qr_code_master,
-		["name", "job", "finished_good", "total_qty", "completed_qty", "status", "process_name"],
+		[
+			"name",
+			"job",
+			"finished_good",
+			"subpart_code",
+			"subpart_name",
+			"total_qty",
+			"completed_qty",
+			"status",
+			"process_name",
+		],
 		as_dict=True,
 	)
 	if not qr:
@@ -112,6 +122,21 @@ def assert_qr_belongs_to_job(qr_code_master, job):
 	if qr.job != job:
 		frappe.throw(f"QR Code Master {qr.name} belongs to Job {qr.job}, not {job}.")
 	return qr
+
+
+def assert_subpart_label_belongs_to_job(label_name, job):
+	"""Return label details after verifying that it belongs to ``job``."""
+	label = frappe.db.get_value(
+		"Job Subpart Label",
+		label_name,
+		["name", "job", "finished_good", "subpart_code", "subpart_name", "total_qty"],
+		as_dict=True,
+	)
+	if not label:
+		frappe.throw(f"Job Subpart Label {label_name} does not exist.", frappe.DoesNotExistError)
+	if label.job != job:
+		frappe.throw(f"Job Subpart Label {label.name} belongs to Job {label.job}, not {job}.")
+	return label
 
 
 def require_doc_permission(doc, permission="write"):

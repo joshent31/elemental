@@ -39,3 +39,12 @@ def normalize_material_indent_departments():
 				canonical,
 				update_modified=False,
 			)
+
+
+def sync_job_subpart_labels():
+	"""Create the one-label-per-subpart traveller records for existing Jobs."""
+	from elemental_erp.elemental_erp.doctype.job_subpart_label.job_subpart_label import (
+		sync_job_subpart_labels as sync_labels,
+	)
+
+	sync_labels(refresh_existing=False)

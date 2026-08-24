@@ -34,6 +34,15 @@ let scannedPartQr = null;
 const boxScanner = new Html5Qrcode("scanner-box");
 const partScanner = new Html5Qrcode("scanner-part");
 
+function extractQrValue(decodedText, queryParameter) {
+	try {
+		const url = new URL(decodedText, window.location.origin);
+		return url.searchParams.get(queryParameter) || url.pathname.split("/").filter(Boolean).pop();
+	} catch (error) {
+		return decodedText.trim();
+	}
+}
+
 function refreshBox() {
 	frappe.call({
 		method: "elemental_erp.api.lookup_box",
@@ -61,8 +70,7 @@ document.getElementById("start-scan-box").onclick = function () {
 		{ facingMode: "environment" },
 		{ fps: 10, qrbox: 220 },
 		(decodedText) => {
-			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
-			boxQrValue = decodedText.includes("box=") ? decodedText.split("box=")[1] : value;
+			boxQrValue = extractQrValue(decodedText, "box");
 			boxScanner.stop();
 			refreshBox();
 		}
@@ -76,7 +84,7 @@ document.getElementById("start-scan-part").onclick = function () {
 		{ facingMode: "environment" },
 		{ fps: 10, qrbox: 220 },
 		(decodedText) => {
-			const value = decodedText.split("/").filter(Boolean).pop();
+			const value = extractQrValue(decodedText, "part");
 			scannedPartQr = value;
 			partScanner.stop();
 			frappe.call({
@@ -85,8 +93,13 @@ document.getElementById("start-scan-part").onclick = function () {
 				callback: function (r) {
 					if (r.message) {
 						const p = r.message;
+						const processSummary = (p.processes || [])
+							.map((process) => `${process.process_name}: ${process.status}`)
+							.join("<br>");
 						document.getElementById("part-info").innerHTML =
-							`Part: <b>${p.subpart_name}</b> (${p.subpart_code})<br>Process: ${p.process_name}`;
+							`Part: <b>${p.subpart_name}</b> (${p.subpart_code})<br>` +
+							(processSummary || `Process: ${p.process_name}`);
+						document.getElementById("part-qty").value = "";
 						document.getElementById("part-qty-row").style.display = "block";
 					}
 				},

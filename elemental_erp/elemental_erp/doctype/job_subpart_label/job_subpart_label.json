@@ -1,0 +1,212 @@
+{
+ "doctype": "DocType",
+ "name": "Job Subpart Label",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "autoname": "naming_series:",
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "image_field": "qr_image",
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "label": "Series",
+   "fieldtype": "Select",
+   "options": "JSL-.YYYY.-",
+   "default": "JSL-.YYYY.-",
+   "reqd": 1
+  },
+  {
+   "fieldname": "job",
+   "label": "Job",
+   "fieldtype": "Link",
+   "options": "Job",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "finished_good",
+   "label": "Finished Good",
+   "fieldtype": "Link",
+   "options": "Finished Good",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "subpart_code",
+   "label": "Subpart Code",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "subpart_name",
+   "label": "Subpart / Description",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "label_key",
+   "label": "Job + FG + Subpart Identity",
+   "fieldtype": "Data",
+   "unique": 1,
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "column_break_label1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ref_image",
+   "label": "Diagram / Reference Image",
+   "fieldtype": "Attach Image",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qty_per_fg",
+   "label": "Qty per FG",
+   "fieldtype": "Float",
+   "read_only": 1
+  },
+  {
+   "fieldname": "job_qty",
+   "label": "Job FG Qty",
+   "fieldtype": "Float",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_qty",
+   "label": "Total Subpart Qty",
+   "fieldtype": "Float",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "uom",
+   "label": "UOM",
+   "fieldtype": "Link",
+   "options": "UOM",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "section_break_processes",
+   "label": "Department Process Trackers",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "processes",
+   "label": "Processes",
+   "fieldtype": "Table",
+   "options": "Job Subpart Label Process",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_labelqr",
+   "label": "One Physical QR for Every Department and Packaging",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "qr_value",
+   "label": "Subpart Label QR Value",
+   "fieldtype": "Data",
+   "unique": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "scan_url",
+   "label": "Production Scan URL",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_label2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "qr_image",
+   "label": "Subpart Label QR",
+   "fieldtype": "Attach Image",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "role": "Elemental Data Entry User",
+   "read": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Data Entry HOD",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Elemental Production User",
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Production HOD",
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  },
+  {
+   "role": "Elemental Packaging User",
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Elemental Packaging HOD",
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "track_changes": 1
+}

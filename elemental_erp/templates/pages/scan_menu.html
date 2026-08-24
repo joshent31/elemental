@@ -15,6 +15,14 @@
 
   <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
 
+    {% if can_production %}<a href="/process-scan" style="text-decoration:none;">
+      <div style="background:#e8f5e9; border:1px solid #2e7d32; border-radius:10px; padding:16px; text-align:center;">
+        <div style="font-size:28px;">⚙️</div>
+        <div style="font-weight:bold; color:#1b5e20; margin-top:6px; font-size:14px;">Complete Process</div>
+        <div style="font-size:11px; color:#666; margin-top:2px;">Scan the shared subpart label</div>
+      </div>
+    </a>{% endif %}
+
     {% if can_design %}<a href="/design-scan" style="text-decoration:none;">
       <div style="background:#f3e5f5; border:1px solid #6a1b9a; border-radius:10px; padding:16px; text-align:center;">
         <div style="font-size:28px;">📐</div>

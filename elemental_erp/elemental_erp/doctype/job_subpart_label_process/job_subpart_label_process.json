@@ -1,0 +1,57 @@
+{
+ "doctype": "DocType",
+ "name": "Job Subpart Label Process",
+ "module": "Elemental ERP",
+ "custom": 0,
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {
+   "fieldname": "process_name",
+   "label": "Department Process",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "qr_code_master",
+   "label": "Process Tracker",
+   "fieldtype": "Link",
+   "options": "QR Code Master",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "total_qty",
+   "label": "Total Qty",
+   "fieldtype": "Float",
+   "fetch_from": "qr_code_master.total_qty",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "completed_qty",
+   "label": "Completed Qty",
+   "fieldtype": "Float",
+   "fetch_from": "qr_code_master.completed_qty",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "status",
+   "label": "Status",
+   "fieldtype": "Data",
+   "fetch_from": "qr_code_master.status",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  }
+ ]
+}

@@ -88,6 +88,7 @@ class TestMobileRoutesAreProtected(unittest.TestCase):
 			"scan_menu",
 			"design_scan",
 			"qc_scan",
+			"process_scan",
 			"transfer_out",
 			"transfer_in",
 			"pack_box",
@@ -111,6 +112,8 @@ class TestMobileRoutesAreProtected(unittest.TestCase):
 		functions = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
 		for function_name in (
 			"scan_qr",
+			"lookup_subpart_label",
+			"complete_subpart_process",
 			"lookup_part_qr",
 			"create_transfer",
 			"get_transfer",

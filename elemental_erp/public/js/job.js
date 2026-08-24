@@ -36,6 +36,33 @@ frappe.ui.form.on("Job", {
 			"View"
 		);
 		frm.add_custom_button(
+			"View Subpart Labels",
+			() => frappe.set_route("List", "Job Subpart Label", { job: frm.doc.name }),
+			"View"
+		);
+		frm.add_custom_button(
+			"Print Production Traveller",
+			() => {
+				const printWindow = window.open("about:blank", "_blank");
+				frappe.call({
+					method: "elemental_erp.api.prepare_job_production_traveller",
+					args: { job: frm.doc.name },
+					freeze: true,
+					freeze_message: "Preparing diagrams and subpart QR labels...",
+					callback: (response) => {
+						if (response.message) {
+							if (printWindow) printWindow.location = response.message.print_url;
+							else window.location = response.message.print_url;
+						}
+					},
+					error: () => {
+						if (printWindow) printWindow.close();
+					},
+				});
+			},
+			"View"
+		);
+		frm.add_custom_button(
 			"Job Consumption Report",
 			() => frappe.set_route("query-report", "Job Consumption Report", { job: frm.doc.name }),
 			"View"
