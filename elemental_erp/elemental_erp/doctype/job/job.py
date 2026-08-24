@@ -96,6 +96,7 @@ def generate_trackers_for_new_fg_rows(doc):
 	processed are skipped, so this is safe to run on every single save."""
 	from elemental_erp.elemental_erp.doctype.qr_code_master.qr_code_master import create_qr_master
 	from elemental_erp.elemental_erp.doctype.job_subpart_label.job_subpart_label import (
+		_process_names,
 		create_or_update_label,
 	)
 	from elemental_erp.utils.qr_generator import generate_qr_image
@@ -116,16 +117,15 @@ def generate_trackers_for_new_fg_rows(doc):
 			create_or_update_label(doc.name, fg.name, fg.fg_code, [tracker])
 		else:
 			for sp in fg.subparts:
-				raw = sp.processes or "US Assembly"
-				processes = raw.split("\n") if "\n" in raw else raw.split(",")
+				processes = _process_names(sp.get("processes"))
 				trackers = []
-				for process in [p.strip() for p in processes if p.strip()]:
+				for process in processes:
 					trackers.append(create_qr_master(
 						job=doc.name, finished_good=fg.name,
-						subpart_code=sp.part_code, subpart_name=sp.subpart_name,
-						process_name=process, total_qty=(sp.qty_per_fg or 1) * fg_row.job_qty,
+						subpart_code=sp.get("part_code"), subpart_name=sp.get("subpart_name"),
+						process_name=process, total_qty=(sp.get("qty_per_fg") or 1) * fg_row.job_qty,
 					))
-				create_or_update_label(doc.name, fg.name, sp.part_code, trackers)
+				create_or_update_label(doc.name, fg.name, sp.get("part_code"), trackers)
 
 		# --- Design Task (one per FG) ---
 		if not frappe.db.exists("Design Task", {"job": doc.name, "finished_good": fg_row.finished_good}):

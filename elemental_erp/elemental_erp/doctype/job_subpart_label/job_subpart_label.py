@@ -41,7 +41,7 @@ def make_label_key(job, finished_good, subpart_code):
 
 def _find_subpart(finished_good, subpart_code):
 	for subpart in finished_good.subparts:
-		if subpart.part_code == subpart_code:
+		if subpart.get("part_code") == subpart_code:
 			return subpart
 	return None
 
@@ -55,9 +55,13 @@ def _job_qty(job, finished_good):
 
 
 def _process_names(raw):
-	raw = raw or "US Assembly"
-	processes = raw.split("\n") if "\n" in raw else raw.split(",")
-	return [process.strip() for process in processes if process.strip()]
+	if not raw:
+		return ["US Assembly"]
+	if isinstance(raw, (list, tuple)):
+		processes = raw
+	else:
+		processes = raw.split("\n") if "\n" in raw else raw.split(",")
+	return list(dict.fromkeys(process.strip() for process in processes if process.strip()))
 
 
 def create_or_update_label(job, finished_good, subpart_code, qr_trackers, refresh_snapshot=True):
@@ -73,15 +77,15 @@ def create_or_update_label(job, finished_good, subpart_code, qr_trackers, refres
 	subpart = _find_subpart(fg, subpart_code)
 	job_qty = float(_job_qty(job, finished_good) or 0)
 	if subpart:
-		subpart_name = subpart.subpart_name
-		ref_image = subpart.ref_image
-		qty_per_fg = float(subpart.qty_per_fg or 1)
-		uom = subpart.uom or fg.default_uom
+		subpart_name = subpart.get("subpart_name")
+		ref_image = subpart.get("ref_image")
+		qty_per_fg = float(subpart.get("qty_per_fg") or 1)
+		uom = subpart.get("uom") or fg.get("default_uom")
 	else:
 		subpart_name = fg.fg_name
-		ref_image = fg.fg_image
+		ref_image = fg.get("fg_image")
 		qty_per_fg = 1
-		uom = fg.default_uom
+		uom = fg.get("default_uom")
 
 	total_qty = qty_per_fg * job_qty
 	if total_qty <= 0:
@@ -213,10 +217,10 @@ def reconcile_job_subpart_trackers(job):
 		fg = frappe.get_doc("Finished Good", fg_row.finished_good)
 		if fg.subparts:
 			for subpart in fg.subparts:
-				expected[(fg.name, subpart.part_code)] = {
-					"processes": _process_names(subpart.processes),
-					"subpart_name": subpart.subpart_name,
-					"total_qty": float(subpart.qty_per_fg or 1) * float(fg_row.job_qty or 0),
+				expected[(fg.name, subpart.get("part_code"))] = {
+					"processes": _process_names(subpart.get("processes")),
+					"subpart_name": subpart.get("subpart_name"),
+					"total_qty": float(subpart.get("qty_per_fg") or 1) * float(fg_row.job_qty or 0),
 				}
 		else:
 			expected[(fg.name, fg.fg_code)] = {

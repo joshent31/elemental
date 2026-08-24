@@ -13,9 +13,9 @@ class FinishedGood(Document):
 
 		seen_codes = set()
 		for row in self.subparts:
-			part_code = (row.part_code or "").strip()
+			part_code = (row.get("part_code") or "").strip()
 			if part_code in seen_codes:
 				frappe.throw(f"Subpart code {part_code} is listed more than once in this Finished Good.")
 			seen_codes.add(part_code)
-			if float(row.qty_per_fg or 0) <= 0:
+			if float(row.get("qty_per_fg") or 0) <= 0:
 				frappe.throw(f"Qty per FG must be greater than zero for subpart {part_code}.")

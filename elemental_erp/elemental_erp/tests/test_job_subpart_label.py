@@ -80,6 +80,14 @@ class TestJobSubpartLabelSchema(unittest.TestCase):
 
 
 class TestOrderedProcessCompletion(unittest.TestCase):
+	def test_blank_legacy_process_flow_defaults_to_us_assembly(self):
+		from elemental_erp.elemental_erp.doctype.job_subpart_label.job_subpart_label import (
+			_process_names,
+		)
+
+		self.assertEqual(_process_names(None), ["US Assembly"])
+		self.assertEqual(_process_names(""), ["US Assembly"])
+
 	def setUp(self):
 		self.label = frappe._dict(
 			{
