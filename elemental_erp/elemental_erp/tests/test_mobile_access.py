@@ -72,10 +72,19 @@ class TestMobilePageAccess(unittest.TestCase):
 		self.assertFalse(menu["design"])
 		self.assertFalse(menu["dispatch"])
 
+	def test_unified_menu_includes_only_assigned_production_and_gate_areas(self):
+		access, _ = load_access(roles=["Elemental QC User", "Elemental HR Gate User"])
+		menu = access.mobile_app_access(["Elemental QC User", "Elemental HR Gate User"])
+		self.assertTrue(menu["qc"])
+		self.assertTrue(menu["gate"])
+		self.assertFalse(menu["design"])
+		self.assertFalse(menu["production"])
+
 
 class TestMobileRoutesAreProtected(unittest.TestCase):
 	def test_each_scan_page_controller_has_a_role_gate(self):
 		for route in (
+			"mobile_app",
 			"scan_menu",
 			"design_scan",
 			"qc_scan",
@@ -136,12 +145,25 @@ class TestMobileRoutesAreProtected(unittest.TestCase):
 
 
 class TestAndroidMobileWrappers(unittest.TestCase):
-	def test_variants_are_separate_apps_with_correct_entry_routes(self):
+	def test_universal_app_has_no_compiled_customer_url(self):
 		build = (ANDROID_ROOT / "app" / "build.gradle").read_text(encoding="utf-8")
-		self.assertIn('applicationIdSuffix ".production"', build)
-		self.assertIn('applicationIdSuffix ".gate"', build)
-		self.assertIn('buildConfigField "String", "START_PATH", \'"/scan-menu"\'', build)
-		self.assertIn('buildConfigField "String", "START_PATH", \'"/gate-scan"\'', build)
+		activity = (
+			ANDROID_ROOT
+			/ "app"
+			/ "src"
+			/ "main"
+			/ "java"
+			/ "com"
+			/ "elementalfixtures"
+			/ "mobile"
+			/ "MainActivity.java"
+		).read_text(encoding="utf-8")
+		self.assertIn('private static final String START_PATH = "/mobile-app"', activity)
+		self.assertNotIn("BASE_URL", build)
+		self.assertNotIn("efpl-4.local", build)
+		self.assertIn('private static final String SITE_URL_KEY = "site_url"', activity)
+		self.assertIn("normaliseSiteUrl", activity)
+		self.assertIn("changeSiteButton.setText(R.string.change_site)", activity)
 
 	def test_wrapper_requests_camera_and_contains_navigation(self):
 		manifest = (ANDROID_ROOT / "app" / "src" / "main" / "AndroidManifest.xml").read_text(encoding="utf-8")
@@ -164,12 +186,22 @@ class TestAndroidMobileWrappers(unittest.TestCase):
 		self.assertIn("if (isCurrentPageTrusted())", activity)
 		self.assertIn("JSONObject.quote(value)", activity)
 
-	def test_checked_in_apks_have_android_payloads(self):
-		for apk_name in ("Elemental-Production-Scan.apk", "Elemental-Gate-Scan.apk"):
-			with self.subTest(apk=apk_name):
-				with zipfile.ZipFile(APP_ROOT / "public" / "apk" / apk_name) as apk:
-					self.assertIn("AndroidManifest.xml", apk.namelist())
-					self.assertIn("classes.dex", apk.namelist())
+	def test_checked_in_universal_apk_has_android_payload(self):
+		with zipfile.ZipFile(APP_ROOT / "public" / "apk" / "Elemental-Mobile.apk") as apk:
+			self.assertIn("AndroidManifest.xml", apk.namelist())
+			self.assertIn("classes.dex", apk.namelist())
+
+
+class TestMobilePwa(unittest.TestCase):
+	def test_unified_manifest_starts_at_role_aware_dashboard(self):
+		manifest = (APP_ROOT / "www" / "manifest-mobile.json").read_text(encoding="utf-8")
+		self.assertIn('"start_url": "/mobile-app"', manifest)
+
+	def test_service_worker_never_caches_pages_or_api_responses(self):
+		worker = (APP_ROOT / "www" / "sw.js").read_text(encoding="utf-8")
+		self.assertIn('requestUrl.pathname.startsWith("/assets/elemental_erp/")', worker)
+		self.assertIn("if (!isStaticElementalAsset) return;", worker)
+		self.assertNotIn("catch(() => caches.match", worker)
 
 
 if __name__ == "__main__":

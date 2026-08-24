@@ -1,11 +1,9 @@
-// Minimal service worker — just enough to satisfy PWA installability
-// (Chrome/Android requires an active service worker with a fetch handler
-// before it will offer "Add to Home Screen"). This does a light
-// network-first cache of visited pages so a flaky factory-floor or gate
-// connection doesn't show a blank white screen; it's not full offline
-// support for the scan actions themselves, which need the server anyway.
+// Minimal service worker for PWA installability. Authentication pages,
+// user-specific HTML and API responses must never be cached: these devices can
+// be shared and a previous operator's data must not be shown after sign-out.
+// Only versioned/static Elemental assets are safe to cache.
 
-const CACHE_NAME = "elemental-erp-shell-v1";
+const CACHE_NAME = "elemental-erp-static-v2";
 
 self.addEventListener("install", (event) => {
 	self.skipWaiting();
@@ -22,13 +20,18 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
 	if (event.request.method !== "GET") return;
+	const requestUrl = new URL(event.request.url);
+	const isStaticElementalAsset = requestUrl.origin === self.location.origin
+		&& requestUrl.pathname.startsWith("/assets/elemental_erp/");
+	if (!isStaticElementalAsset) return;
 	event.respondWith(
-		fetch(event.request)
+		caches.match(event.request).then((cached) => cached || fetch(event.request)
 			.then((response) => {
-				const copy = response.clone();
-				caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+				if (response.ok) {
+					const copy = response.clone();
+					caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+				}
 				return response;
-			})
-			.catch(() => caches.match(event.request))
+			}))
 	);
 });

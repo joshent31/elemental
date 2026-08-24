@@ -122,7 +122,7 @@ Then log in, open the **Elemental Fixtures** workspace, and:
 ## 4. Inter-department transfer (mobile scan → print → scan to receive → close dept)
 
 This is a phone-camera QR flow implemented as mobile web pages. It works in a normal browser,
-the existing PWAs, or the `Elemental Production Scan` Android wrapper described in section 15.
+the installable Elemental Mobile PWA, or the universal Android wrapper described in section 15.
 
 **Departments are not in a fixed sequence.** There is no hard-coded Metal → Powdercoat →
 Assembly → Packing pipeline — every transfer explicitly asks "from which department" and
@@ -495,38 +495,41 @@ feature. The process for bringing someone onto the system:
 
 ---
 
-## 15. Two Android apps — Production Scan Menu and Gate
+## 15. Elemental Mobile — one role-aware app for every site
 
-The repository includes one Android WebView shell with two separately installable variants.
-Both use the normal Frappe login and persistent session cookies; authorization is still checked
-on the server for every page and scan action. The existing PWAs remain available as a browser
-alternative.
+Elemental Mobile follows the Frappe HR mobile model: the primary mobile experience is an
+installable PWA served by each Frappe site. Open `/mobile-app` in Chrome or Safari, sign in with
+that site's normal credentials, and install it to the home screen. The same app source is deployed
+to every customer site; no customer hostname is compiled into it. A universal Android wrapper is
+also included for teams that prefer sideloading one APK and selecting the site on first launch.
 
 | Piece | What it does |
 |---|---|
-| `/scan-menu` | A single hub screen listing every production-process scan flow as tappable tiles: Design, Quality Check, Send/Receive to Department, Pack a Box, Dispatch Loading, plus Site Receive/Install underneath. One app icon on a shared shop-floor device instead of six separate bookmarks |
+| `/mobile-app` | Unified home screen. It lists only the Production and Gate workflows allowed by the signed-in user's exact Elemental roles |
+| `/scan-menu` | Legacy/direct Production-only hub; individual scan routes and API endpoints retain their own server-side role checks |
 | `/gate-scan` | Continuous kiosk scanning for an authenticated Gate user, available as its own separate app |
-| `public/apk/Elemental-Production-Scan.apk` | Debug-signed pilot APK opening `/scan-menu`; Android application ID `com.elementalfixtures.mobile.production` |
-| `public/apk/Elemental-Gate-Scan.apk` | Debug-signed pilot APK opening `/gate-scan`; Android application ID `com.elementalfixtures.mobile.gate` |
-| `mobile/android/` | Android source and the PowerShell build helper; the server URL is a build-time setting |
-| `www/manifest-scan.json` / `www/manifest-gate.json` | The two PWA manifests — separate `start_url`, name, and icon per app, so they install and appear as two distinct apps, not one |
-| `www/sw.js` | A minimal shared service worker — required by Chrome/Android before it will treat a site as installable at all. Does light network-first caching so a flaky connection doesn't show a blank white screen; it is **not** offline support for the scan actions themselves, which still need the server |
+| `public/apk/Elemental-Mobile.apk` | Debug-signed universal Android APK; first launch asks for a site URL and then opens `/mobile-app` |
+| `mobile/android/` | Android source and PowerShell build helper. The selected site origin is validated and saved on the device; it is not a build parameter |
+| `www/manifest-mobile.json` | Unified cross-platform PWA manifest with `/mobile-app` as its start URL |
+| `www/sw.js` | Minimal installability service worker. It caches only static Elemental assets; authenticated pages, login responses, and APIs are never cached on shared devices |
 | `public/icons/icon-192.png` / `icon-512.png` | Generated app icons (simple "E" mark on the same navy/gold as the customer guide) used by both manifests and as the Apple touch icon |
 | `public/js/pwa_install.js` | Shared logic behind the in-page "Install this app" button — shows the native Android/Chrome install prompt when available, shows manual "tap Share → Add to Home Screen" instructions on iOS (which doesn't expose an install prompt at all), and hides itself once already installed |
 
 The APKs are native Android wrappers around the existing web pages, not offline rewrites of the
-ERP workflow. Camera access, navigation containment, and cookies are handled by the wrapper;
-an embedded ZXing scanner keeps QR capture working on the current local HTTP server. All business
-data and authorization remain on the Frappe server. The checked-in APKs use a debug/pilot
-signature. HTTP still leaves credentials and ERP data unencrypted, so use a protected release
-keystore and HTTPS server URL before managed or Play Store distribution.
+ERP workflow. Camera access, same-origin navigation containment, site switching, cookies and the
+embedded ZXing scanner are handled by the wrapper. Login/password entry remains inside the chosen
+site's Frappe login page; the wrapper never stores the password. All business data and authorization
+remain on the Frappe server. Changing sites clears cookies, Web Storage, cache and history so one
+customer's session cannot carry into another site. HTTP is available for trusted local testing but
+leaves credentials and ERP data unencrypted; customer systems should use HTTPS.
 
-**Two separate installs, on purpose.** A shop-floor device installs `Elemental Production Scan`;
-a gate device installs `Elemental Gate Scan`. Their application IDs are different, so a phone
-can have one or both. The PWA manifests also remain separate for browser-based installation.
+**Android and iPhone:** the PWA is the common install and works from Chrome/Android and
+Safari/iPhone. An APK is Android-only by definition. A native iOS IPA would still require an Apple
+Developer identity, macOS/Xcode signing, and App Store or managed-device distribution; it is not
+produced by the Windows Android build.
 
 **One correction worth flagging:** the service worker and manifests had to be placed under this
-app's `www/` folder (served at the site root — `/sw.js`, `/manifest-scan.json`) rather than
+app's `www/` folder (served at the site root — `/sw.js`, `/manifest-mobile.json`) rather than
 under `public/` (served at `/assets/elemental_erp/...`). A service worker's default control
 scope is limited to its own directory and below — one served from under `/assets/...` would
 not be able to control pages like `/scan-menu` or `/gate-scan` at all, which would silently

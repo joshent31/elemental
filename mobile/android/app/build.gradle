@@ -6,8 +6,6 @@ dependencies {
 	implementation "com.journeyapps:zxing-android-embedded:4.3.0"
 }
 
-def elementalServerUrl = (project.findProperty("ELEMENTAL_SERVER_URL") ?: "http://efpl-4.local:8080").toString()
-def quotedServerUrl = '"' + elementalServerUrl.replace('\\', '\\\\').replace('"', '\\"') + '"'
 def elementalDebugKeystore = project.findProperty("ELEMENTAL_DEBUG_KEYSTORE")
 def elementalForkJavac = project.findProperty("ELEMENTAL_FORK_JAVAC") == "true"
 def elementalJavac = project.findProperty("ELEMENTAL_JAVAC")
@@ -20,13 +18,8 @@ android {
 		applicationId "com.elementalfixtures.mobile"
 		minSdk 24
 		targetSdk 34
-		versionCode 1
-		versionName "1.0.0"
-		buildConfigField "String", "BASE_URL", quotedServerUrl
-	}
-
-	buildFeatures {
-		buildConfig true
+		versionCode 2
+		versionName "1.1.0"
 	}
 
 	signingConfigs {
@@ -37,22 +30,6 @@ android {
 				keyAlias "androiddebugkey"
 				keyPassword "android"
 			}
-		}
-	}
-
-	flavorDimensions += "module"
-	productFlavors {
-		production {
-			dimension "module"
-			applicationIdSuffix ".production"
-			resValue "string", "app_name", "Elemental Production Scan"
-			buildConfigField "String", "START_PATH", '"/scan-menu"'
-		}
-		gate {
-			dimension "module"
-			applicationIdSuffix ".gate"
-			resValue "string", "app_name", "Elemental Gate Scan"
-			buildConfigField "String", "START_PATH", '"/gate-scan"'
 		}
 	}
 

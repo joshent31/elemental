@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">Elemental Mobile</string>
+    <string name="change_site">Change Site</string>
+    <string name="connect_site_title">Connect to your Elemental site</string>
+    <string name="connect_site_help">Enter the customer site address. You will sign in on that site\'s secure Frappe login page.</string>
+    <string name="site_url_hint">https://erp.customer.com</string>
+    <string name="connect_sign_in">Connect and Sign In</string>
+    <string name="http_security_note">Use HTTPS for customer systems. HTTP is supported only for trusted local test networks and does not protect passwords or ERP data.</string>
     <string name="close_camera">Close Camera</string>
 </resources>

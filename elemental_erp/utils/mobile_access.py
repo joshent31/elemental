@@ -22,6 +22,7 @@ PRODUCTION_SCAN_GROUPS = {
 PRODUCTION_SCAN_ROLES = tuple(
 	dict.fromkeys(role for group in PRODUCTION_SCAN_GROUPS.values() for role in group)
 )
+MOBILE_APP_ROLES = tuple(dict.fromkeys((*PRODUCTION_SCAN_ROLES, *GATE_SCAN_ROLES)))
 
 
 def roles_allow(user_roles, allowed_roles):
@@ -52,3 +53,10 @@ def production_menu_access(user_roles):
 		name: roles_allow(user_roles, allowed_roles)
 		for name, allowed_roles in PRODUCTION_SCAN_GROUPS.items()
 	}
+
+
+def mobile_app_access(user_roles):
+	"""Return the unified mobile dashboard areas visible to this user."""
+	access = production_menu_access(user_roles)
+	access["gate"] = roles_allow(user_roles, GATE_SCAN_ROLES)
+	return access

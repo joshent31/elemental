@@ -4,12 +4,15 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -17,13 +20,18 @@ import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
+import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.zxing.ResultPoint;
@@ -35,14 +43,23 @@ import org.json.JSONObject;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final int CAMERA_PERMISSION_REQUEST = 1001;
+    private static final String PREFERENCES_NAME = "elemental_mobile";
+    private static final String SITE_URL_KEY = "site_url";
+    private static final String START_PATH = "/mobile-app";
 
     private WebView webView;
     private ProgressBar progressBar;
     private DecoratedBarcodeView nativeScanner;
     private Button closeScannerButton;
+    private Button changeSiteButton;
+    private LinearLayout setupPanel;
+    private EditText siteUrlInput;
+    private TextView setupError;
+    private TextView siteLabel;
     private PermissionRequest pendingWebCameraRequest;
     private boolean nativeScannerPermissionPending;
     private String lastNativeScan;
@@ -52,34 +69,249 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        trustedOrigin = Uri.parse(BuildConfig.BASE_URL);
+        createInterface();
+        configureWebView();
 
-        if ("/gate-scan".equals(BuildConfig.START_PATH)) {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        String configuredSite = getPreferences().getString(SITE_URL_KEY, "");
+        if (configuredSite == null || configuredSite.isEmpty()) {
+            showSiteSetup(false);
+            return;
         }
 
-        FrameLayout root = new FrameLayout(this);
+        try {
+            setTrustedSite(configuredSite);
+            showBrowser();
+            if (savedInstanceState == null || webView.restoreState(savedInstanceState) == null) {
+                loadMobileApp();
+            }
+        } catch (IllegalArgumentException error) {
+            getPreferences().edit().remove(SITE_URL_KEY).apply();
+            showSiteSetup(false);
+        }
+    }
+
+    private void createInterface() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.WHITE);
+
+        LinearLayout toolbar = new LinearLayout(this);
+        toolbar.setOrientation(LinearLayout.HORIZONTAL);
+        toolbar.setGravity(Gravity.CENTER_VERTICAL);
+        toolbar.setPadding(dp(14), dp(4), dp(8), dp(4));
+        toolbar.setBackgroundColor(Color.rgb(26, 41, 66));
+
+        siteLabel = new TextView(this);
+        siteLabel.setText(R.string.app_name);
+        siteLabel.setTextColor(Color.WHITE);
+        siteLabel.setTextSize(15);
+        siteLabel.setGravity(Gravity.CENTER_VERTICAL);
+        toolbar.addView(siteLabel, new LinearLayout.LayoutParams(0, dp(48), 1));
+
+        changeSiteButton = new Button(this);
+        changeSiteButton.setText(R.string.change_site);
+        changeSiteButton.setTextSize(11);
+        changeSiteButton.setVisibility(View.GONE);
+        changeSiteButton.setOnClickListener(view -> showSiteSetup(true));
+        toolbar.addView(changeSiteButton, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dp(40)
+        ));
+        root.addView(toolbar, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(52)
+        ));
+
+        FrameLayout content = new FrameLayout(this);
+        root.addView(content, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1
+        ));
+
         webView = new WebView(this);
         progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-
-        root.addView(webView, new FrameLayout.LayoutParams(
+        content.addView(webView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
-        FrameLayout.LayoutParams progressLayout = new FrameLayout.LayoutParams(
+        content.addView(progressBar, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                8
-        );
-        root.addView(progressBar, progressLayout);
-        configureNativeScanner(root);
-        setContentView(root);
+                dp(4)
+        ));
 
-        configureWebView();
-        if (savedInstanceState == null) {
-            webView.loadUrl(joinUrl(BuildConfig.BASE_URL, BuildConfig.START_PATH));
-        } else {
-            webView.restoreState(savedInstanceState);
+        configureNativeScanner(content);
+        configureSiteSetup(content);
+        setContentView(root);
+    }
+
+    private void configureSiteSetup(FrameLayout content) {
+        setupPanel = new LinearLayout(this);
+        setupPanel.setOrientation(LinearLayout.VERTICAL);
+        setupPanel.setGravity(Gravity.CENTER_HORIZONTAL);
+        setupPanel.setPadding(dp(28), dp(48), dp(28), dp(24));
+        setupPanel.setBackgroundColor(Color.WHITE);
+
+        TextView title = new TextView(this);
+        title.setText(R.string.connect_site_title);
+        title.setTextColor(Color.rgb(26, 41, 66));
+        title.setTextSize(22);
+        title.setGravity(Gravity.CENTER);
+        setupPanel.addView(title, matchWidthWrapHeight());
+
+        TextView help = new TextView(this);
+        help.setText(R.string.connect_site_help);
+        help.setTextColor(Color.DKGRAY);
+        help.setTextSize(14);
+        help.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams helpLayout = matchWidthWrapHeight();
+        helpLayout.topMargin = dp(12);
+        setupPanel.addView(help, helpLayout);
+
+        siteUrlInput = new EditText(this);
+        siteUrlInput.setHint(R.string.site_url_hint);
+        siteUrlInput.setSingleLine(true);
+        siteUrlInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        LinearLayout.LayoutParams inputLayout = matchWidthWrapHeight();
+        inputLayout.topMargin = dp(28);
+        setupPanel.addView(siteUrlInput, inputLayout);
+
+        setupError = new TextView(this);
+        setupError.setTextColor(Color.rgb(183, 28, 28));
+        setupError.setTextSize(12);
+        setupError.setVisibility(View.GONE);
+        LinearLayout.LayoutParams errorLayout = matchWidthWrapHeight();
+        errorLayout.topMargin = dp(8);
+        setupPanel.addView(setupError, errorLayout);
+
+        Button connectButton = new Button(this);
+        connectButton.setText(R.string.connect_sign_in);
+        connectButton.setOnClickListener(view -> connectToEnteredSite());
+        LinearLayout.LayoutParams connectLayout = matchWidthWrapHeight();
+        connectLayout.topMargin = dp(18);
+        setupPanel.addView(connectButton, connectLayout);
+
+        TextView securityNote = new TextView(this);
+        securityNote.setText(R.string.http_security_note);
+        securityNote.setTextColor(Color.GRAY);
+        securityNote.setTextSize(11);
+        securityNote.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams noteLayout = matchWidthWrapHeight();
+        noteLayout.topMargin = dp(18);
+        setupPanel.addView(securityNote, noteLayout);
+
+        content.addView(setupPanel, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+    }
+
+    private LinearLayout.LayoutParams matchWidthWrapHeight() {
+        return new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+    }
+
+    private void connectToEnteredSite() {
+        try {
+            String normalisedSite = normaliseSiteUrl(siteUrlInput.getText().toString());
+            String previousSite = getPreferences().getString(SITE_URL_KEY, "");
+            boolean changedSite = previousSite != null
+                    && !previousSite.isEmpty()
+                    && !previousSite.equals(normalisedSite);
+            if (changedSite) {
+                clearBrowserSession();
+            }
+            getPreferences().edit().putString(SITE_URL_KEY, normalisedSite).apply();
+            setTrustedSite(normalisedSite);
+            setupError.setVisibility(View.GONE);
+            showBrowser();
+            webView.clearHistory();
+            loadMobileApp();
+            if (normalisedSite.startsWith("http://")) {
+                Toast.makeText(
+                        this,
+                        "Warning: this HTTP connection does not encrypt your login or ERP data.",
+                        Toast.LENGTH_LONG
+                ).show();
+            }
+        } catch (IllegalArgumentException error) {
+            setupError.setText(error.getMessage());
+            setupError.setVisibility(View.VISIBLE);
         }
+    }
+
+    private void showSiteSetup(boolean keepCurrentSite) {
+        hideNativeScanner();
+        setupPanel.setVisibility(View.VISIBLE);
+        webView.setVisibility(View.GONE);
+        progressBar.setVisibility(View.GONE);
+        changeSiteButton.setVisibility(View.GONE);
+        setupError.setVisibility(View.GONE);
+        String currentSite = getPreferences().getString(SITE_URL_KEY, "");
+        siteUrlInput.setText(keepCurrentSite && currentSite != null ? currentSite : "");
+        siteUrlInput.requestFocus();
+    }
+
+    private void showBrowser() {
+        setupPanel.setVisibility(View.GONE);
+        webView.setVisibility(View.VISIBLE);
+        changeSiteButton.setVisibility(View.VISIBLE);
+    }
+
+    private void setTrustedSite(String siteUrl) {
+        String normalisedSite = normaliseSiteUrl(siteUrl);
+        trustedOrigin = Uri.parse(normalisedSite);
+        String label = trustedOrigin.getHost();
+        if (trustedOrigin.getPort() != -1) {
+            label += ":" + trustedOrigin.getPort();
+        }
+        siteLabel.setText(label);
+    }
+
+    private void loadMobileApp() {
+        if (trustedOrigin != null) {
+            webView.loadUrl(joinUrl(trustedOrigin.toString(), START_PATH));
+        }
+    }
+
+    private SharedPreferences getPreferences() {
+        return getSharedPreferences(PREFERENCES_NAME, MODE_PRIVATE);
+    }
+
+    private void clearBrowserSession() {
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.removeAllCookies(null);
+        cookieManager.flush();
+        WebStorage.getInstance().deleteAllData();
+        webView.clearCache(true);
+        webView.clearHistory();
+    }
+
+    static String normaliseSiteUrl(String input) {
+        String value = input == null ? "" : input.trim();
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("Enter a site address.");
+        }
+        if (!value.contains("://")) {
+            value = "https://" + value;
+        }
+        Uri parsed = Uri.parse(value);
+        String scheme = parsed.getScheme();
+        if (!"https".equalsIgnoreCase(scheme) && !"http".equalsIgnoreCase(scheme)) {
+            throw new IllegalArgumentException("The site must use an http:// or https:// address.");
+        }
+        if (parsed.getHost() == null || parsed.getHost().trim().isEmpty()) {
+            throw new IllegalArgumentException("Enter a valid site address, for example https://erp.customer.com.");
+        }
+        if (parsed.getUserInfo() != null) {
+            throw new IllegalArgumentException("Do not include a username or password in the site address.");
+        }
+        Uri.Builder origin = new Uri.Builder()
+                .scheme(scheme.toLowerCase(Locale.ROOT))
+                .encodedAuthority(parsed.getEncodedAuthority());
+        return origin.build().toString();
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -91,14 +323,15 @@ public class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " ElementalMobile/1.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " ElementalMobile/1.1");
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(webView, false);
         webView.addJavascriptInterface(new ScannerBridge(), "ElementalAndroid");
 
-        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
+        boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        WebView.setWebContentsDebuggingEnabled(debuggable);
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -109,7 +342,20 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 progressBar.setVisibility(View.GONE);
                 CookieManager.getInstance().flush();
+                updateGateScreenMode(Uri.parse(url));
                 installNativeScannerBridge();
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                if (request.isForMainFrame()) {
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Unable to reach this site. Check the address and network, or tap Change Site.",
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
             }
 
             @Override
@@ -169,7 +415,7 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL
         );
-        closeLayout.bottomMargin = 40;
+        closeLayout.bottomMargin = dp(40);
         root.addView(closeScannerButton, closeLayout);
 
         nativeScanner.decodeContinuous(new BarcodeCallback() {
@@ -337,6 +583,15 @@ public class MainActivity extends Activity {
         return currentUrl != null && isTrustedOrigin(Uri.parse(currentUrl));
     }
 
+    private void updateGateScreenMode(Uri currentPage) {
+        boolean isGateScreen = isTrustedOrigin(currentPage) && "/gate-scan".equals(currentPage.getPath());
+        if (isGateScreen) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
     private static boolean equalsIgnoreCase(String left, String right) {
         return left != null && right != null && left.equalsIgnoreCase(right);
     }
@@ -354,6 +609,10 @@ public class MainActivity extends Activity {
         return base + suffix;
     }
 
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         webView.saveState(outState);
@@ -364,6 +623,9 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (nativeScanner.getVisibility() == View.VISIBLE) {
             hideNativeScanner();
+        } else if (setupPanel.getVisibility() == View.VISIBLE
+                && getPreferences().contains(SITE_URL_KEY)) {
+            showBrowser();
         } else if (webView.canGoBack()) {
             webView.goBack();
         } else {

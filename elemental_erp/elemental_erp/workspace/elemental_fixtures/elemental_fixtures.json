@@ -30,9 +30,9 @@
         {
             "hidden": 0,
             "is_query_report": 0,
-            "label": "Production Scan Menu (Mobile App)",
+            "label": "Elemental Mobile (Production & Gate)",
             "link_count": 0,
-            "link_to": "scan-menu",
+            "link_to": "mobile-app",
             "link_type": "Page",
             "onboard": 1,
             "type": "Link"

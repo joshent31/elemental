@@ -1,5 +1,4 @@
 param(
-    [string]$ServerUrl = "http://efpl-4.local:8080",
     [string]$GradleVersion = "8.2.1"
 )
 
@@ -23,13 +22,12 @@ if (-not (Test-Path $gradleBat)) {
     Expand-Archive -LiteralPath $zipPath -DestinationPath $toolsRoot -Force
 }
 
-& $gradleBat --no-daemon "-PELEMENTAL_SERVER_URL=$ServerUrl" clean assembleProductionDebug assembleGateDebug
+& $gradleBat --no-daemon clean assembleDebug
 if ($LASTEXITCODE -ne 0) {
     throw "Android build failed with exit code $LASTEXITCODE."
 }
 
 $dist = Join-Path $projectRoot "dist"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
-Copy-Item (Join-Path $projectRoot "app\build\outputs\apk\production\debug\app-production-debug.apk") (Join-Path $dist "Elemental-Production-Scan.apk") -Force
-Copy-Item (Join-Path $projectRoot "app\build\outputs\apk\gate\debug\app-gate-debug.apk") (Join-Path $dist "Elemental-Gate-Scan.apk") -Force
-Write-Host "Built APKs in $dist"
+Copy-Item (Join-Path $projectRoot "app\build\outputs\apk\debug\app-debug.apk") (Join-Path $dist "Elemental-Mobile.apk") -Force
+Write-Host "Built universal APK in $dist"
