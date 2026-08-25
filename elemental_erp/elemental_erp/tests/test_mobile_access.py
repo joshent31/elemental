@@ -82,6 +82,25 @@ class TestMobilePageAccess(unittest.TestCase):
 
 
 class TestMobileRoutesAreProtected(unittest.TestCase):
+	def test_every_mobile_page_has_an_explicit_website_route(self):
+		hooks = (APP_ROOT / "hooks.py").read_text(encoding="utf-8")
+		for public_route, page in (
+			("mobile-app", "mobile_app"),
+			("scan-menu", "scan_menu"),
+			("elemental-gate-scan", "elemental_gate_scan"),
+			("worker-job-scan", "worker_job_scan"),
+			("process-scan", "process_scan"),
+			("design-scan", "design_scan"),
+			("qc-scan", "qc_scan"),
+			("transfer-out", "transfer_out"),
+			("transfer-in", "transfer_in"),
+			("pack-box", "pack_box"),
+			("dispatch-scan", "dispatch_scan"),
+			("site-scan", "site_scan"),
+		):
+			with self.subTest(route=public_route):
+				self.assertIn(f'{{"from_route": "/{public_route}", "to_route": "{page}"}}', hooks)
+
 	def test_elemental_gate_route_does_not_collide_with_trip_dispatch(self):
 		pages = APP_ROOT / "templates" / "pages"
 		hooks = (APP_ROOT / "hooks.py").read_text(encoding="utf-8")

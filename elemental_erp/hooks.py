@@ -59,7 +59,18 @@ doc_events = {
 # Website Route Rules — public QR scan landing page: elemental.com/qr/<qr_value>
 website_route_rules = [
 	{"from_route": "/qr/<qr_value>", "to_route": "qr_scan"},
+	{"from_route": "/mobile-app", "to_route": "mobile_app"},
+	{"from_route": "/scan-menu", "to_route": "scan_menu"},
 	{"from_route": "/elemental-gate-scan", "to_route": "elemental_gate_scan"},
+	{"from_route": "/worker-job-scan", "to_route": "worker_job_scan"},
+	{"from_route": "/process-scan", "to_route": "process_scan"},
+	{"from_route": "/design-scan", "to_route": "design_scan"},
+	{"from_route": "/qc-scan", "to_route": "qc_scan"},
+	{"from_route": "/transfer-out", "to_route": "transfer_out"},
+	{"from_route": "/transfer-in", "to_route": "transfer_in"},
+	{"from_route": "/pack-box", "to_route": "pack_box"},
+	{"from_route": "/dispatch-scan", "to_route": "dispatch_scan"},
+	{"from_route": "/site-scan", "to_route": "site_scan"},
 ]
 
 # Client scripts loaded per DocType.
