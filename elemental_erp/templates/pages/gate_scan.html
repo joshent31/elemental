@@ -79,7 +79,8 @@ function handleScan(decodedText) {
 				const bg = g.log_type === "IN" ? "background:#d4edda; color:#155724;" : "background:#d1ecf1; color:#0c5460;";
 				showResult(
 					`<b>${verb}, ${g.employee_name}</b><br>Marked <b>${g.log_type}</b> at ${g.time}` +
-					(g.attendance ? `<br><span style="font-size:13px;">Today's attendance updated.</span>` : ""),
+					(g.attendance ? `<br><span style="font-size:13px;">Today's attendance updated.</span>` : "") +
+					(g.closed_job_logs ? `<br><span style="font-size:13px; color:#a15c00;">${g.closed_job_logs} open Job allocation(s) automatically closed.</span>` : ""),
 					""
 				);
 				document.getElementById("gate-result").setAttribute("style",

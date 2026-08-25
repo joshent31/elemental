@@ -37,6 +37,7 @@ def get_columns():
 		{"label": "Design Hours / Cost", "fieldname": "design_summary", "fieldtype": "Data", "width": 150},
 		{"label": "Data Entry Hours / Cost", "fieldname": "data_entry_summary", "fieldtype": "Data", "width": 160},
 		{"label": "Production Hours / Cost", "fieldname": "production_summary", "fieldtype": "Data", "width": 160},
+		{"label": "Scanned Worker Hours / Cost", "fieldname": "worker_job_summary", "fieldtype": "Data", "width": 185},
 		{"label": "Packaging Hours / Cost", "fieldname": "packaging_summary", "fieldtype": "Data", "width": 160},
 		{"label": "Dispatch Hours / Cost", "fieldname": "dispatch_summary", "fieldtype": "Data", "width": 150},
 		{"label": "Total Manpower Cost", "fieldname": "total_manpower_cost", "fieldtype": "Currency", "width": 150},
@@ -173,6 +174,18 @@ def get_data(filters, has_sales_invoice_job=None):
 			as_dict=True,
 		)[0]
 
+		# --- Manpower: supervisor-scanned worker-to-Job time segments ---
+		worker_job = frappe.db.sql(
+			"""
+			SELECT COALESCE(SUM(hours_spent), 0) AS hours,
+			       COALESCE(SUM(labour_cost), 0) AS cost
+			FROM `tabWorker Job Time Log`
+			WHERE job = %s AND status != 'Active'
+			""",
+			job.job,
+			as_dict=True,
+		)[0]
+
 		# --- Manpower: Packaging ---
 		packaging = frappe.db.sql(
 			"""
@@ -195,7 +208,7 @@ def get_data(filters, has_sales_invoice_job=None):
 
 		total_manpower_cost = (
 			(design.cost or 0) + (data_entry.cost or 0) + (production.cost or 0)
-			+ (packaging.cost or 0) + (dispatch.cost or 0)
+			+ (worker_job.cost or 0) + (packaging.cost or 0) + (dispatch.cost or 0)
 		)
 
 		# --- Completion percentages ---
@@ -280,6 +293,7 @@ def get_data(filters, has_sales_invoice_job=None):
 				"design_summary": f"{design.hours or 0}h / {design.cost or 0}",
 				"data_entry_summary": f"{data_entry.hours or 0}h / {data_entry.cost or 0}",
 				"production_summary": f"{production.hours or 0}h / {production.cost or 0}",
+				"worker_job_summary": f"{worker_job.hours or 0}h / {worker_job.cost or 0}",
 				"packaging_summary": f"{packaging.hours or 0}h / {packaging.cost or 0}",
 				"dispatch_summary": f"{dispatch.hours or 0}h / {dispatch.cost or 0}",
 				"total_manpower_cost": total_manpower_cost,

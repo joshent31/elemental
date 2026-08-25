@@ -40,6 +40,16 @@
         {
             "hidden": 0,
             "is_query_report": 0,
+            "label": "Worker Job Allocation (Supervisor)",
+            "link_count": 0,
+            "link_to": "worker-job-scan",
+            "link_type": "Page",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
             "label": "Label Print Center",
             "link_count": 0,
             "link_to": "label-print-center",
@@ -79,6 +89,26 @@
             "label": "Job",
             "link_count": 0,
             "link_to": "Job",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Production Workstation",
+            "link_count": 0,
+            "link_to": "Production Workstation",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Worker Job Time Log",
+            "link_count": 0,
+            "link_to": "Worker Job Time Log",
             "link_type": "DocType",
             "onboard": 1,
             "type": "Link"
@@ -275,6 +305,16 @@
             "label": "Job Consumption Report",
             "link_count": 0,
             "link_to": "Job Consumption Report",
+            "link_type": "Report",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 1,
+            "label": "Worker Job Cost",
+            "link_count": 0,
+            "link_to": "Worker Job Cost",
             "link_type": "Report",
             "onboard": 1,
             "type": "Link"

@@ -1,0 +1,43 @@
+{
+ "doctype":"DocType",
+ "name":"Worker Job Time Log",
+ "module":"Elemental ERP",
+ "custom":0,
+ "autoname":"naming_series:",
+ "engine":"InnoDB",
+ "track_changes":1,
+ "fields":[
+  {"fieldname":"naming_series","label":"Series","fieldtype":"Select","options":"WJTL-.YYYY.-","default":"WJTL-.YYYY.-","reqd":1},
+  {"fieldname":"employee","label":"Worker","fieldtype":"Link","options":"Employee","reqd":1,"read_only":1,"in_list_view":1,"in_standard_filter":1,"columns":2},
+  {"fieldname":"employee_name","label":"Worker Name","fieldtype":"Data","fetch_from":"employee.employee_name","read_only":1,"in_list_view":1,"columns":2},
+  {"fieldname":"job","label":"Job","fieldtype":"Link","options":"Job","reqd":1,"read_only":1,"in_list_view":1,"in_standard_filter":1,"columns":2},
+  {"fieldname":"workstation","label":"Machine / Table","fieldtype":"Link","options":"Production Workstation","reqd":1,"read_only":1,"in_list_view":1,"in_standard_filter":1,"columns":2},
+  {"fieldname":"column_break_wj1","fieldtype":"Column Break"},
+  {"fieldname":"department","label":"Department","fieldtype":"Link","options":"Department","fetch_from":"workstation.department","read_only":1,"in_list_view":1},
+  {"fieldname":"work_date","label":"Work Date","fieldtype":"Date","reqd":1,"default":"Today","read_only":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"status","label":"Status","fieldtype":"Select","options":"Active\nHold\nCompleted\nGate-Out Closed","default":"Active","reqd":1,"read_only":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"active_employee_key","label":"Active Employee Key","fieldtype":"Data","unique":1,"read_only":1,"hidden":1},
+  {"fieldname":"section_break_time","label":"Time and Cost","fieldtype":"Section Break"},
+  {"fieldname":"start_time","label":"Started At","fieldtype":"Datetime","reqd":1,"read_only":1,"in_list_view":1},
+  {"fieldname":"end_time","label":"Ended At","fieldtype":"Datetime","read_only":1,"in_list_view":1},
+  {"fieldname":"column_break_wj2","fieldtype":"Column Break"},
+  {"fieldname":"hours_spent","label":"Hours Spent","fieldtype":"Float","precision":"4","read_only":1},
+  {"fieldname":"hourly_rate","label":"Hourly Labour Rate","fieldtype":"Currency","read_only":1},
+  {"fieldname":"labour_cost","label":"Labour Cost","fieldtype":"Currency","read_only":1,"in_list_view":1},
+  {"fieldname":"section_break_audit","label":"Supervisor Audit","fieldtype":"Section Break"},
+  {"fieldname":"started_by","label":"Started By","fieldtype":"Link","options":"User","read_only":1},
+  {"fieldname":"closed_by","label":"Closed By","fieldtype":"Link","options":"User","read_only":1},
+  {"fieldname":"close_action","label":"Close Action","fieldtype":"Data","read_only":1},
+  {"fieldname":"remarks","label":"Remarks","fieldtype":"Small Text"}
+ ],
+ "permissions":[
+  {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"print":1,"export":1},
+  {"role":"Elemental Production HOD","read":1,"write":1,"create":1,"report":1,"print":1,"export":1},
+  {"role":"Elemental Production User","read":1,"report":1},
+  {"role":"Elemental Costing User","read":1,"report":1},
+  {"role":"Elemental Costing HOD","read":1,"report":1,"print":1,"export":1},
+  {"role":"Elemental HR Gate HOD","read":1,"report":1,"export":1}
+ ],
+ "sort_field":"start_time",
+ "sort_order":"DESC"
+}

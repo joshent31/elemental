@@ -44,6 +44,13 @@
       </div>
     </a>{% endif %}
 
+    {% if can_supervisor %}<a href="/worker-job-scan" style="text-decoration:none;">
+      <div style="background:#e8eaf6; border:1px solid #3949ab; border-radius:10px; padding:16px; text-align:center; height:100%;">
+        <div style="font-size:28px;">👷</div><div style="font-weight:bold; color:#283593; margin-top:6px; font-size:14px;">Worker Job Allocation</div>
+        <div style="font-size:11px; color:#666; margin-top:2px;">Machine + Job + worker time</div>
+      </div>
+    </a>{% endif %}
+
     {% if can_packaging %}<a href="/pack-box" style="text-decoration:none;">
       <div style="background:#fff8e1; border:1px solid #b8860b; border-radius:10px; padding:16px; text-align:center; height:100%;">
         <div style="font-size:28px;">📦</div><div style="font-weight:bold; color:#7a5c00; margin-top:6px; font-size:14px;">Pack a Box</div>

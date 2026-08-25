@@ -1,0 +1,81 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<div style="max-width:620px; margin:0 auto; padding:14px; font-family:sans-serif;">
+  <h2 style="margin-bottom:3px;">Worker Job Allocation</h2>
+  <p style="color:#666; font-size:12px;">Supervisor: {{ frappe.session.user }}. Gate-In is required before a worker can start.</p>
+
+  <div id="worker-job-scanner" style="display:none; width:100%; margin:10px 0;"></div>
+  <div id="worker-job-message" style="display:none; padding:10px; border-radius:6px; margin:10px 0;"></div>
+
+  <div style="border:1px solid #ddd; border-radius:8px; padding:12px;">
+    <label>1. Machine / Table QR or Code</label>
+    <div style="display:flex; gap:6px;"><input id="wj-workstation" class="form-control" value="{{ prefill_workstation }}"><button class="btn btn-default wj-scan" data-target="workstation">Scan</button></div>
+    <div id="wj-workstation-info" style="font-size:12px; color:#555; margin:4px 0 12px;"></div>
+
+    <label>2. Job QR or Job Code</label>
+    <div style="display:flex; gap:6px;"><input id="wj-job" class="form-control"><button class="btn btn-default wj-scan" data-target="job">Scan</button></div>
+    <div id="wj-job-info" style="font-size:12px; color:#555; margin:4px 0 12px;"></div>
+
+    <label>3. Worker Employee QR or Code</label>
+    <div style="display:flex; gap:6px;"><input id="wj-worker" class="form-control"><button class="btn btn-default wj-scan" data-target="worker">Scan</button><button id="wj-add-worker" class="btn btn-default">Add</button></div>
+    <div id="wj-workers" style="margin:8px 0 12px;"></div>
+    <button id="wj-start" class="btn btn-primary btn-block">Start Job for Scanned Workers</button>
+  </div>
+
+  <div style="border:1px solid #ddd; border-radius:8px; padding:12px; margin-top:14px;">
+    <h4 style="margin-top:0;">Active Worker Allocations</h4>
+    <div id="wj-active"><span style="color:#888;">Scan or enter a Job to load active workers.</span></div>
+    <textarea id="wj-remarks" class="form-control" placeholder="Hold / completion remarks (optional)" style="margin-top:8px;"></textarea>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button class="btn btn-warning wj-close" data-action="Hold" style="flex:1;">Hold Selected</button>
+      <button class="btn btn-success wj-close" data-action="Completed" style="flex:1;">Complete Selected</button>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+(() => {
+  const selectedWorkers = new Map();
+  let scanner = null;
+  let scanTarget = null;
+  let processing = false;
+  const $ = (id) => document.getElementById(id);
+  const api = (method, args, callback) => frappe.call({method: `elemental_erp.worker_job.${method}`, args, freeze:true, callback});
+  const valueFromQr = (text, target) => {
+    try {
+      const url = new URL(text, window.location.origin);
+      return url.searchParams.get(target) || url.searchParams.get("qr") || url.pathname.split("/").filter(Boolean).pop();
+    } catch (e) { return text.trim(); }
+  };
+  const show = (message, error=false) => {
+    const box = $("worker-job-message"); box.style.display="block"; box.style.background=error ? "#f8d7da" : "#d4edda"; box.style.color=error ? "#721c24" : "#155724"; box.textContent=message;
+  };
+  async function stopScanner() { if (scanner) { try { await scanner.stop(); } catch(e) {} scanner.clear(); scanner=null; } $("worker-job-scanner").style.display="none"; }
+  async function startScanner(target) {
+    await stopScanner(); scanTarget=target; $("worker-job-scanner").style.display="block"; scanner=new Html5Qrcode("worker-job-scanner");
+    scanner.start({facingMode:"environment"},{fps:10,qrbox:240}, async (text) => { if(processing)return; processing=true; const value=valueFromQr(text,target); await stopScanner(); handleValue(target,value); processing=false; });
+  }
+  function handleValue(target, value) {
+    if (target === "worker") { $("wj-worker").value=value; addWorker(); return; }
+    const input = target === "job" ? $("wj-job") : $("wj-workstation"); input.value=value; lookup(target,value);
+  }
+  function lookup(target,value) {
+    if(!value)return;
+    const method = target === "job" ? "lookup_job" : "lookup_workstation";
+    api(method,{value},(r)=>{ if(!r.message)return; if(target==="job") { $("wj-job").value=r.message.name; $("wj-job-info").textContent=`${r.message.name} — ${r.message.job_name}`; loadActive(); } else { $("wj-workstation").value=r.message.name; $("wj-workstation-info").textContent=`${r.message.workstation_name} — ${r.message.department}`; } });
+  }
+  function addWorker() {
+    const value=$("wj-worker").value.trim(); if(!value)return;
+    api("lookup_worker",{value},(r)=>{ if(!r.message)return; if(r.message.active_log){show(`${r.message.employee_name} already has an active Job allocation.`,true);return;} selectedWorkers.set(r.message.name,r.message.employee_name); $("wj-worker").value=""; renderWorkers(); });
+  }
+  function renderWorkers(){ $("wj-workers").innerHTML=[...selectedWorkers].map(([id,name])=>`<span style="display:inline-block;background:#eef1ff;border:1px solid #7986cb;border-radius:12px;padding:4px 8px;margin:2px;">${frappe.utils.escape_html(name)} (${frappe.utils.escape_html(id)}) <a href="#" class="wj-remove" data-id="${frappe.utils.escape_html(id)}">×</a></span>`).join(""); document.querySelectorAll(".wj-remove").forEach(a=>a.onclick=(e)=>{e.preventDefault();selectedWorkers.delete(a.dataset.id);renderWorkers();}); }
+  function loadActive(){ const job=$("wj-job").value.trim(); if(!job)return; api("get_active_allocations",{job},(r)=>{ const rows=r.message||[]; $("wj-active").innerHTML=rows.length?rows.map(x=>`<label style="display:block;border-bottom:1px solid #eee;padding:7px;"><input type="checkbox" class="wj-active-worker" value="${frappe.utils.escape_html(x.employee)}"> <b>${frappe.utils.escape_html(x.employee_name)}</b> (${frappe.utils.escape_html(x.employee)})<br><small>${frappe.utils.escape_html(x.workstation)} — since ${x.start_time}</small></label>`).join(""):"<span style='color:#888;'>No active workers on this Job.</span>"; }); }
+  document.querySelectorAll(".wj-scan").forEach(b=>b.onclick=()=>startScanner(b.dataset.target));
+  $("wj-add-worker").onclick=addWorker; $("wj-worker").onkeydown=(e)=>{if(e.key==="Enter"){e.preventDefault();addWorker();}};
+  $("wj-job").onchange=()=>lookup("job",$("wj-job").value); $("wj-workstation").onchange=()=>lookup("workstation",$("wj-workstation").value);
+  $("wj-start").onclick=()=>{ const workstation=$("wj-workstation").value.trim(),job=$("wj-job").value.trim(),employees=[...selectedWorkers.keys()]; if(!workstation||!job||!employees.length){show("Scan the Machine/Table, Job, and at least one worker.",true);return;} api("start_workers",{workstation,job,employees:JSON.stringify(employees)},(r)=>{if(!r.message)return;show(`${r.message.started.length} worker(s) started on ${r.message.job}.`);selectedWorkers.clear();renderWorkers();loadActive();}); };
+  document.querySelectorAll(".wj-close").forEach(b=>b.onclick=()=>{ const job=$("wj-job").value.trim(), employees=[...document.querySelectorAll(".wj-active-worker:checked")].map(x=>x.value); if(!job||!employees.length){show("Select active workers to close.",true);return;} api("close_workers",{job,employees:JSON.stringify(employees),action:b.dataset.action,remarks:$("wj-remarks").value},(r)=>{if(!r.message)return;show(`${r.message.closed.length} worker allocation(s) marked ${r.message.action}.`);$("wj-remarks").value="";loadActive();}); });
+  if($("wj-workstation").value) lookup("workstation",$("wj-workstation").value);
+})();
+</script>
+{% endblock %}

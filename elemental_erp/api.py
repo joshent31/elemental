@@ -2092,12 +2092,15 @@ def create_sales_invoice_for_job(job):
 @frappe.whitelist()
 def confirm_job_installation_complete(job, confirmed_by=None):
 	_require_roles(*DISPATCH_SCAN_ROLES)
+	from elemental_erp.worker_job import assert_no_active_logs_for_job
+
 	job_doc = frappe.get_doc("Job", job)
 	require_doc_permission(job_doc, "write")
 	assert_active_job(job)
 	total_boxes = frappe.db.count("Packing Box", {"job": job})
 	if not total_boxes:
 		frappe.throw("Cannot close a Job with no Packing Boxes.")
+	assert_no_active_logs_for_job(job)
 	remaining = frappe.db.count("Packing Box", {"job": job, "status": ["!=", "Installed"]})
 	if remaining:
 		frappe.throw(f"{remaining} box(es) are not yet marked Installed — cannot close the Job.")
@@ -2193,9 +2196,12 @@ def gate_scan(qr_value):
 	checkin.insert(ignore_permissions=True)
 
 	attendance_name = None
+	closed_job_logs = []
 	if log_type == "OUT":
 		from elemental_erp.employee_gate import upsert_attendance_for_day
+		from elemental_erp.worker_job import close_active_logs_for_gate_out
 
+		closed_job_logs = close_active_logs_for_gate_out(employee.name, checkin.time)
 		attendance_name = upsert_attendance_for_day(employee.name, frappe.utils.nowdate())
 
 	frappe.db.commit()
@@ -2205,6 +2211,7 @@ def gate_scan(qr_value):
 		"log_type": log_type,
 		"time": checkin.time,
 		"attendance": attendance_name,
+		"closed_job_logs": len(closed_job_logs),
 	}
 
 
@@ -2302,6 +2309,8 @@ def close_job(job):
 	current_status = frappe.db.get_value("Job", job, "status")
 	if current_status in ("Closed", "Cancelled"):
 		frappe.throw(f"This Job is already {current_status}.")
+	from elemental_erp.worker_job import assert_no_active_logs_for_job
+	assert_no_active_logs_for_job(job)
 
 	frappe.db.set_value("Job", job, "status", "Closed")
 	frappe.db.commit()
@@ -2321,6 +2330,8 @@ def cancel_job(job, reason=None):
 	current_status = frappe.db.get_value("Job", job, "status")
 	if current_status in ("Closed", "Cancelled"):
 		frappe.throw(f"This Job is already {current_status}.")
+	from elemental_erp.worker_job import assert_no_active_logs_for_job
+	assert_no_active_logs_for_job(job)
 
 	cancel_related_records(job)
 	frappe.db.set_value("Job", job, "status", "Cancelled")
@@ -2398,9 +2409,10 @@ def get_dashboard_data():
 	design_cost = frappe.db.sql("SELECT COALESCE(SUM(design_cost), 0) FROM `tabDesign Task`")[0][0]
 	data_entry_cost = frappe.db.sql("SELECT COALESCE(SUM(data_entry_cost), 0) FROM `tabData Entry Task`")[0][0]
 	production_cost = frappe.db.sql("SELECT COALESCE(SUM(production_cost), 0) FROM `tabProduction Entry` WHERE docstatus=1")[0][0]
+	worker_job_cost = frappe.db.sql("SELECT COALESCE(SUM(labour_cost), 0) FROM `tabWorker Job Time Log` WHERE status != 'Active'")[0][0]
 	packaging_cost = frappe.db.sql("SELECT COALESCE(SUM(packaging_cost), 0) FROM `tabPackaging Entry` WHERE docstatus=1")[0][0]
 	dispatch_cost = frappe.db.sql("SELECT COALESCE(SUM(dispatch_cost), 0) FROM `tabDispatch Entry` WHERE docstatus=1")[0][0]
-	total_manpower = (design_cost or 0) + (data_entry_cost or 0) + (production_cost or 0) + (packaging_cost or 0) + (dispatch_cost or 0)
+	total_manpower = (design_cost or 0) + (data_entry_cost or 0) + (production_cost or 0) + (worker_job_cost or 0) + (packaging_cost or 0) + (dispatch_cost or 0)
 	total_cost = total_indent_value + total_manpower
 	avg_margin_pct = round(((total_revenue - total_cost) / total_revenue * 100), 1) if total_revenue else 0
 

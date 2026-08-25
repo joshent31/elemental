@@ -1,0 +1,11 @@
+{
+ "doctype":"Print Format",
+ "name":"Production Workstation QR",
+ "doc_type":"Production Workstation",
+ "module":"Elemental ERP",
+ "standard":"Yes",
+ "custom_format":1,
+ "print_format_type":"Jinja",
+ "disabled":0,
+ "html":"<div style=\"width:90mm;min-height:70mm;border:2px solid #111;padding:8mm;text-align:center;font-family:Arial,sans-serif;box-sizing:border-box;\"><h2 style=\"margin:0 0 3mm;\">ELEMENTAL FIXTURES</h2><div style=\"font-size:18px;font-weight:bold;\">{{ doc.workstation_type|upper }}: {{ doc.workstation_name }}</div><div style=\"font-size:14px;margin:2mm 0;\">Code: <b>{{ doc.name }}</b> | {{ doc.department }}</div>{% if doc.qr_image %}<img src=\"{{ doc.qr_image }}\" style=\"width:42mm;height:42mm;object-fit:contain;\">{% else %}<div>Save this record to generate QR.</div>{% endif %}<div style=\"font-size:11px;margin-top:2mm;\">Supervisor: scan this first, then scan the Job and worker badges.</div></div>"
+}

@@ -95,6 +95,7 @@ class TestMobileRoutesAreProtected(unittest.TestCase):
 			"dispatch_scan",
 			"site_scan",
 			"gate_scan",
+			"worker_job_scan",
 		):
 			with self.subTest(route=route):
 				source = (APP_ROOT / "templates" / "pages" / f"{route}.py").read_text(encoding="utf-8")

@@ -58,5 +58,6 @@ def production_menu_access(user_roles):
 def mobile_app_access(user_roles):
 	"""Return the unified mobile dashboard areas visible to this user."""
 	access = production_menu_access(user_roles)
+	access["supervisor"] = roles_allow(user_roles, ("Elemental Production HOD",))
 	access["gate"] = roles_allow(user_roles, GATE_SCAN_ROLES)
 	return access

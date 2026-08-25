@@ -21,6 +21,7 @@ def get_data():
 					"QR Code Master",
 					"QR Scan Log",
 					"Production Entry",
+					"Worker Job Time Log",
 					"Department Transfer",
 					"Job Department Status",
 				],

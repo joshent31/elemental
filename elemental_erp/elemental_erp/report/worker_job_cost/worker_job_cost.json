@@ -1,0 +1,16 @@
+{
+ "doctype":"Report",
+ "name":"Worker Job Cost",
+ "report_name":"Worker Job Cost",
+ "report_type":"Script Report",
+ "module":"Elemental ERP",
+ "is_standard":"Yes",
+ "ref_doctype":"Worker Job Time Log",
+ "roles":[
+  {"role":"System Manager"},
+  {"role":"Elemental Production HOD"},
+  {"role":"Elemental Costing User"},
+  {"role":"Elemental Costing HOD"},
+  {"role":"Elemental HR Gate HOD"}
+ ]
+}
