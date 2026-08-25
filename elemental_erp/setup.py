@@ -82,3 +82,26 @@ def backfill_job_qr_codes():
 		limit_page_length=0,
 	):
 		ensure_job_qr(job_name)
+
+
+def backfill_fg_subpart_process_checks():
+	"""Migrate legacy child-grid process pills to persistent checkboxes."""
+	import frappe
+
+	from elemental_erp.elemental_erp.doctype.finished_good.finished_good import (
+		PROCESS_FIELDS,
+		selected_processes,
+	)
+
+	if not frappe.db.has_column("FG Subpart", "process_flow"):
+		return
+	fields = ["name", "processes", *[fieldname for fieldname, _label in PROCESS_FIELDS]]
+	for row in frappe.get_all("FG Subpart", fields=fields, limit_page_length=0):
+		processes = selected_processes(row)
+		values = {
+			fieldname: int(row.get(fieldname) or 0)
+			for fieldname, _label in PROCESS_FIELDS
+		}
+		values["process_flow"] = " → ".join(processes)
+		values["processes"] = "\n".join(processes)
+		frappe.db.set_value("FG Subpart", row.name, values, update_modified=False)

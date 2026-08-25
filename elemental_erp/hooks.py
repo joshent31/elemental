@@ -19,6 +19,7 @@ after_migrate = [
 	"elemental_erp.setup.normalize_material_indent_departments",
 	"elemental_erp.setup.backfill_material_indent_excess_stock",
 	"elemental_erp.setup.backfill_job_qr_codes",
+	"elemental_erp.setup.backfill_fg_subpart_process_checks",
 	"elemental_erp.setup.sync_job_subpart_labels",
 ]
 
@@ -62,6 +63,7 @@ website_route_rules = [
 
 # Client scripts loaded per DocType.
 doctype_js = {
+	"Finished Good": "public/js/finished_good.js",
 	"Job": "public/js/job.js",
 	"Material Indent": "public/js/material_indent.js",
 	"Material Issue": "public/js/material_issue.js",
