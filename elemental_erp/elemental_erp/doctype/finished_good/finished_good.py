@@ -23,8 +23,9 @@ def selected_processes(row, migrate_legacy=True):
 		if not legacy:
 			legacy = {"US Assembly"}
 		for fieldname, label in PROCESS_FIELDS:
-			if hasattr(row, "set"):
-				row.set(fieldname, 1 if label in legacy else 0)
+			setter = getattr(row, "set", None)
+			if callable(setter):
+				setter(fieldname, 1 if label in legacy else 0)
 			else:
 				row[fieldname] = 1 if label in legacy else 0
 		selected = [label for fieldname, label in PROCESS_FIELDS if int(row.get(fieldname) or 0)]

@@ -2,7 +2,10 @@
 
 import json
 from pathlib import Path
+import sys
+import types
 import unittest
+from unittest.mock import patch
 
 
 APP_ROOT = Path(__file__).resolve().parents[2]
@@ -15,6 +18,32 @@ TRAVELLER = APP_ROOT / "elemental_erp" / "print_format" / "job_production_travel
 
 
 class TestFinishedGoodProcessFlow(unittest.TestCase):
+	def test_legacy_migration_accepts_frappe_dict_without_callable_set(self):
+		class FrappeDict(dict):
+			def __getattr__(self, key):
+				return self.get(key)
+
+		frappe = types.ModuleType("frappe")
+		model = types.ModuleType("frappe.model")
+		document = types.ModuleType("frappe.model.document")
+		document.Document = object
+		modules = {
+			"frappe": frappe,
+			"frappe.model": model,
+			"frappe.model.document": document,
+		}
+		controller_path = APP_ROOT / "elemental_erp" / "doctype" / "finished_good" / "finished_good.py"
+		import importlib.util
+		spec = importlib.util.spec_from_file_location("test_finished_good_processes", controller_path)
+		module = importlib.util.module_from_spec(spec)
+		with patch.dict(sys.modules, modules):
+			spec.loader.exec_module(module)
+		row = FrappeDict(processes="Metal\nPacking")
+		self.assertEqual(module.selected_processes(row), ["Metal", "Packing"])
+		self.assertEqual(row["process_metal"], 1)
+		self.assertEqual(row["process_packing"], 1)
+		self.assertEqual(row["process_wood"], 0)
+
 	def test_processes_are_persistent_checkboxes_with_read_only_summary(self):
 		doctype = json.loads(FG_SUBPART.read_text(encoding="utf-8"))
 		fields = {field["fieldname"]: field for field in doctype["fields"] if field.get("fieldname")}
