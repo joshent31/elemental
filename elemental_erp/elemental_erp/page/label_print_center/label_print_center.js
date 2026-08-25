@@ -44,6 +44,13 @@ class LabelPrintCenter {
 						<div style="width:180px;"><label>Total labels to generate</label><div id="label-print-total-field"></div></div>
 						<button class="btn btn-default" id="label-print-generate">Generate &amp; Print All</button>
 					</div>
+					<h5>Add More Packing Labels</h5>
+					<div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:18px;">
+						<div style="width:150px;"><label>New From Box No.</label><div id="label-create-from-field"></div></div>
+						<div style="width:150px;"><label>New To Box No.</label><div id="label-create-to-field"></div></div>
+						<button class="btn btn-default" id="label-create-range">Create &amp; Print New Range</button>
+					</div>
+					<h5>Print Existing Packing Labels</h5>
 					<div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
 						<div style="width:150px;"><label>From Box No.</label><div id="label-print-from-field"></div></div>
 						<div style="width:150px;"><label>To Box No.</label><div id="label-print-to-field"></div></div>
@@ -85,6 +92,16 @@ class LabelPrintCenter {
 			fieldtype: "Int",
 			fieldname: "box_to",
 		});
+		this.create_from_control = this.make_control("#label-create-from-field", {
+			fieldtype: "Int",
+			fieldname: "create_box_from",
+			default: 1,
+		});
+		this.create_to_control = this.make_control("#label-create-to-field", {
+			fieldtype: "Int",
+			fieldname: "create_box_to",
+			default: 10,
+		});
 
 		const roles = frappe.user_roles || [];
 		this.can_manage_boxes = [
@@ -109,6 +126,7 @@ class LabelPrintCenter {
 			"Elemental Packaging HOD",
 		].some((role) => roles.includes(role));
 		$("#label-print-generate", this.$root).toggle(this.can_manage_boxes);
+		$("#label-create-range", this.$root).toggle(this.can_manage_boxes);
 		$("#label-print-range, #label-print-all-boxes", this.$root).toggle(this.can_print_boxes);
 		$("#label-print-fg", this.$root).toggle(this.can_print_fg);
 		$("#label-print-subparts", this.$root).toggle(this.can_print_subparts);
@@ -128,6 +146,7 @@ class LabelPrintCenter {
 	bind_actions() {
 		$("#label-print-load", this.$root).on("click", () => this.load_job());
 		$("#label-print-generate", this.$root).on("click", () => this.generate_packing_labels());
+		$("#label-create-range", this.$root).on("click", () => this.generate_packing_label_range());
 		$("#label-print-range", this.$root).on("click", () => this.print_packing_labels(true));
 		$("#label-print-all-boxes", this.$root).on("click", () => this.print_packing_labels(false));
 		$("#label-print-job-qr", this.$root).on("click", () => this.print_job_format("Job QR Label"));
@@ -178,9 +197,15 @@ class LabelPrintCenter {
 					this.from_control.set_value(boxes.first);
 					this.to_control.set_value(boxes.last);
 				}
+				this.create_from_control.set_value(boxes.next_number);
+				this.create_to_control.set_value(Math.min(boxes.next_number + 9, 1000));
 				$("#label-print-generate", this.$root)
-					.prop("disabled", boxes.count > 0)
-					.text(boxes.count > 0 ? "Packing Labels Already Generated" : "Generate & Print All");
+					.prop("disabled", boxes.existing_count > 0)
+					.text(
+						boxes.existing_count > 0
+							? "Packing Labels Already Generated"
+							: "Generate & Print All"
+					);
 			},
 		});
 	}
@@ -207,6 +232,39 @@ class LabelPrintCenter {
 				if (print_window) {
 					print_window.location =
 						`/api/method/elemental_erp.api.download_packing_labels?job=${encodeURIComponent(job)}`;
+				}
+				this.load_job();
+			},
+			error: () => {
+				if (print_window) print_window.close();
+			},
+		});
+	}
+
+	generate_packing_label_range() {
+		const job = this.get_job();
+		const box_from = this.create_from_control.get_value();
+		const box_to = this.create_to_control.get_value();
+		if (!job || !box_from || !box_to || box_from > box_to) {
+			if (job) frappe.msgprint("Enter a valid new packing-label range.");
+			return;
+		}
+		const print_window = window.open("about:blank", "_blank");
+		frappe.call({
+			method: "elemental_erp.api.create_packing_label_range",
+			args: { job, box_from, box_to },
+			freeze: true,
+			freeze_message: `Generating Packing Box labels ${box_from} to ${box_to}...`,
+			callback: (response) => {
+				if (!response.message) {
+					if (print_window) print_window.close();
+					return;
+				}
+				frappe.show_alert(`${response.message.created} new packing labels generated.`);
+				if (print_window) {
+					const params = new URLSearchParams({ job, box_from, box_to });
+					print_window.location =
+						`/api/method/elemental_erp.api.download_packing_labels?${params.toString()}`;
 				}
 				this.load_job();
 			},

@@ -689,6 +689,81 @@ def create_packing_labels(job, total_boxes):
 
 
 @frappe.whitelist()
+def create_packing_label_range(job, box_from, box_to):
+	"""Append one contiguous Packing Box label range to an existing Job."""
+	from elemental_erp.utils.qr_generator import generate_qr_image
+
+	_require_roles(*PACKAGING_SCAN_ROLES)
+	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "read")
+	assert_active_job(job)
+	try:
+		box_from = int(box_from)
+		box_to = int(box_to)
+	except (TypeError, ValueError):
+		frappe.throw("Packing label range must use whole numbers.")
+	if box_from <= 0 or box_to <= 0:
+		frappe.throw("Packing label range must use positive numbers.")
+	if box_from > box_to:
+		frappe.throw("From Box No. cannot be greater than To Box No.")
+	if box_to > 1000:
+		frappe.throw("Packing Box labels cannot exceed Box No. 1000.")
+
+	existing_boxes = frappe.get_all(
+		"Packing Box",
+		filters={"job": job},
+		fields=["name", "box_no"],
+		order_by="box_no asc",
+		limit_page_length=0,
+	)
+	existing_numbers = {int(box.box_no) for box in existing_boxes}
+	last_existing = max(existing_numbers) if existing_numbers else 0
+	expected_from = last_existing + 1
+	if box_from != expected_from:
+		frappe.throw(
+			f"The next Packing Box label must start at {expected_from}. "
+			f"Existing labels currently end at {last_existing}."
+		)
+	requested_numbers = set(range(box_from, box_to + 1))
+	duplicates = sorted(existing_numbers.intersection(requested_numbers))
+	if duplicates:
+		frappe.throw(f"Packing Box label {duplicates[0]} already exists for Job {job}.")
+
+	frappe.db.set_value("Job", job, "total_packing_boxes", box_to)
+	for existing_box in existing_boxes:
+		frappe.db.set_value(
+			"Packing Box", existing_box.name, "total_boxes", box_to, update_modified=False
+		)
+
+	created = []
+	for box_no in range(box_from, box_to + 1):
+		box = frappe.get_doc(
+			{
+				"doctype": "Packing Box",
+				"job": job,
+				"box_no": box_no,
+				"total_boxes": box_to,
+				"status": "Label Created",
+			}
+		)
+		box.box_qr_value = frappe.generate_hash(length=12).upper()
+		box.insert(ignore_permissions=True)
+		scan_url = frappe.utils.get_url(f"/pack-box?box={box.box_qr_value}")
+		box.box_qr_image = generate_qr_image(box.box_qr_value, scan_url, box.doctype, box.name)
+		box.save(ignore_permissions=True)
+		created.append(box.name)
+
+	frappe.db.commit()
+	return {
+		"created": len(created),
+		"box_names": created,
+		"box_from": box_from,
+		"box_to": box_to,
+		"total_boxes": box_to,
+	}
+
+
+@frappe.whitelist()
 def get_label_print_center_data(job):
 	"""Return the selected Job and its available Packing Box label range."""
 	_require_roles(*LABEL_PRINT_ROLES)
@@ -696,12 +771,13 @@ def get_label_print_center_data(job):
 	require_doc_permission(job_doc, "read")
 	boxes = frappe.get_all(
 		"Packing Box",
-		filters={"job": job, "status": ["!=", "Cancelled"]},
+		filters={"job": job},
 		fields=["box_no", "status"],
 		order_by="box_no asc",
 		limit_page_length=0,
 	)
-	box_numbers = [int(box.box_no) for box in boxes]
+	all_box_numbers = [int(box.box_no) for box in boxes]
+	box_numbers = [int(box.box_no) for box in boxes if box.status != "Cancelled"]
 	return {
 		"job": {
 			"name": job_doc.name,
@@ -711,9 +787,11 @@ def get_label_print_center_data(job):
 			"status": job_doc.status,
 		},
 		"packing_boxes": {
+			"existing_count": len(all_box_numbers),
 			"count": len(box_numbers),
 			"first": min(box_numbers) if box_numbers else 0,
 			"last": max(box_numbers) if box_numbers else 0,
+			"next_number": (max(all_box_numbers) + 1) if all_box_numbers else 1,
 			"configured_total": int(job_doc.get("total_packing_boxes") or 0),
 		},
 	}

@@ -104,9 +104,13 @@ class TestPackingBoxLabels(unittest.TestCase):
 			"From Box No.",
 			"To Box No.",
 			"Generate &amp; Print All",
+			"Create &amp; Print New Range",
+			"New From Box No.",
+			"New To Box No.",
 			"Print Selected Range",
 			"Print All Packing Labels",
 			"create_packing_labels",
+			"create_packing_label_range",
 		):
 			with self.subTest(expected=expected):
 				self.assertIn(expected, page)
@@ -115,6 +119,10 @@ class TestPackingBoxLabels(unittest.TestCase):
 			'filters.extend([["box_no", ">=", box_from], ["box_no", "<=", box_to]])',
 			"missing_numbers",
 			"def get_label_print_center_data(job):",
+			"def create_packing_label_range(job, box_from, box_to):",
+			"expected_from = last_existing + 1",
+			'frappe.db.set_value("Job", job, "total_packing_boxes", box_to)',
+			'"Packing Box", existing_box.name, "total_boxes", box_to',
 		):
 			with self.subTest(expected=expected):
 				self.assertIn(expected, api_source)
