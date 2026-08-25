@@ -3,6 +3,7 @@ import math
 from urllib.parse import quote
 
 import frappe
+from frappe.utils import fmt_money
 
 from elemental_erp.utils.purchase import allocate_order_quantity, split_moq_order_quantity
 from elemental_erp.utils.mobile_access import (
@@ -2645,7 +2646,7 @@ def calculate_slip_ot(employee, start_date, end_date):
 		"ot_hours_fmt": fmt_hhmm(capped_ot_hours),
 		"hourly_rate": round(hr, 2),
 		"ot_amount": ot_amount,
-		"ot_amount_fmt": frappe.format_currency(ot_amount),
+		"ot_amount_fmt": fmt_money(ot_amount),
 		"total_ot_actual": round(total_ot_hours, 2),
 		"total_ot_actual_fmt": fmt_hhmm(total_ot_hours),
 	}

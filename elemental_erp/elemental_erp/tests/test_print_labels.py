@@ -42,9 +42,23 @@ WORKSPACE = (
 )
 HOOKS_SOURCE = APP_ROOT / "hooks.py"
 API_SOURCE = APP_ROOT / "api.py"
+WORKER_ATTENDANCE_REPORT = (
+	APP_ROOT
+	/ "elemental_erp"
+	/ "report"
+	/ "worker_attendance_report"
+	/ "worker_attendance_report.py"
+)
 
 
 class TestEmployeeBadge(unittest.TestCase):
+	def test_server_currency_uses_frappe_15_formatter(self):
+		for source in (API_SOURCE, WORKER_ATTENDANCE_REPORT):
+			with self.subTest(source=source.name):
+				text = source.read_text(encoding="utf-8")
+				self.assertNotIn("frappe.format_currency", text)
+				self.assertIn("fmt_money", text)
+
 	def test_employee_code_is_printed_below_qr(self):
 		html = json.loads(EMPLOYEE_FORMAT.read_text(encoding="utf-8"))["html"]
 		qr_position = html.index("doc.employee_qr_image")

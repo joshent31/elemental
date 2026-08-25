@@ -14,7 +14,7 @@ Run at month end when all checkin data is complete.
 """
 import calendar
 import frappe
-from frappe.utils import getdate
+from frappe.utils import fmt_money, getdate
 
 
 def execute(filters=None):
@@ -156,11 +156,11 @@ def get_summary(data, year=None, month=None, is_month_complete=False):
         "message": (
             f"<b>Workers: {len(data)}</b> | "
             f"Paid Days: {total_paid:.0f} | PH: {total_ph} | LOP: {total_lop:.0f} | "
-            f"Att.Salary: {frappe.format_currency(total_att_salary)}<br>"
-            f"<b>Total OT:</b> {fmt_hhmm(total_ot_hours)} = <b>{frappe.format_currency(total_ot_1x)}</b> (at 1x rate) | "
-            f"<b>Salary Slip:</b> {frappe.format_currency(total_slip_2x)} (at 2x rate, ≤{GOV_OT_CAP_HOURS} hrs) | "
-            f"<b>Cash to Worker:</b> {frappe.format_currency(total_cash)} | "
-            f"<b>Total Earnings:</b> {frappe.format_currency(total_earnings)}<br>"
+            f"Att.Salary: {fmt_money(total_att_salary)}<br>"
+            f"<b>Total OT:</b> {fmt_hhmm(total_ot_hours)} = <b>{fmt_money(total_ot_1x)}</b> (at 1x rate) | "
+            f"<b>Salary Slip:</b> {fmt_money(total_slip_2x)} (at 2x rate, ≤{GOV_OT_CAP_HOURS} hrs) | "
+            f"<b>Cash to Worker:</b> {fmt_money(total_cash)} | "
+            f"<b>Total Earnings:</b> {fmt_money(total_earnings)}<br>"
             f"<span style='color:#888;'>{formula_msg}</span><br>"
             f"<span style='color:{'green' if is_month_complete else 'orange'};'><b>Month Status: {month_status}</b></span>"
         )
