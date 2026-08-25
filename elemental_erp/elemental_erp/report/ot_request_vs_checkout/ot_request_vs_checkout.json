@@ -1,0 +1,22 @@
+{
+ "doctype": "Report",
+ "name": "OT Request vs Checkout",
+ "report_name": "OT Request vs Checkout",
+ "report_type": "Script Report",
+ "module": "Elemental ERP",
+ "is_standard": "Yes",
+ "ref_doctype": "Department OT Request",
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Elemental HR Gate HOD"},
+  {"role": "Elemental Design HOD"},
+  {"role": "Elemental Data Entry HOD"},
+  {"role": "Elemental Costing HOD"},
+  {"role": "Elemental Purchase HOD"},
+  {"role": "Elemental Production HOD"},
+  {"role": "Elemental QC HOD"},
+  {"role": "Elemental Packaging HOD"},
+  {"role": "Elemental Dispatch HOD"},
+  {"role": "Elemental Sales HOD"}
+ ]
+}

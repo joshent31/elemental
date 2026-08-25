@@ -63,6 +63,7 @@ website_route_rules = [
 
 # Client scripts loaded per DocType.
 doctype_js = {
+	"Department OT Request": "public/js/department_ot_request.js",
 	"Finished Good": "public/js/finished_good.js",
 	"Job": "public/js/job.js",
 	"Material Indent": "public/js/material_indent.js",

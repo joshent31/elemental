@@ -286,6 +286,16 @@
         {
             "hidden": 0,
             "is_query_report": 0,
+            "label": "Department OT Request",
+            "link_count": 0,
+            "link_to": "Department OT Request",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
             "label": "Department Transfer",
             "link_count": 0,
             "link_to": "Department Transfer",
@@ -298,6 +308,16 @@
             "label": "Reports",
             "icon": "chart-bar",
             "link_count": -1
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 1,
+            "label": "OT Request vs Checkout",
+            "link_count": 0,
+            "link_to": "OT Request vs Checkout",
+            "link_type": "Report",
+            "onboard": 1,
+            "type": "Link"
         },
         {
             "hidden": 0,
