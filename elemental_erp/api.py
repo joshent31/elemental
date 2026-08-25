@@ -731,7 +731,7 @@ def download_packing_labels(job, box_from=None, box_to=None):
 	range_requested = box_from not in (None, "") or box_to not in (None, "")
 	if range_requested and (box_from in (None, "") or box_to in (None, "")):
 		frappe.throw("Enter both From Box No. and To Box No.")
-	filters = {"job": job, "status": ["!=", "Cancelled"]}
+	filters = [["job", "=", job], ["status", "!=", "Cancelled"]]
 	if range_requested:
 		try:
 			box_from = int(box_from)
@@ -744,7 +744,7 @@ def download_packing_labels(job, box_from=None, box_to=None):
 			frappe.throw("From Box No. cannot be greater than To Box No.")
 		if box_to - box_from + 1 > 1000:
 			frappe.throw("A single print range cannot exceed 1000 labels.")
-		filters["box_no"] = ["between", [box_from, box_to]]
+		filters.extend([["box_no", ">=", box_from], ["box_no", "<=", box_to]])
 
 	boxes = frappe.get_all(
 		"Packing Box",

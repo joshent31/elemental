@@ -111,7 +111,8 @@ class TestPackingBoxLabels(unittest.TestCase):
 			with self.subTest(expected=expected):
 				self.assertIn(expected, page)
 		for expected in (
-			'filters["box_no"] = ["between", [box_from, box_to]]',
+			'filters = [["job", "=", job], ["status", "!=", "Cancelled"]]',
+			'filters.extend([["box_no", ">=", box_from], ["box_no", "<=", box_to]])',
 			"missing_numbers",
 			"def get_label_print_center_data(job):",
 		):
