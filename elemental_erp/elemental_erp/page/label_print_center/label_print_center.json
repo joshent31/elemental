@@ -1,0 +1,21 @@
+{
+ "doctype": "Page",
+ "name": "label-print-center",
+ "title": "Label Print Center",
+ "page_name": "label-print-center",
+ "module": "Elemental ERP",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Elemental Data Entry User"},
+  {"role": "Elemental Data Entry HOD"},
+  {"role": "Elemental Production User"},
+  {"role": "Elemental Production HOD"},
+  {"role": "Elemental QC User"},
+  {"role": "Elemental QC HOD"},
+  {"role": "Elemental Packaging User"},
+  {"role": "Elemental Packaging HOD"},
+  {"role": "Elemental Dispatch HOD"}
+ ]
+}

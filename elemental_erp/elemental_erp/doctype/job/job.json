@@ -260,7 +260,8 @@
   {
    "role": "Elemental Data Entry User",
    "read": 1,
-   "report": 1
+   "report": 1,
+   "print": 1
   },
   {
    "role": "Elemental Data Entry HOD",
@@ -293,7 +294,8 @@
   {
    "role": "Elemental Production User",
    "read": 1,
-   "report": 1
+   "report": 1,
+   "print": 1
   },
   {
    "role": "Elemental Production HOD",
@@ -304,7 +306,8 @@
   {
    "role": "Elemental QC User",
    "read": 1,
-   "report": 1
+   "report": 1,
+   "print": 1
   },
   {
    "role": "Elemental QC HOD",
@@ -315,7 +318,8 @@
   {
    "role": "Elemental Packaging User",
    "read": 1,
-   "report": 1
+   "report": 1,
+   "print": 1
   },
   {
    "role": "Elemental Packaging HOD",

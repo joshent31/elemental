@@ -2,6 +2,17 @@
 // Adds: QC status check, link to Job/QR, and a "Mark Packaging Completed"
 // button once all entries for the Job are submitted.
 
+function print_all_packing_labels(job) {
+	if (!job) {
+		frappe.msgprint("Select a Job first.");
+		return;
+	}
+	window.open(
+		`/api/method/elemental_erp.api.download_packing_labels?job=${encodeURIComponent(job)}`,
+		"_blank"
+	);
+}
+
 frappe.ui.form.on("Packaging Entry", {
 	refresh(frm) {
 		if (frm.is_new()) return;
@@ -15,7 +26,7 @@ frappe.ui.form.on("Packaging Entry", {
 			);
 			frm.add_custom_button(
 				"Print All Packing Labels",
-				() => window.elemental_print_all_packing_labels(frm.doc.job),
+				() => print_all_packing_labels(frm.doc.job),
 				"View"
 			).addClass("btn-primary");
 		}

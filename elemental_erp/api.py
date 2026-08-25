@@ -628,14 +628,29 @@ def mark_job_packaging_completed(job):
 # into a specific box — so each box's contents are known before it ships.
 # ---------------------------------------------------------------------------
 
+LABEL_PRINT_ROLES = tuple(
+	dict.fromkeys(
+		(
+			*PRODUCTION_FLOOR_ROLES,
+			*QC_SCAN_ROLES,
+			*PACKAGING_SCAN_ROLES,
+			"Elemental Data Entry User",
+			"Elemental Data Entry HOD",
+			"Elemental Dispatch HOD",
+		)
+	)
+)
+
+
 @frappe.whitelist()
 def create_packing_labels(job, total_boxes):
 	"""Generates `total_boxes` Packing Box records (Box 1 of N ... Box N of N),
 	each with a unique QR image, ready to print and stick on the boxes."""
 	from elemental_erp.utils.qr_generator import generate_qr_image
 
+	_require_roles(*PACKAGING_SCAN_ROLES)
 	job_doc = frappe.get_doc("Job", job)
-	require_doc_permission(job_doc, "write")
+	require_doc_permission(job_doc, "read")
 	assert_active_job(job)
 	total_boxes = int(total_boxes)
 	if total_boxes <= 0:
@@ -673,25 +688,82 @@ def create_packing_labels(job, total_boxes):
 
 
 @frappe.whitelist()
-def download_packing_labels(job):
-	"""Download every Packing Box Label for a Job as one ordered PDF."""
+def get_label_print_center_data(job):
+	"""Return the selected Job and its available Packing Box label range."""
+	_require_roles(*LABEL_PRINT_ROLES)
+	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "read")
+	boxes = frappe.get_all(
+		"Packing Box",
+		filters={"job": job, "status": ["!=", "Cancelled"]},
+		fields=["box_no", "status"],
+		order_by="box_no asc",
+		limit_page_length=0,
+	)
+	box_numbers = [int(box.box_no) for box in boxes]
+	return {
+		"job": {
+			"name": job_doc.name,
+			"job_name": job_doc.job_name,
+			"customer": job_doc.customer,
+			"job_location": job_doc.get("job_location"),
+			"status": job_doc.status,
+		},
+		"packing_boxes": {
+			"count": len(box_numbers),
+			"first": min(box_numbers) if box_numbers else 0,
+			"last": max(box_numbers) if box_numbers else 0,
+			"configured_total": int(job_doc.get("total_packing_boxes") or 0),
+		},
+	}
+
+
+@frappe.whitelist()
+def download_packing_labels(job, box_from=None, box_to=None):
+	"""Download all or an inclusive Box No. range as one ordered PDF."""
 	from frappe.utils.print_format import download_multi_pdf
 
 	_require_roles(*PACKAGING_SCAN_ROLES, "Elemental Dispatch HOD")
 	job_doc = frappe.get_doc("Job", job)
 	require_doc_permission(job_doc, "read")
-	box_names = frappe.get_all(
+	range_requested = box_from not in (None, "") or box_to not in (None, "")
+	if range_requested and (box_from in (None, "") or box_to in (None, "")):
+		frappe.throw("Enter both From Box No. and To Box No.")
+	filters = {"job": job, "status": ["!=", "Cancelled"]}
+	if range_requested:
+		try:
+			box_from = int(box_from)
+			box_to = int(box_to)
+		except (TypeError, ValueError):
+			frappe.throw("Box range must use whole numbers.")
+		if box_from <= 0 or box_to <= 0:
+			frappe.throw("Box range must use positive numbers.")
+		if box_from > box_to:
+			frappe.throw("From Box No. cannot be greater than To Box No.")
+		if box_to - box_from + 1 > 1000:
+			frappe.throw("A single print range cannot exceed 1000 labels.")
+		filters["box_no"] = ["between", [box_from, box_to]]
+
+	boxes = frappe.get_all(
 		"Packing Box",
-		filters={"job": job, "status": ["!=", "Cancelled"]},
-		pluck="name",
+		filters=filters,
+		fields=["name", "box_no"],
 		order_by="box_no asc",
 		limit_page_length=0,
 	)
-	if not box_names:
-		frappe.throw(f"No active Packing Box labels exist for Job {job}.")
+	if not boxes:
+		frappe.throw(f"No active Packing Box labels exist for Job {job} in the selected range.")
+	if range_requested:
+		actual_numbers = {int(box.box_no) for box in boxes}
+		missing_numbers = [number for number in range(box_from, box_to + 1) if number not in actual_numbers]
+		if missing_numbers:
+			preview = ", ".join(str(number) for number in missing_numbers[:10])
+			if len(missing_numbers) > 10:
+				preview += ", ..."
+			frappe.throw(f"Packing Box label(s) {preview} do not exist for Job {job}.")
 	return download_multi_pdf(
 		"Packing Box",
-		frappe.as_json(box_names),
+		frappe.as_json([box.name for box in boxes]),
 		format="Packing Box Label",
 		no_letterhead=True,
 	)

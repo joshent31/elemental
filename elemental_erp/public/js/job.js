@@ -53,6 +53,27 @@ frappe.ui.form.on("Job", {
 			"Elemental Packaging User",
 			"Elemental Packaging HOD",
 		].some((role) => (frappe.user_roles || []).includes(role));
+		const canPrintFGLabels = [
+			"System Manager",
+			"Elemental QC User",
+			"Elemental QC HOD",
+			"Elemental Packaging HOD",
+		].some((role) => (frappe.user_roles || []).includes(role));
+		const canPrintSubpartLabels = [
+			"System Manager",
+			"Elemental Data Entry User",
+			"Elemental Data Entry HOD",
+			"Elemental Production User",
+			"Elemental Production HOD",
+			"Elemental Packaging User",
+			"Elemental Packaging HOD",
+		].some((role) => (frappe.user_roles || []).includes(role));
+		if (canPrintProductionLabels || canPrintPackingLabels) {
+			frm.add_custom_button("Label Print Center", () => {
+				frappe.route_options = { job: frm.doc.name };
+				frappe.set_route("label-print-center");
+			}).addClass("btn-primary");
+		}
 		if (canPrintPackingLabels) {
 			frm.add_custom_button(
 				"Print All Packing Labels",
@@ -93,16 +114,20 @@ frappe.ui.form.on("Job", {
 				() => window.elemental_print_job_format(frm.doc.name, "Job All Production QR Labels"),
 				"Bulk Print Labels"
 			).addClass("btn-primary");
-			frm.add_custom_button(
-				"Print All FG / QC Labels",
-				() => window.elemental_download_job_label_pdf(frm.doc.name, "download_job_fg_labels"),
-				"Bulk Print Labels"
-			);
-			frm.add_custom_button(
-				"Print All Subpart Labels",
-				() => window.elemental_download_job_label_pdf(frm.doc.name, "download_job_subpart_labels"),
-				"Bulk Print Labels"
-			);
+			if (canPrintFGLabels) {
+				frm.add_custom_button(
+					"Print All FG / QC Labels",
+					() => window.elemental_download_job_label_pdf(frm.doc.name, "download_job_fg_labels"),
+					"Bulk Print Labels"
+				);
+			}
+			if (canPrintSubpartLabels) {
+				frm.add_custom_button(
+					"Print All Subpart Labels",
+					() => window.elemental_download_job_label_pdf(frm.doc.name, "download_job_subpart_labels"),
+					"Bulk Print Labels"
+				);
+			}
 		}
 
 		if (isTerminal) {

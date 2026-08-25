@@ -6,10 +6,6 @@ app_email = "dev@elemental.com"
 app_license = "mit"
 required_apps = ["erpnext"]
 
-# Includes in <head>
-# ------------------
-app_include_js = "/assets/elemental_erp/js/job.js"
-
 # Install the Work from Home list-query compatibility wrapper through Frappe's
 # request lifecycle. Import-time side effects in hooks.py are not reliable when
 # Frappe reads cached hook metadata.
@@ -64,8 +60,9 @@ website_route_rules = [
 	{"from_route": "/qr/<qr_value>", "to_route": "qr_scan"},
 ]
 
-# Client scripts loaded per-doctype (in addition to app_include_js above)
+# Client scripts loaded per DocType.
 doctype_js = {
+	"Job": "public/js/job.js",
 	"Material Indent": "public/js/material_indent.js",
 	"Material Issue": "public/js/material_issue.js",
 	"Elemental Quotation": "public/js/quotation.js",

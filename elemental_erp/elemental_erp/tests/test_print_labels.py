@@ -30,6 +30,16 @@ JOB_SCHEMA = APP_ROOT / "elemental_erp" / "doctype" / "job" / "job.json"
 JOB_DASHBOARD = APP_ROOT / "elemental_erp" / "doctype" / "job" / "job_dashboard.py"
 JOB_CLIENT = APP_ROOT / "public" / "js" / "job.js"
 PACKAGING_CLIENT = APP_ROOT / "public" / "js" / "packaging_entry.js"
+LABEL_PRINT_PAGE = (
+	APP_ROOT / "elemental_erp" / "page" / "label_print_center" / "label_print_center.js"
+)
+LABEL_PRINT_PAGE_SCHEMA = (
+	APP_ROOT / "elemental_erp" / "page" / "label_print_center" / "label_print_center.json"
+)
+WORKSPACE = (
+	APP_ROOT / "elemental_erp" / "workspace" / "elemental_fixtures" / "elemental_fixtures.json"
+)
+HOOKS_SOURCE = APP_ROOT / "hooks.py"
 API_SOURCE = APP_ROOT / "api.py"
 
 
@@ -43,12 +53,22 @@ class TestEmployeeBadge(unittest.TestCase):
 
 class TestPackingBoxLabels(unittest.TestCase):
 	def test_job_has_location_and_description_fields(self):
-		fields = {
-			row["fieldname"]
-			for row in json.loads(JOB_SCHEMA.read_text(encoding="utf-8"))["fields"]
-		}
+		job_schema = json.loads(JOB_SCHEMA.read_text(encoding="utf-8"))
+		fields = {row["fieldname"] for row in job_schema["fields"]}
 		self.assertIn("job_location", fields)
 		self.assertIn("job_description", fields)
+
+	def test_operational_label_roles_can_print_jobs(self):
+		job_schema = json.loads(JOB_SCHEMA.read_text(encoding="utf-8"))
+		permissions = {row["role"]: row for row in job_schema["permissions"]}
+		for role in (
+			"Elemental Data Entry User",
+			"Elemental Production User",
+			"Elemental QC User",
+			"Elemental Packaging User",
+		):
+			with self.subTest(role=role):
+				self.assertEqual(permissions[role].get("print"), 1)
 
 	def test_label_contains_job_and_sequence_details(self):
 		html = json.loads(PACKING_FORMAT.read_text(encoding="utf-8"))["html"]
@@ -68,8 +88,42 @@ class TestPackingBoxLabels(unittest.TestCase):
 		self.assertIn("elemental_print_all_packing_labels", job_client)
 		self.assertIn('"Print All Packing Labels"', job_client)
 		self.assertIn('"Print All Packing Labels"', packaging_client)
-		self.assertIn("def download_packing_labels(job):", api_source)
+		self.assertIn("def download_packing_labels(job, box_from=None, box_to=None):", api_source)
 		self.assertIn("download_multi_pdf", api_source)
+
+	def test_job_script_is_registered_on_the_job_doctype(self):
+		hooks = HOOKS_SOURCE.read_text(encoding="utf-8")
+		self.assertIn('"Job": "public/js/job.js"', hooks)
+		self.assertNotIn('app_include_js = "/assets/elemental_erp/js/job.js"', hooks)
+
+	def test_print_center_supports_packing_box_ranges(self):
+		page = LABEL_PRINT_PAGE.read_text(encoding="utf-8")
+		api_source = API_SOURCE.read_text(encoding="utf-8")
+		for expected in (
+			"From Box No.",
+			"To Box No.",
+			"Generate &amp; Print All",
+			"Print Selected Range",
+			"Print All Packing Labels",
+			"create_packing_labels",
+		):
+			with self.subTest(expected=expected):
+				self.assertIn(expected, page)
+		for expected in (
+			'filters["box_no"] = ["between", [box_from, box_to]]',
+			"missing_numbers",
+			"def get_label_print_center_data(job):",
+		):
+			with self.subTest(expected=expected):
+				self.assertIn(expected, api_source)
+
+	def test_print_center_is_installed_and_linked_in_workspace(self):
+		page = json.loads(LABEL_PRINT_PAGE_SCHEMA.read_text(encoding="utf-8"))
+		workspace = json.loads(WORKSPACE.read_text(encoding="utf-8"))
+		self.assertEqual(page["name"], "label-print-center")
+		self.assertTrue(
+			any(link.get("link_to") == "label-print-center" for link in workspace["links"])
+		)
 
 
 class TestJobProductionLabels(unittest.TestCase):

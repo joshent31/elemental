@@ -40,6 +40,16 @@
         {
             "hidden": 0,
             "is_query_report": 0,
+            "label": "Label Print Center",
+            "link_count": 0,
+            "link_to": "label-print-center",
+            "link_type": "Page",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
             "label": "Gate Check-in/Out (Mobile App)",
             "link_count": 0,
             "link_to": "gate-scan",
