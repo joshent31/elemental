@@ -3,9 +3,10 @@
  "name": "QR Scan Log",
  "module": "Elemental ERP",
  "custom": 0,
- "autoname": "hash",
+ "autoname": "naming_series:",
  "engine": "InnoDB",
  "fields": [
+  {"fieldname":"naming_series","label":"Series","fieldtype":"Select","options":"QSL-.YYYY.-","default":"QSL-.YYYY.-","reqd":1,"read_only":1},
   {
    "fieldname": "qr_code_master",
    "label": "QR Code",

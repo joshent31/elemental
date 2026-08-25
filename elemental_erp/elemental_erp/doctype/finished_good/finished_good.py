@@ -43,6 +43,9 @@ def generate_part_code():
 
 class FinishedGood(Document):
 	def before_validate(self):
+		if not (self.fg_code or "").strip():
+			self.fg_code = make_autoname(self.naming_series or "FG-.#####")
+
 		# Populate before mandatory child-field validation. The browser normally
 		# generates this as soon as Add Row is clicked; this is the authoritative
 		# fallback for imports, API inserts, and slow/offline clients.

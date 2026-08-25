@@ -14,6 +14,7 @@
    "label": "Series",
    "fieldtype": "Select",
    "options": "JOB-.YYYY.-",
+   "default": "JOB-.YYYY.-",
    "reqd": 1
   },
   {

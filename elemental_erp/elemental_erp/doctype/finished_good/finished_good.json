@@ -10,11 +10,20 @@
  "image_field": "fg_image",
  "fields": [
   {
+   "fieldname": "naming_series",
+   "label": "Series",
+   "fieldtype": "Select",
+   "options": "FG-.#####",
+   "default": "FG-.#####",
+   "reqd": 1
+  },
+  {
    "fieldname": "fg_code",
    "label": "FG Code",
    "fieldtype": "Data",
    "reqd": 1,
    "unique": 1,
+   "read_only": 1,
    "in_list_view": 1,
    "columns": 2,
    "description": "e.g. 2373921, 252602644-STD-C-TYPE-SHELF"

@@ -12,6 +12,7 @@
    "label": "Series",
    "fieldtype": "Select",
    "options": "PRD-.YYYY.-",
+   "default": "PRD-.YYYY.-",
    "reqd": 1
   },
   {

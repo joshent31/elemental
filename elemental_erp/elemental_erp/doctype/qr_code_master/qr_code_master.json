@@ -3,10 +3,11 @@
  "name": "QR Code Master",
  "module": "Elemental ERP",
  "custom": 0,
- "autoname": "hash",
+ "autoname": "naming_series:",
  "engine": "InnoDB",
  "editable_grid": 1,
  "fields": [
+  {"fieldname":"naming_series","label":"Series","fieldtype":"Select","options":"QRM-.YYYY.-","default":"QRM-.YYYY.-","reqd":1,"read_only":1},
   {
    "fieldname": "job",
    "label": "Job",

@@ -13,6 +13,7 @@
    "label": "Series",
    "fieldtype": "Select",
    "options": "IND-.YYYY.-",
+   "default": "IND-.YYYY.-",
    "reqd": 1
   },
   {

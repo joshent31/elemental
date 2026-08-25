@@ -3,11 +3,12 @@
  "name": "Packing Box",
  "module": "Elemental ERP",
  "custom": 0,
- "autoname": "hash",
+ "autoname": "naming_series:",
  "engine": "InnoDB",
  "editable_grid": 1,
  "image_field": "box_qr_image",
  "fields": [
+  {"fieldname":"naming_series","label":"Series","fieldtype":"Select","options":"PBOX-.YYYY.-","default":"PBOX-.YYYY.-","reqd":1,"read_only":1},
   {
    "fieldname": "job",
    "label": "Job",

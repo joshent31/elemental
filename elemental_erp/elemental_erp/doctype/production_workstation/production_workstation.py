@@ -1,8 +1,13 @@
 import frappe
 from frappe.model.document import Document
+from frappe.model.naming import make_autoname
 
 
 class ProductionWorkstation(Document):
+	def before_validate(self):
+		if not (self.workstation_code or "").strip():
+			self.workstation_code = make_autoname(self.naming_series or "WS-.#####")
+
 	def validate(self):
 		self.workstation_code = (self.workstation_code or "").strip().upper()
 		if not self.workstation_code:
@@ -27,4 +32,3 @@ class ProductionWorkstation(Document):
 			{"qr_value": qr_value, "scan_url": scan_url, "qr_image": qr_image},
 			update_modified=False,
 		)
-
