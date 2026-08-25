@@ -1,3 +1,4 @@
+import base64
 import math
 from urllib.parse import quote
 
@@ -720,8 +721,9 @@ def get_label_print_center_data(job):
 
 @frappe.whitelist()
 def download_packing_labels(job, box_from=None, box_to=None):
-	"""Download all or an inclusive Box No. range as one ordered PDF."""
-	from frappe.utils.print_format import download_multi_pdf
+	"""Render all selected box labels in one HTML document and one PDF pass."""
+	from frappe.utils.file_manager import get_file
+	from frappe.utils.pdf import get_pdf
 
 	_require_roles(*PACKAGING_SCAN_ROLES, "Elemental Dispatch HOD")
 	job_doc = frappe.get_doc("Job", job)
@@ -747,7 +749,7 @@ def download_packing_labels(job, box_from=None, box_to=None):
 	boxes = frappe.get_all(
 		"Packing Box",
 		filters=filters,
-		fields=["name", "box_no"],
+		fields=["name", "box_no", "total_boxes", "box_qr_value", "box_qr_image"],
 		order_by="box_no asc",
 		limit_page_length=0,
 	)
@@ -761,12 +763,38 @@ def download_packing_labels(job, box_from=None, box_to=None):
 			if len(missing_numbers) > 10:
 				preview += ", ..."
 			frappe.throw(f"Packing Box label(s) {preview} do not exist for Job {job}.")
-	return download_multi_pdf(
-		"Packing Box",
-		frappe.as_json([box.name for box in boxes]),
-		format="Packing Box Label",
-		no_letterhead=True,
+	for box in boxes:
+		box.qr_image_src = ""
+		if box.box_qr_image:
+			try:
+				_, content = get_file(box.box_qr_image)
+				if isinstance(content, str):
+					content = content.encode()
+				encoded = base64.b64encode(content).decode("ascii")
+				box.qr_image_src = f"data:image/png;base64,{encoded}"
+			except Exception:
+				box.qr_image_src = ""
+
+	html = frappe.render_template(
+		"elemental_erp/templates/print_formats/packing_box_labels.html",
+		{"job": job_doc, "boxes": boxes},
 	)
+	pdf = get_pdf(
+		html,
+		options={
+			"page-size": "A4",
+			"margin-top": "8mm",
+			"margin-right": "8mm",
+			"margin-bottom": "8mm",
+			"margin-left": "8mm",
+			"disable-smart-shrinking": "",
+		},
+	)
+	first_box = int(boxes[0].box_no)
+	last_box = int(boxes[-1].box_no)
+	frappe.local.response.filename = f"Packing-Labels-{job}-{first_box}-to-{last_box}.pdf"
+	frappe.local.response.filecontent = pdf
+	frappe.local.response.type = "pdf"
 
 
 def _require_production_label_roles():

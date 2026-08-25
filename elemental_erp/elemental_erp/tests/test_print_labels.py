@@ -8,6 +8,7 @@ from pathlib import Path
 APP_ROOT = Path(__file__).resolve().parents[2]
 EMPLOYEE_FORMAT = APP_ROOT / "elemental_erp" / "print_format" / "employee_id_badge" / "employee_id_badge.json"
 PACKING_FORMAT = APP_ROOT / "elemental_erp" / "print_format" / "packing_box_label" / "packing_box_label.json"
+PACKING_BULK_TEMPLATE = APP_ROOT / "templates" / "print_formats" / "packing_box_labels.html"
 JOB_TRAVELLER_FORMAT = (
 	APP_ROOT
 	/ "elemental_erp"
@@ -116,6 +117,19 @@ class TestPackingBoxLabels(unittest.TestCase):
 		):
 			with self.subTest(expected=expected):
 				self.assertIn(expected, api_source)
+
+	def test_bulk_packing_pdf_is_rendered_in_one_pass(self):
+		api_source = API_SOURCE.read_text(encoding="utf-8")
+		packing_method = api_source.split("def download_packing_labels", 1)[1].split(
+			"def _require_production_label_roles", 1
+		)[0]
+		template = PACKING_BULK_TEMPLATE.read_text(encoding="utf-8")
+		self.assertIn("from frappe.utils.pdf import get_pdf", packing_method)
+		self.assertNotIn("download_multi_pdf", packing_method)
+		self.assertNotIn("frappe.utils.get_url", packing_method)
+		self.assertIn("frappe.local.response.filecontent = pdf", packing_method)
+		self.assertIn("{% for box in boxes %}", template)
+		self.assertIn("data:image/png;base64", packing_method)
 
 	def test_print_center_is_installed_and_linked_in_workspace(self):
 		page = json.loads(LABEL_PRINT_PAGE_SCHEMA.read_text(encoding="utf-8"))
