@@ -45,6 +45,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/qr_camera.js"></script>
 <script src="/assets/elemental_erp/js/job_scan_context.js"></script>
 <script>
 let transferQrValue = "{{ prefill_qr }}";
@@ -77,8 +78,9 @@ function loadTransfer(value) {
 }
 
 document.getElementById("start-scan-in").onclick = function () {
-	scanner.start(
-		{ facingMode: "environment" },
+	ElementalQrCamera.addSelectorButton(document.getElementById("scanner-in"));
+	ElementalQrCamera.start(
+		scanner,
 		{ fps: 10, qrbox: 220 },
 		(decodedText) => {
 			let value = decodedText.trim();
@@ -89,7 +91,7 @@ document.getElementById("start-scan-in").onclick = function () {
 			scanner.stop();
 			loadTransfer(value);
 		}
-	);
+	).catch(() => {});
 };
 
 document.getElementById("submit-receive").onclick = function () {

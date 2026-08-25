@@ -25,6 +25,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/qr_camera.js"></script>
 <script>
 const scanner = new Html5Qrcode("scanner-gate");
 
@@ -98,15 +99,16 @@ function handleScan(decodedText) {
 }
 
 document.getElementById("start-scan-gate").onclick = function () {
-	scanner.start(
-		{ facingMode: "environment" },
+	ElementalQrCamera.addSelectorButton(document.getElementById("scanner-gate"));
+	ElementalQrCamera.start(
+		scanner,
 		{ fps: 10, qrbox: 250 },
 		handleScan
 	).then(() => {
 		document.getElementById("start-scan-gate").style.display = "none";
 		document.getElementById("stop-scan-gate").style.display = "block";
 		document.getElementById("gate-idle-hint").style.display = "block";
-	});
+	}).catch(() => {});
 };
 
 document.getElementById("stop-scan-gate").onclick = function () {

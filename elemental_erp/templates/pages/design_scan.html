@@ -26,6 +26,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/qr_camera.js"></script>
 <script>
 let designQrValue = "{{ prefill_qr }}";
 const scanner = new Html5Qrcode("scanner-design");
@@ -50,8 +51,9 @@ function loadTask() {
 }
 
 document.getElementById("start-scan-design").onclick = function () {
-	scanner.start(
-		{ facingMode: "environment" },
+	ElementalQrCamera.addSelectorButton(document.getElementById("scanner-design"));
+	ElementalQrCamera.start(
+		scanner,
 		{ fps: 10, qrbox: 220 },
 		(decodedText) => {
 			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
@@ -59,7 +61,7 @@ document.getElementById("start-scan-design").onclick = function () {
 			scanner.stop();
 			loadTask();
 		}
-	);
+	).catch(() => {});
 };
 
 if (designQrValue) { loadTask(); }

@@ -54,14 +54,15 @@
 
 		startScanner() {
 			if (!this.scanner) this.scanner = new Html5Qrcode("scanner-job-context");
-			this.scanner.start(
-				{ facingMode: "environment" },
+			ElementalQrCamera.addSelectorButton(document.getElementById("scanner-job-context"));
+			ElementalQrCamera.start(
+				this.scanner,
 				{ fps: 10, qrbox: 220 },
 				(decodedText) => {
 					this.scanner.stop();
 					this.activate(decodedText);
 				}
-			);
+			).catch(() => {});
 		}
 
 		get name() {

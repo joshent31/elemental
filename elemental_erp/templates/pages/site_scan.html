@@ -29,6 +29,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/qr_camera.js"></script>
 <script>
 let boxQrValue = "{{ prefill_box }}";
 let currentJob = null;
@@ -86,8 +87,9 @@ function loadBox() {
 }
 
 document.getElementById("start-scan-site").onclick = function () {
-	scanner.start(
-		{ facingMode: "environment" },
+	ElementalQrCamera.addSelectorButton(document.getElementById("scanner-site"));
+	ElementalQrCamera.start(
+		scanner,
 		{ fps: 10, qrbox: 220 },
 		(decodedText) => {
 			const value = decodedText.split("/").filter(Boolean).pop().split("?")[0];
@@ -95,7 +97,7 @@ document.getElementById("start-scan-site").onclick = function () {
 			scanner.stop();
 			loadBox();
 		}
-	);
+	).catch(() => {});
 };
 
 if (boxQrValue) { loadBox(); }

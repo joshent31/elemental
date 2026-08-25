@@ -33,6 +33,7 @@
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/qr_camera.js"></script>
 <script>
 (() => {
   const selectedWorkers = new Map();
@@ -53,7 +54,8 @@
   async function stopScanner() { if (scanner) { try { await scanner.stop(); } catch(e) {} scanner.clear(); scanner=null; } $("worker-job-scanner").style.display="none"; }
   async function startScanner(target) {
     await stopScanner(); scanTarget=target; $("worker-job-scanner").style.display="block"; scanner=new Html5Qrcode("worker-job-scanner");
-    scanner.start({facingMode:"environment"},{fps:10,qrbox:240}, async (text) => { if(processing)return; processing=true; const value=valueFromQr(text,target); await stopScanner(); handleValue(target,value); processing=false; });
+    ElementalQrCamera.addSelectorButton($("worker-job-scanner"));
+    ElementalQrCamera.start(scanner,{fps:10,qrbox:240}, async (text) => { if(processing)return; processing=true; const value=valueFromQr(text,target); await stopScanner(); handleValue(target,value); processing=false; }).catch(() => stopScanner());
   }
   function handleValue(target, value) {
     if (target === "worker") { $("wj-worker").value=value; addWorker(); return; }

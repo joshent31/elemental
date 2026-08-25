@@ -38,6 +38,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/qr_camera.js"></script>
 {% if can_pack %}<script src="/assets/elemental_erp/js/job_scan_context.js"></script>{% endif %}
 <script>
 let boxQrValue = "{{ prefill_box }}";
@@ -119,15 +120,16 @@ function refreshBox(expectedJob) {
 }
 
 document.getElementById("start-scan-box").onclick = function () {
-	boxScanner.start(
-		{ facingMode: "environment" },
+	ElementalQrCamera.addSelectorButton(document.getElementById("scanner-box"));
+	ElementalQrCamera.start(
+		boxScanner,
 		{ fps: 10, qrbox: 220 },
 		(decodedText) => {
 			boxQrValue = extractQrValue(decodedText, "box");
 			boxScanner.stop();
 			refreshBox(canPack && jobContext ? jobContext.name : null);
 		}
-	);
+	).catch(() => {});
 };
 
 if (boxQrValue) refreshBox(null);
@@ -138,8 +140,9 @@ if (canPack) {
 			frappe.msgprint("Activate the Job before adding box contents.");
 			return;
 		}
-		partScanner.start(
-			{ facingMode: "environment" },
+		ElementalQrCamera.addSelectorButton(document.getElementById("scanner-part"));
+		ElementalQrCamera.start(
+			partScanner,
 			{ fps: 10, qrbox: 220 },
 			(decodedText) => {
 				const value = extractQrValue(decodedText, "part");
@@ -162,7 +165,7 @@ if (canPack) {
 					},
 				});
 			}
-		);
+		).catch(() => {});
 	};
 
 	document.getElementById("add-part-btn").onclick = function () {

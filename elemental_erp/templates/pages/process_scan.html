@@ -35,6 +35,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="/assets/elemental_erp/js/qr_camera.js"></script>
 <script src="/assets/elemental_erp/js/job_scan_context.js"></script>
 <script>
 let partQrValue = "{{ prefill_part }}";
@@ -120,15 +121,16 @@ function loadLabel() {
 
 document.getElementById("process-name").onchange = updateSuggestedQty;
 document.getElementById("start-scan").onclick = function () {
-	scanner.start(
-		{ facingMode: "environment" },
+	ElementalQrCamera.addSelectorButton(document.getElementById("scanner-part"));
+	ElementalQrCamera.start(
+		scanner,
 		{ fps: 10, qrbox: 220 },
 		(decodedText) => {
 			partQrValue = extractQrValue(decodedText);
 			scanner.stop();
 			loadLabel();
 		}
-	);
+	).catch(() => {});
 };
 
 document.getElementById("complete-btn").onclick = function () {
