@@ -42,6 +42,14 @@ def generate_part_code():
 
 
 class FinishedGood(Document):
+	def before_validate(self):
+		# Populate before mandatory child-field validation. The browser normally
+		# generates this as soon as Add Row is clicked; this is the authoritative
+		# fallback for imports, API inserts, and slow/offline clients.
+		for row in self.subparts or []:
+			if not (row.get("part_code") or "").strip():
+				row.part_code = generate_part_code()
+
 	def validate(self):
 		if not self.subparts:
 			frappe.msgprint(
@@ -52,8 +60,6 @@ class FinishedGood(Document):
 
 		seen_codes = set()
 		for row in self.subparts:
-			if not (row.get("part_code") or "").strip():
-				row.part_code = generate_part_code()
 			processes = selected_processes(row, migrate_legacy=False)
 			if not processes:
 				frappe.throw(f"Select at least one process for subpart {row.get('part_code') or row.idx}.")
@@ -65,3 +71,14 @@ class FinishedGood(Document):
 			seen_codes.add(part_code)
 			if float(row.get("qty_per_fg") or 0) <= 0:
 				frappe.throw(f"Qty per FG must be greater than zero for subpart {part_code}.")
+
+
+@frappe.whitelist()
+def get_next_part_code():
+	"""Return a reserved code immediately when the user adds a child row."""
+	if not (
+		frappe.has_permission("Finished Good", ptype="create")
+		or frappe.has_permission("Finished Good", ptype="write")
+	):
+		frappe.throw("You do not have permission to edit Finished Goods.", frappe.PermissionError)
+	return generate_part_code()

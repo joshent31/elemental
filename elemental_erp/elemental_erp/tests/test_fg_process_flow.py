@@ -24,6 +24,7 @@ class TestFinishedGoodProcessFlow(unittest.TestCase):
 				return self.get(key)
 
 		frappe = types.ModuleType("frappe")
+		frappe.whitelist = lambda: (lambda function: function)
 		model = types.ModuleType("frappe.model")
 		model.__path__ = []
 		document = types.ModuleType("frappe.model.document")
@@ -63,9 +64,14 @@ class TestFinishedGoodProcessFlow(unittest.TestCase):
 
 	def test_part_code_is_generated_from_locked_frappe_series(self):
 		source = FINISHED_GOOD.read_text(encoding="utf-8")
+		client = CLIENT.read_text(encoding="utf-8")
 		self.assertIn('make_autoname("PART-.#####")', source)
+		self.assertIn("def before_validate(self):", source)
 		self.assertIn("row.part_code = generate_part_code()", source)
 		self.assertIn('frappe.db.exists("FG Subpart", {"part_code": part_code})', source)
+		self.assertIn("subparts_add", client)
+		self.assertIn("get_next_part_code", client)
+		self.assertIn('frappe.model.set_value(cdt, cdn, "part_code"', client)
 
 	def test_save_builds_ordered_flow_and_legacy_storage(self):
 		source = FINISHED_GOOD.read_text(encoding="utf-8")
