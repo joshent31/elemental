@@ -697,6 +697,71 @@ def download_packing_labels(job):
 	)
 
 
+def _require_production_label_roles():
+	_require_roles(
+		*PRODUCTION_FLOOR_ROLES,
+		*QC_SCAN_ROLES,
+		*PACKAGING_SCAN_ROLES,
+		"Elemental Data Entry User",
+		"Elemental Data Entry HOD",
+	)
+
+
+@frappe.whitelist()
+def download_job_fg_labels(job):
+	"""Download every Job/Finished-Good QC label as one ordered PDF."""
+	from frappe.utils.print_format import download_multi_pdf
+
+	_require_production_label_roles()
+	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "read")
+	inspection_names = frappe.get_all(
+		"QC Inspection",
+		filters={"job": job, "status": ["!=", "Cancelled"]},
+		pluck="name",
+		order_by="finished_good asc",
+		limit_page_length=0,
+	)
+	if not inspection_names:
+		frappe.throw(f"No Finished Good QR labels exist for Job {job}.")
+	return download_multi_pdf(
+		"QC Inspection",
+		frappe.as_json(inspection_names),
+		format="Job FG QR Label",
+		no_letterhead=True,
+	)
+
+
+@frappe.whitelist()
+def download_job_subpart_labels(job):
+	"""Refresh and download every Job subpart label as one ordered PDF."""
+	from frappe.utils.print_format import download_multi_pdf
+	from elemental_erp.elemental_erp.doctype.job_subpart_label.job_subpart_label import (
+		reconcile_job_subpart_trackers,
+	)
+
+	_require_production_label_roles()
+	job_doc = frappe.get_doc("Job", job)
+	require_doc_permission(job_doc, "read")
+	reconcile_job_subpart_trackers(job)
+	frappe.db.commit()
+	label_names = frappe.get_all(
+		"Job Subpart Label",
+		filters={"job": job},
+		pluck="name",
+		order_by="finished_good asc, creation asc",
+		limit_page_length=0,
+	)
+	if not label_names:
+		frappe.throw(f"No subpart QR labels exist for Job {job}.")
+	return download_multi_pdf(
+		"Job Subpart Label",
+		frappe.as_json(label_names),
+		format="Job Subpart QR Label",
+		no_letterhead=True,
+	)
+
+
 def _get_box_contents(box_name, job):
 	"""Return packed rows with the diagram and master data needed on mobile."""
 	rows = frappe.get_all(

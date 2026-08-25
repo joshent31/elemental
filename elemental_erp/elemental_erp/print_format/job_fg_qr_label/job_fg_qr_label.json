@@ -1,0 +1,10 @@
+{
+ "doctype": "Print Format",
+ "name": "Job FG QR Label",
+ "doc_type": "QC Inspection",
+ "module": "Elemental ERP",
+ "print_format_type": "Jinja",
+ "standard": "Yes",
+ "disabled": 0,
+ "html": "<style>\n.fg-label { width:100mm; min-height:65mm; border:2px solid #111; padding:5mm; box-sizing:border-box; font-family:Arial,sans-serif; }\n.fg-label .top { font-size:14px; font-weight:bold; border-bottom:1px solid #333; padding-bottom:2mm; margin-bottom:3mm; }\n.fg-label .body { display:flex; gap:5mm; align-items:center; }\n.fg-label .qr { width:35mm; height:35mm; object-fit:contain; }\n.fg-label .diagram { width:32mm; height:30mm; object-fit:contain; border:1px solid #ddd; }\n.fg-label .detail { font-size:12px; line-height:1.5; flex:1; }\n</style>\n{% set fg = frappe.get_doc('Finished Good', doc.finished_good) %}\n{% set job_qty = frappe.db.get_value('Job FG Item', {'parent': doc.job, 'parenttype': 'Job', 'finished_good': doc.finished_good}, 'job_qty') %}\n<div class=\"fg-label\">\n  <div class=\"top\">JOB {{ doc.job }} — FINISHED GOOD QR</div>\n  <div class=\"body\">\n    <div style=\"text-align:center;\">{% if doc.qr_image %}<img src=\"{{ doc.qr_image }}\" class=\"qr\">{% endif %}<br><b>{{ doc.name }}</b></div>\n    <div class=\"detail\"><b>FG Code:</b> {{ fg.fg_code }}<br><b>Description:</b> {{ fg.fg_name }}<br><b>Job Qty:</b> {{ job_qty or 0 }} {{ fg.default_uom or '' }}<br><b>QC Status:</b> {{ doc.status }}</div>\n    <div style=\"text-align:center;\">{% if fg.fg_image %}<img src=\"{{ fg.fg_image }}\" class=\"diagram\"><br>FG IMAGE{% else %}<b>FG image not uploaded</b>{% endif %}</div>\n  </div>\n</div>"
+}

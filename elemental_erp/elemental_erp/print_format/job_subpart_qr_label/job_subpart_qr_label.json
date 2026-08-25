@@ -1,0 +1,10 @@
+{
+ "doctype": "Print Format",
+ "name": "Job Subpart QR Label",
+ "doc_type": "Job Subpart Label",
+ "module": "Elemental ERP",
+ "print_format_type": "Jinja",
+ "standard": "Yes",
+ "disabled": 0,
+ "html": "<style>\n.part-label { width:100mm; min-height:65mm; border:2px solid #111; padding:5mm; box-sizing:border-box; font-family:Arial,sans-serif; }\n.part-label .top { font-size:14px; font-weight:bold; border-bottom:1px solid #333; padding-bottom:2mm; margin-bottom:3mm; }\n.part-label .body { display:flex; gap:5mm; align-items:center; }\n.part-label .qr { width:35mm; height:35mm; object-fit:contain; }\n.part-label .diagram { width:30mm; height:28mm; object-fit:contain; border:1px solid #ddd; }\n.part-label .detail { font-size:12px; line-height:1.45; flex:1; }\n</style>\n<div class=\"part-label\">\n  <div class=\"top\">JOB {{ doc.job }} — SUBPART QR</div>\n  <div class=\"body\">\n    <div style=\"text-align:center;\">{% if doc.qr_image %}<img src=\"{{ doc.qr_image }}\" class=\"qr\">{% endif %}<br><b>{{ doc.name }}</b></div>\n    <div class=\"detail\"><b>FG:</b> {{ doc.finished_good }}<br><b>Part:</b> {{ doc.subpart_code }}<br><b>Description:</b> {{ doc.subpart_name }}<br><b>Total Qty:</b> {{ doc.total_qty }} {{ doc.uom or '' }}<br><b>Process:</b> {% for process in doc.processes %}{{ process.process_name }}{% if not loop.last %} → {% endif %}{% endfor %}</div>\n    <div style=\"text-align:center;\">{% if doc.ref_image %}<img src=\"{{ doc.ref_image }}\" class=\"diagram\"><br>REFERENCE{% else %}<b>Diagram not uploaded</b>{% endif %}</div>\n  </div>\n</div>"
+}

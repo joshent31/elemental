@@ -13,6 +13,24 @@ window.elemental_print_all_packing_labels = function (job) {
 	window.open(url, "_blank");
 };
 
+window.elemental_download_job_label_pdf = function (job, method) {
+	if (!job) {
+		frappe.msgprint("Select a Job first.");
+		return;
+	}
+	window.open(
+		`/api/method/elemental_erp.api.${method}?job=${encodeURIComponent(job)}`,
+		"_blank"
+	);
+};
+
+window.elemental_print_job_format = function (job, format) {
+	const url =
+		`/printview?doctype=Job&name=${encodeURIComponent(job)}` +
+		`&format=${encodeURIComponent(format)}&no_letterhead=1`;
+	window.open(url, "_blank");
+};
+
 frappe.ui.form.on("Job", {
 	refresh(frm) {
 		if (frm.is_new()) return;
@@ -24,23 +42,68 @@ frappe.ui.form.on("Job", {
 			"Elemental Packaging HOD",
 			"Elemental Dispatch HOD",
 		].some((role) => (frappe.user_roles || []).includes(role));
+		const canPrintProductionLabels = [
+			"System Manager",
+			"Elemental Data Entry User",
+			"Elemental Data Entry HOD",
+			"Elemental Production User",
+			"Elemental Production HOD",
+			"Elemental QC User",
+			"Elemental QC HOD",
+			"Elemental Packaging User",
+			"Elemental Packaging HOD",
+		].some((role) => (frappe.user_roles || []).includes(role));
 		if (canPrintPackingLabels) {
 			frm.add_custom_button(
 				"Print All Packing Labels",
 				() => window.elemental_print_all_packing_labels(frm.doc.name),
-				"View"
+				"Bulk Print Labels"
 			).addClass("btn-primary");
 		}
 		frm.add_custom_button(
 			"Print Job QR Label",
-			() => {
-				const url =
-					`/printview?doctype=Job&name=${encodeURIComponent(frm.doc.name)}` +
-					"&format=Job%20QR%20Label&no_letterhead=1";
-				window.open(url, "_blank");
-			},
-			"View"
+			() => window.elemental_print_job_format(frm.doc.name, "Job QR Label"),
+			"Bulk Print Labels"
 		);
+		frm.add_custom_button(
+			"Print Production Traveller",
+			() => {
+				const printWindow = window.open("about:blank", "_blank");
+				frappe.call({
+					method: "elemental_erp.api.prepare_job_production_traveller",
+					args: { job: frm.doc.name },
+					freeze: true,
+					freeze_message: "Preparing diagrams and subpart QR labels...",
+					callback: (response) => {
+						if (response.message) {
+							if (printWindow) printWindow.location = response.message.print_url;
+							else window.location = response.message.print_url;
+						}
+					},
+					error: () => {
+						if (printWindow) printWindow.close();
+					},
+				});
+			},
+			"Bulk Print Labels"
+		);
+		if (canPrintProductionLabels) {
+			frm.add_custom_button(
+				"Print Job + All FG + Subpart Labels",
+				() => window.elemental_print_job_format(frm.doc.name, "Job All Production QR Labels"),
+				"Bulk Print Labels"
+			).addClass("btn-primary");
+			frm.add_custom_button(
+				"Print All FG / QC Labels",
+				() => window.elemental_download_job_label_pdf(frm.doc.name, "download_job_fg_labels"),
+				"Bulk Print Labels"
+			);
+			frm.add_custom_button(
+				"Print All Subpart Labels",
+				() => window.elemental_download_job_label_pdf(frm.doc.name, "download_job_subpart_labels"),
+				"Bulk Print Labels"
+			);
+		}
 
 		if (isTerminal) {
 			frm.set_intro(
@@ -70,28 +133,6 @@ frappe.ui.form.on("Job", {
 		frm.add_custom_button(
 			"View Subpart Labels",
 			() => frappe.set_route("List", "Job Subpart Label", { job: frm.doc.name }),
-			"View"
-		);
-		frm.add_custom_button(
-			"Print Production Traveller",
-			() => {
-				const printWindow = window.open("about:blank", "_blank");
-				frappe.call({
-					method: "elemental_erp.api.prepare_job_production_traveller",
-					args: { job: frm.doc.name },
-					freeze: true,
-					freeze_message: "Preparing diagrams and subpart QR labels...",
-					callback: (response) => {
-						if (response.message) {
-							if (printWindow) printWindow.location = response.message.print_url;
-							else window.location = response.message.print_url;
-						}
-					},
-					error: () => {
-						if (printWindow) printWindow.close();
-					},
-				});
-			},
 			"View"
 		);
 		frm.add_custom_button(
