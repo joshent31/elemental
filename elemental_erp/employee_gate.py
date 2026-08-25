@@ -7,12 +7,12 @@ from elemental_erp.utils.qr_generator import generate_qr_image
 def generate_employee_qr(doc, method=None):
 	"""hooked on Employee.after_insert. Every Employee gets a unique QR the
 	moment they're created \u2014 print it onto their ID badge. Scanning it at
-	/gate-scan is what drives check-in/out (see gate_scan() in api.py)."""
+	/elemental-gate-scan is what drives check-in/out (see gate_scan() in api.py)."""
 	if doc.get("employee_qr_value"):
 		return  # already has one (e.g. re-triggered by a data import)
 
 	qr_value = frappe.generate_hash(length=12).upper()
-	scan_url = frappe.utils.get_url(f"/gate-scan?qr={qr_value}")
+	scan_url = frappe.utils.get_url(f"/elemental-gate-scan?qr={qr_value}")
 	file_url = generate_qr_image(qr_value, scan_url, "Employee", doc.name)
 
 	frappe.db.set_value(

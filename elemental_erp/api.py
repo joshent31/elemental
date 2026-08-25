@@ -2129,7 +2129,7 @@ def confirm_job_installation_complete(job, confirmed_by=None):
 
 @frappe.whitelist()
 def lookup_employee_qr(qr_value):
-	"""Used by /gate-scan right after a scan, to show who it is and what
+	"""Used by /elemental-gate-scan right after a scan, to show who it is and what
 	the next action will be, before actually logging it."""
 	_require_roles(*GATE_SCAN_ROLES)
 	employee = frappe.db.get_value(
@@ -2155,7 +2155,7 @@ def gate_scan(qr_value):
 	an OUT scan \u2014 rebuilds today's Attendance from the day's checkins.
 
 	Server-side duplicate guard: a badge held up to a continuously-running
-	camera (see /gate-scan) gets seen across many video frames, and the
+	camera (see /elemental-gate-scan) gets seen across many video frames, and the
 	page's own debounce is only a client-side safeguard \u2014 if it's ever
 	bypassed (a second gate device, a client bug, a slow network retry),
 	this refuses to log a second checkin for the same employee within a

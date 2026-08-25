@@ -47,23 +47,23 @@ def load_access(*, user="operator@example.com", roles=(), path="/scan-menu"):
 
 class TestMobilePageAccess(unittest.TestCase):
 	def test_guest_is_redirected_to_login_and_back_to_requested_page(self):
-		access, frappe = load_access(user="Guest", path="/gate-scan?qr=ABC")
+		access, frappe = load_access(user="Guest", path="/elemental-gate-scan?qr=ABC")
 		with self.assertRaises(FakeRedirect):
-			access.require_mobile_page("/gate-scan", *access.GATE_SCAN_ROLES)
+			access.require_mobile_page("/elemental-gate-scan", *access.GATE_SCAN_ROLES)
 		self.assertEqual(
 			frappe.local.flags.redirect_location,
-			"/login?redirect-to=%2Fgate-scan%3Fqr%3DABC",
+			"/login?redirect-to=%2Felemental-gate-scan%3Fqr%3DABC",
 		)
 
 	def test_assigned_role_can_open_its_page(self):
 		access, _ = load_access(roles=["Elemental HR Gate User"])
-		roles = access.require_mobile_page("/gate-scan", *access.GATE_SCAN_ROLES)
+		roles = access.require_mobile_page("/elemental-gate-scan", *access.GATE_SCAN_ROLES)
 		self.assertIn("Elemental HR Gate User", roles)
 
 	def test_unassigned_user_is_rejected(self):
 		access, _ = load_access(roles=["Elemental Sales User"])
 		with self.assertRaises(FakePermissionError):
-			access.require_mobile_page("/gate-scan", *access.GATE_SCAN_ROLES)
+			access.require_mobile_page("/elemental-gate-scan", *access.GATE_SCAN_ROLES)
 
 	def test_production_menu_only_enables_assigned_area(self):
 		access, _ = load_access(roles=["Elemental Packaging User"])
@@ -82,6 +82,13 @@ class TestMobilePageAccess(unittest.TestCase):
 
 
 class TestMobileRoutesAreProtected(unittest.TestCase):
+	def test_elemental_gate_route_does_not_collide_with_trip_dispatch(self):
+		pages = APP_ROOT / "templates" / "pages"
+		self.assertTrue((pages / "elemental_gate_scan.py").exists())
+		self.assertTrue((pages / "elemental_gate_scan.html").exists())
+		self.assertFalse((pages / "gate_scan.py").exists())
+		self.assertFalse((pages / "gate_scan.html").exists())
+
 	def test_each_scan_page_controller_has_a_role_gate(self):
 		for route in (
 			"mobile_app",
@@ -94,7 +101,7 @@ class TestMobileRoutesAreProtected(unittest.TestCase):
 			"pack_box",
 			"dispatch_scan",
 			"site_scan",
-			"gate_scan",
+			"elemental_gate_scan",
 			"worker_job_scan",
 		):
 			with self.subTest(route=route):

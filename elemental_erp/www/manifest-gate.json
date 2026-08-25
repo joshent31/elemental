@@ -1,7 +1,7 @@
 {
  "name": "Elemental Gate Check-in",
  "short_name": "Elemental Gate",
- "start_url": "/gate-scan",
+ "start_url": "/elemental-gate-scan",
  "scope": "/",
  "display": "standalone",
  "orientation": "portrait",
