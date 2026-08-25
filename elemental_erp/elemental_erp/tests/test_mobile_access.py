@@ -84,10 +84,12 @@ class TestMobilePageAccess(unittest.TestCase):
 class TestMobileRoutesAreProtected(unittest.TestCase):
 	def test_elemental_gate_route_does_not_collide_with_trip_dispatch(self):
 		pages = APP_ROOT / "templates" / "pages"
+		hooks = (APP_ROOT / "hooks.py").read_text(encoding="utf-8")
 		self.assertTrue((pages / "elemental_gate_scan.py").exists())
 		self.assertTrue((pages / "elemental_gate_scan.html").exists())
 		self.assertFalse((pages / "gate_scan.py").exists())
 		self.assertFalse((pages / "gate_scan.html").exists())
+		self.assertIn('{"from_route": "/elemental-gate-scan", "to_route": "elemental_gate_scan"}', hooks)
 
 	def test_each_scan_page_controller_has_a_role_gate(self):
 		for route in (
