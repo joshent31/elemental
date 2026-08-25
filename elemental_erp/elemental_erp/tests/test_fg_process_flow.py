@@ -25,12 +25,16 @@ class TestFinishedGoodProcessFlow(unittest.TestCase):
 
 		frappe = types.ModuleType("frappe")
 		model = types.ModuleType("frappe.model")
+		model.__path__ = []
 		document = types.ModuleType("frappe.model.document")
 		document.Document = object
+		naming = types.ModuleType("frappe.model.naming")
+		naming.make_autoname = lambda _series: "PART-00001"
 		modules = {
 			"frappe": frappe,
 			"frappe.model": model,
 			"frappe.model.document": document,
+			"frappe.model.naming": naming,
 		}
 		controller_path = APP_ROOT / "elemental_erp" / "doctype" / "finished_good" / "finished_good.py"
 		import importlib.util
@@ -55,6 +59,13 @@ class TestFinishedGoodProcessFlow(unittest.TestCase):
 		self.assertEqual(fields["process_flow"]["read_only"], 1)
 		self.assertEqual(fields["process_flow"]["in_list_view"], 1)
 		self.assertTrue(fields["processes"]["hidden"])
+		self.assertEqual(fields["part_code"]["read_only"], 1)
+
+	def test_part_code_is_generated_from_locked_frappe_series(self):
+		source = FINISHED_GOOD.read_text(encoding="utf-8")
+		self.assertIn('make_autoname("PART-.#####")', source)
+		self.assertIn("row.part_code = generate_part_code()", source)
+		self.assertIn('frappe.db.exists("FG Subpart", {"part_code": part_code})', source)
 
 	def test_save_builds_ordered_flow_and_legacy_storage(self):
 		source = FINISHED_GOOD.read_text(encoding="utf-8")

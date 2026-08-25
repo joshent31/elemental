@@ -1,5 +1,6 @@
 import frappe
 from frappe.model.document import Document
+from frappe.model.naming import make_autoname
 
 
 PROCESS_FIELDS = (
@@ -32,6 +33,14 @@ def selected_processes(row, migrate_legacy=True):
 	return selected
 
 
+def generate_part_code():
+	"""Generate one globally unique subpart code from Frappe's locked series."""
+	part_code = make_autoname("PART-.#####")
+	while frappe.db.exists("FG Subpart", {"part_code": part_code}):
+		part_code = make_autoname("PART-.#####")
+	return part_code
+
+
 class FinishedGood(Document):
 	def validate(self):
 		if not self.subparts:
@@ -43,6 +52,8 @@ class FinishedGood(Document):
 
 		seen_codes = set()
 		for row in self.subparts:
+			if not (row.get("part_code") or "").strip():
+				row.part_code = generate_part_code()
 			processes = selected_processes(row, migrate_legacy=False)
 			if not processes:
 				frappe.throw(f"Select at least one process for subpart {row.get('part_code') or row.idx}.")
