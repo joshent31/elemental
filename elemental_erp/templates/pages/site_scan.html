@@ -45,7 +45,7 @@ function loadBox() {
 				document.getElementById("site-box-info").innerHTML =
 					`Job: <b>${b.job}</b> — ${b.job_name || ""}<br>` +
 					`Location: <b>${b.job_location || "-"}</b><br>` +
-					(b.job_description ? `Description: ${b.job_description}<br>` : "") +
+					(b.job_name ? `Description: ${b.job_name}<br>` : "") +
 					`Box <b>${b.box_no}</b> of <b>${b.total_boxes}</b><br>Current Status: <b>${b.status}</b>`;
 				const contents = document.getElementById("site-box-contents");
 				contents.innerHTML = "";

@@ -53,11 +53,11 @@ class TestEmployeeBadge(unittest.TestCase):
 
 
 class TestPackingBoxLabels(unittest.TestCase):
-	def test_job_has_location_and_description_fields(self):
+	def test_job_has_location_without_duplicate_description_field(self):
 		job_schema = json.loads(JOB_SCHEMA.read_text(encoding="utf-8"))
 		fields = {row["fieldname"] for row in job_schema["fields"]}
 		self.assertIn("job_location", fields)
-		self.assertIn("job_description", fields)
+		self.assertNotIn("job_description", fields)
 
 	def test_operational_label_roles_can_print_jobs(self):
 		job_schema = json.loads(JOB_SCHEMA.read_text(encoding="utf-8"))
@@ -76,7 +76,7 @@ class TestPackingBoxLabels(unittest.TestCase):
 		for expected in (
 			"JOB NO: {{ doc.job }}",
 			"job.job_location",
-			"job.job_description",
+			"job.job_name",
 			"LABEL {{ doc.box_no }} OF {{ doc.total_boxes }}",
 		):
 			with self.subTest(expected=expected):

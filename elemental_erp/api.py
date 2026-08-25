@@ -51,7 +51,6 @@ def _resolve_job_context(job_code):
 		"job_name",
 		"customer",
 		"job_location",
-		"job_description",
 		"status",
 		"job_qr_value",
 		"job_qr_image",
@@ -1053,7 +1052,7 @@ def lookup_box(box_qr_value, job=None):
 	job_details = frappe.db.get_value(
 		"Job",
 		box.job,
-		["job_name", "job_location", "job_description", "customer"],
+		["job_name", "job_location", "customer"],
 		as_dict=True,
 	) or frappe._dict()
 	box.update(job_details)
@@ -2258,7 +2257,6 @@ def create_job_from_quotation(quotation):
 			"customer": q.customer,
 			"brand": q.brand,
 			"quotation": q.name,
-			"job_description": q.remarks,
 			"fg_items": [
 				{"finished_good": row.finished_good, "job_qty": row.qty}
 				for row in q.items

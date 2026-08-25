@@ -107,7 +107,7 @@ function refreshBox(expectedJob) {
 			document.getElementById("box-info").innerHTML =
 				`Job: <b>${box.job}</b> — ${box.job_name || ""}<br>` +
 				`Location: <b>${box.job_location || "-"}</b><br>` +
-				(box.job_description ? `Description: ${box.job_description}<br>` : "") +
+				(box.job_name ? `Description: ${box.job_name}<br>` : "") +
 				`Box <b>${box.box_no}</b> of <b>${box.total_boxes}</b> | Status: <b>${box.status}</b>`;
 			renderContents(box.contents);
 			document.getElementById("box-result").style.display = "block";
