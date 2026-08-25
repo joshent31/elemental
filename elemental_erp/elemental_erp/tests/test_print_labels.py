@@ -108,6 +108,18 @@ class TestJobProductionLabels(unittest.TestCase):
 			with self.subTest(expected=expected):
 				self.assertIn(expected, all_labels_format["html"])
 
+	def test_job_label_jinja_delimiters_are_balanced(self):
+		for format_path in (
+			JOB_TRAVELLER_FORMAT,
+			JOB_FG_FORMAT,
+			JOB_SUBPART_FORMAT,
+			JOB_ALL_LABELS_FORMAT,
+		):
+			html = json.loads(format_path.read_text(encoding="utf-8"))["html"]
+			with self.subTest(format=format_path.name):
+				self.assertNotIn("%>", html)
+				self.assertEqual(html.count("{%"), html.count("%}"))
+
 	def test_job_form_exposes_grouped_bulk_print_actions(self):
 		job_client = JOB_CLIENT.read_text(encoding="utf-8")
 		api_source = API_SOURCE.read_text(encoding="utf-8")
