@@ -21,9 +21,12 @@ class TestDepartmentOTRequest(unittest.TestCase):
 
 	def test_child_captures_worker_hours_and_reason(self):
 		doc = json.loads((DOCTYPE_ROOT / "department_ot_request_employee" / "department_ot_request_employee.json").read_text(encoding="utf-8"))
+		controller = DOCTYPE_ROOT / "department_ot_request_employee" / "department_ot_request_employee.py"
 		fields = {row.get("fieldname") for row in doc["fields"]}
 		self.assertEqual(doc["istable"], 1)
 		self.assertTrue({"employee", "requested_ot_hours", "reason"}.issubset(fields))
+		self.assertTrue(controller.exists(), "Frappe requires the child DocType controller during migrate")
+		self.assertIn("class DepartmentOTRequestEmployee(Document)", controller.read_text(encoding="utf-8"))
 
 	def test_controller_enforces_department_and_hr_review(self):
 		controller = (DOCTYPE_ROOT / "department_ot_request" / "department_ot_request.py").read_text(encoding="utf-8")
