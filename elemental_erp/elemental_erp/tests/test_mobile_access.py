@@ -90,6 +90,18 @@ class TestMobileRoutesAreProtected(unittest.TestCase):
 		self.assertIn("toggle-gate-sound", source)
 		self.assertIn("navigator.vibrate", source)
 
+	def test_gate_scan_resets_daily_and_respects_hrms_shift_auto_attendance(self):
+		api = (APP_ROOT / "api.py").read_text(encoding="utf-8")
+		gate = (APP_ROOT / "employee_gate.py").read_text(encoding="utf-8")
+		page = (APP_ROOT / "templates" / "pages" / "elemental_gate_scan.html").read_text(encoding="utf-8")
+		self.assertIn('"time": ["between", [f"{today} 00:00:00", f"{today} 23:59:59"]]', api)
+		self.assertIn('log_type = "OUT" if last_today and last_today.log_type == "IN" else "IN"', api)
+		self.assertIn("missed_previous_checkout", api)
+		self.assertIn('frappe.db.get_value("Shift Type", shift, "enable_auto_attendance")', gate)
+		self.assertIn('return None, "HRMS Shift Auto Attendance"', gate)
+		self.assertIn("Attendance will be processed by HRMS Shift Auto Attendance", page)
+		self.assertIn("Previous checkout missing", page)
+
 	def test_every_mobile_page_has_an_explicit_website_route(self):
 		hooks = (APP_ROOT / "hooks.py").read_text(encoding="utf-8")
 		for public_route, page in (

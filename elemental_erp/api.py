@@ -2141,8 +2141,12 @@ def lookup_employee_qr(qr_value):
 	if not employee:
 		frappe.throw("Employee QR not recognised", frappe.DoesNotExistError)
 
+	today = frappe.utils.nowdate()
 	last_log_type = frappe.db.get_value(
-		"Employee Checkin", {"employee": employee.name}, "log_type", order_by="time desc"
+		"Employee Checkin",
+		{"employee": employee.name, "time": ["between", [f"{today} 00:00:00", f"{today} 23:59:59"]]},
+		"log_type",
+		order_by="time desc",
 	)
 	employee["next_action"] = "OUT" if last_log_type == "IN" else "IN"
 	return employee
@@ -2183,7 +2187,20 @@ def gate_scan(qr_value):
 			"duplicate_ignored": True,
 		}
 
-	log_type = "OUT" if last_checkin and last_checkin.log_type == "IN" else "IN"
+	today = frappe.utils.nowdate()
+	last_today = frappe.db.get_value(
+		"Employee Checkin",
+		{"employee": employee.name, "time": ["between", [f"{today} 00:00:00", f"{today} 23:59:59"]]},
+		["name", "log_type", "time"], order_by="time desc", as_dict=True,
+	)
+	missed_previous_checkout = bool(
+		not last_today
+		and last_checkin
+		and last_checkin.log_type == "IN"
+		and frappe.utils.getdate(last_checkin.time) < frappe.utils.getdate(today)
+	)
+	# A forgotten OUT yesterday must never turn today's first arrival into OUT.
+	log_type = "OUT" if last_today and last_today.log_type == "IN" else "IN"
 
 	checkin = frappe.get_doc(
 		{
@@ -2196,13 +2213,14 @@ def gate_scan(qr_value):
 	checkin.insert(ignore_permissions=True)
 
 	attendance_name = None
+	attendance_managed_by = None
 	closed_job_logs = []
 	if log_type == "OUT":
-		from elemental_erp.employee_gate import upsert_attendance_for_day
+		from elemental_erp.employee_gate import process_attendance_after_checkin
 		from elemental_erp.worker_job import close_active_logs_for_gate_out
 
 		closed_job_logs = close_active_logs_for_gate_out(employee.name, checkin.time)
-		attendance_name = upsert_attendance_for_day(employee.name, frappe.utils.nowdate())
+		attendance_name, attendance_managed_by = process_attendance_after_checkin(checkin)
 
 	frappe.db.commit()
 	return {
@@ -2211,6 +2229,8 @@ def gate_scan(qr_value):
 		"log_type": log_type,
 		"time": checkin.time,
 		"attendance": attendance_name,
+		"attendance_managed_by": attendance_managed_by,
+		"missed_previous_checkout": missed_previous_checkout,
 		"closed_job_logs": len(closed_job_logs),
 	}
 
@@ -2777,10 +2797,9 @@ def installation_self_checkin(employee, action, photo=None, latitude=None, longi
 	})
 	checkin.insert(ignore_permissions=True)
 
-	# Auto-create attendance
-	from elemental_erp.employee_gate import upsert_attendance_for_day
-	today = frappe.utils.nowdate()
-	upsert_attendance_for_day(emp_name, today)
+	# Avoid duplicate Attendance when HRMS Shift Type Auto Attendance is enabled.
+	from elemental_erp.employee_gate import process_attendance_after_checkin
+	process_attendance_after_checkin(checkin)
 
 	emp_name_display = frappe.db.get_value("Employee", emp_name, "employee_name")
 	log_time = frappe.utils.format_datetime(frappe.utils.now_datetime(), "hh:mm a")

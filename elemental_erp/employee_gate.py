@@ -4,6 +4,14 @@ from frappe.utils import now_datetime, nowdate, time_diff_in_hours
 from elemental_erp.utils.qr_generator import generate_qr_image
 
 
+def process_attendance_after_checkin(checkin):
+	"""Defer to HRMS when the resolved Shift Type uses Auto Attendance."""
+	shift = checkin.get("shift")
+	if shift and frappe.db.get_value("Shift Type", shift, "enable_auto_attendance"):
+		return None, "HRMS Shift Auto Attendance"
+	return upsert_attendance_for_day(checkin.employee, frappe.utils.getdate(checkin.time)), "Elemental Gate"
+
+
 def generate_employee_qr(doc, method=None):
 	"""hooked on Employee.after_insert. Every Employee gets a unique QR the
 	moment they're created \u2014 print it onto their ID badge. Scanning it at

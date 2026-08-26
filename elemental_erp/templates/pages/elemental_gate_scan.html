@@ -123,6 +123,8 @@ function handleScan(decodedText) {
 				showResult(
 					`<b>${verb}, ${g.employee_name}</b><br>Marked <b>${g.log_type}</b> at ${g.time}` +
 					(g.attendance ? `<br><span style="font-size:13px;">Today's attendance updated.</span>` : "") +
+					(g.attendance_managed_by === "HRMS Shift Auto Attendance" ? `<br><span style="font-size:13px;">Attendance will be processed by HRMS Shift Auto Attendance.</span>` : "") +
+					(g.missed_previous_checkout ? `<br><span style="font-size:13px; color:#a15c00;"><b>Previous checkout missing:</b> today was safely started as IN. HR should review the previous day.</span>` : "") +
 					(g.closed_job_logs ? `<br><span style="font-size:13px; color:#a15c00;">${g.closed_job_logs} open Job allocation(s) automatically closed.</span>` : ""),
 					""
 				);
