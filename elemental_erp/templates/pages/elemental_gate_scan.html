@@ -17,6 +17,7 @@
 
   <button id="start-scan-gate" class="btn btn-primary btn-lg btn-block">Start Gate Camera</button>
   <button id="stop-scan-gate" class="btn btn-secondary btn-block" style="display:none; margin-top:8px;">Pause Camera</button>
+  <button id="toggle-gate-sound" class="btn btn-default btn-sm" style="margin-top:8px;">🔊 Sound On</button>
 
   <div id="gate-result" style="display:none; margin-top:20px; padding:18px; border-radius:8px; font-size:18px;"></div>
   <p id="gate-idle-hint" style="display:none; color:#999; font-size:12px; margin-top:14px;">
@@ -36,6 +37,46 @@ const RECENT_SCAN_COOLDOWN_MS = 8000;
 let lastScannedValue = null;
 let lastScannedAt = 0;
 let processing = false;
+let soundEnabled = true;
+let audioContext = null;
+
+function initialiseGateAudio() {
+	if (!audioContext) {
+		const AudioContext = window.AudioContext || window.webkitAudioContext;
+		if (AudioContext) audioContext = new AudioContext();
+	}
+	if (audioContext && audioContext.state === "suspended") audioContext.resume();
+}
+
+function playTone(frequency, startAt, duration, volume) {
+	if (!soundEnabled || !audioContext) return;
+	const oscillator = audioContext.createOscillator();
+	const gain = audioContext.createGain();
+	oscillator.type = "sine";
+	oscillator.frequency.value = frequency;
+	gain.gain.setValueAtTime(volume, startAt);
+	gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+	oscillator.connect(gain);
+	gain.connect(audioContext.destination);
+	oscillator.start(startAt);
+	oscillator.stop(startAt + duration);
+}
+
+function playGateSound(success) {
+	if (!soundEnabled) return;
+	initialiseGateAudio();
+	if (audioContext) {
+		const now = audioContext.currentTime;
+		if (success) {
+			playTone(740, now, 0.12, 0.22);
+			playTone(988, now + 0.14, 0.18, 0.25);
+		} else {
+			playTone(220, now, 0.22, 0.28);
+			playTone(165, now + 0.24, 0.32, 0.28);
+		}
+	}
+	if (navigator.vibrate) navigator.vibrate(success ? 80 : [160, 80, 160]);
+}
 
 function extractQrValue(decodedText) {
 	if (decodedText.includes("qr=")) {
@@ -75,6 +116,7 @@ function handleScan(decodedText) {
 		callback: function (r) {
 			processing = false;
 			if (r.message) {
+				playGateSound(true);
 				const g = r.message;
 				const verb = g.log_type === "IN" ? "Welcome" : "Goodbye";
 				const bg = g.log_type === "IN" ? "background:#d4edda; color:#155724;" : "background:#d1ecf1; color:#0c5460;";
@@ -90,6 +132,7 @@ function handleScan(decodedText) {
 		},
 		error: function () {
 			processing = false;
+			playGateSound(false);
 			showResult("Badge not recognised \u2014 check with HR that it's registered.",
 				"");
 			document.getElementById("gate-result").setAttribute("style",
@@ -99,6 +142,7 @@ function handleScan(decodedText) {
 }
 
 document.getElementById("start-scan-gate").onclick = function () {
+	initialiseGateAudio();
 	ElementalQrCamera.addSelectorButton(document.getElementById("scanner-gate"));
 	ElementalQrCamera.start(
 		scanner,
@@ -109,6 +153,15 @@ document.getElementById("start-scan-gate").onclick = function () {
 		document.getElementById("stop-scan-gate").style.display = "block";
 		document.getElementById("gate-idle-hint").style.display = "block";
 	}).catch(() => {});
+};
+
+document.getElementById("toggle-gate-sound").onclick = function () {
+	soundEnabled = !soundEnabled;
+	this.textContent = soundEnabled ? "🔊 Sound On" : "🔇 Sound Off";
+	if (soundEnabled) {
+		initialiseGateAudio();
+		playGateSound(true);
+	}
 };
 
 document.getElementById("stop-scan-gate").onclick = function () {

@@ -82,6 +82,14 @@ class TestMobilePageAccess(unittest.TestCase):
 
 
 class TestMobileRoutesAreProtected(unittest.TestCase):
+	def test_gate_scanner_has_success_and_error_audio_feedback(self):
+		source = (APP_ROOT / "templates" / "pages" / "elemental_gate_scan.html").read_text(encoding="utf-8")
+		self.assertIn("window.AudioContext || window.webkitAudioContext", source)
+		self.assertIn("playGateSound(true)", source)
+		self.assertIn("playGateSound(false)", source)
+		self.assertIn("toggle-gate-sound", source)
+		self.assertIn("navigator.vibrate", source)
+
 	def test_every_mobile_page_has_an_explicit_website_route(self):
 		hooks = (APP_ROOT / "hooks.py").read_text(encoding="utf-8")
 		for public_route, page in (
