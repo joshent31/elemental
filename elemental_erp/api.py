@@ -2681,6 +2681,8 @@ def calculate_slip_ot(employee, start_date, end_date):
 		"ot_amount_fmt": fmt_money(ot_amount),
 		"total_ot_actual": round(total_ot_hours, 2),
 		"total_ot_actual_fmt": fmt_hhmm(total_ot_hours),
+		"total_ot_approved": round(total_ot_hours, 2),
+		"total_ot_approved_fmt": fmt_hhmm(total_ot_hours),
 	}
 
 

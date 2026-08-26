@@ -22,8 +22,8 @@ Report Columns:
 3. Salary Slip Hours = min(Total OT, 15) — government capped
 4. Salary Slip Amount = Salary Slip Hours × Hourly Rate × 2 (at 2× rate)
                        This goes on the salary slip
-5. Cash to Worker    = Total OT Amount (1×) − Salary Slip Amount (2×)
-                       The difference is paid in cash to the worker
+5. Cash to Worker    = ((Approved OT − Slip OT Hours) × Hourly Rate)
+                       − (Salary Slip OT Amount ÷ 2), floored at zero
 6. Total Earnings    = Attendance Salary + Total OT Amount (1×)
 
 Example (Worker with salary 16913, July 31 days):
@@ -31,7 +31,7 @@ Example (Worker with salary 16913, July 31 days):
     If worker works 60.5 OT hours in the month:
     - Total OT Amount  = 60.5 × 68.20 = 4126.10 (at 1×)
     - Salary Slip (15 hrs capped) = 15 × 68.20 × 2 = 2046.00 (at 2×)
-    - Cash to Worker   = 4126.10 − 2046.00 = 2080.10
+    - Cash to Worker   = (45.5 × 68.20) − (2046.00 ÷ 2) = 2080.10
     - Total Earnings   = Att.Salary + 4126.10
 """
 import calendar
@@ -101,6 +101,28 @@ def daily_rate(employee, year=None, month=None):
 
     days = get_days_in_month(year, month)
     return ctc / days if days else 0
+
+
+def approved_ot_hours(employee, date, actual_ot_hours):
+    """Cap actual OT by the supervisor request that HR approved for that day."""
+    request_names = frappe.get_all(
+        "Department OT Request",
+        filters={"ot_date": date, "docstatus": 1, "status": "Approved"},
+        pluck="name",
+        limit_page_length=0,
+    )
+    if not request_names:
+        return 0
+    requested = sum(
+        float(row.requested_ot_hours or 0)
+        for row in frappe.get_all(
+            "Department OT Request Employee",
+            filters={"parent": ["in", request_names], "parenttype": "Department OT Request", "employee": employee},
+            fields=["requested_ot_hours"],
+            limit_page_length=0,
+        )
+    )
+    return round(min(float(actual_ot_hours or 0), requested), 2)
 
 
 def compute_daily_ot(employee, date, is_holiday=False):
@@ -182,7 +204,8 @@ def compute_daily_ot(employee, date, is_holiday=False):
     else:
         ot_hours = max(total_hours - shift, 0)
 
-    ot_hours = round(ot_hours, 2)
+    actual_ot_hours = round(ot_hours, 2)
+    ot_hours = approved_ot_hours(employee, date, actual_ot_hours)
 
     date_obj = getdate(date)
     hr = hourly_rate(employee, date_obj.year, date_obj.month)
@@ -193,6 +216,7 @@ def compute_daily_ot(employee, date, is_holiday=False):
         "out_time": out_time,
         "total_hours": total_hours,
         "ot_hours": ot_hours,
+        "actual_ot_hours": actual_ot_hours,
         "ot_amount": ot_amount,
         "status": "P",
         "is_holiday": is_holiday,
@@ -208,7 +232,7 @@ def compute_monthly_summary(employee, year, month):
     - Total OT Amount: OT Hours × Hourly Rate (at 1× rate)
     - Salary Slip Hours: min(Total OT, 15) — govt capped
     - Salary Slip Amount: Salary Slip Hours × Hourly Rate × 2 (at 2× rate)
-    - Cash to Worker: Total OT Amount (1×) − Salary Slip Amount (2×)
+    - Cash to Worker: remaining-hours value − half Slip OT, floored at zero
     - Total Earnings: Attendance Salary + Total OT Amount (1×)
     """
     has_cat = frappe.db.has_column("Employee", "employee_category")
@@ -394,15 +418,19 @@ def compute_monthly_summary(employee, year, month):
     # This goes on the salary slip as per govt norm
     salary_slip_ot_amount = round(capped_ot_hours * hr * 2, 2)
 
-    # Cash to Worker = Total OT Amount (1×) − Salary Slip Amount (2×)
-    # The difference is paid in cash
-    cash_to_worker = round(total_ot_amount_1x - salary_slip_ot_amount, 2)
+    # Cash = value of hours above 15 at 1×, less the 1× half already paid as
+    # the statutory 2× Salary Slip amount. Never produce a negative cash due.
+    remaining_ot_hours = max(total_ot_hours - capped_ot_hours, 0)
+    remaining_ot_value = remaining_ot_hours * hr
+    cash_adjustment = salary_slip_ot_amount / 2
+    cash_to_worker = round(max(remaining_ot_value - cash_adjustment, 0), 2)
 
     # Attendance Salary = Paid Days × Daily Rate
     att_salary = round(paid_days * dr, 2)
 
-    # Total Earnings = Att.Salary + Total OT Amount (1×)
-    total_earnings = round(att_salary + total_ot_amount_1x, 2)
+    total_ot_payable = round(salary_slip_ot_amount + cash_to_worker, 2)
+    # Total Earnings = attendance salary + actual Slip OT + adjusted cash OT.
+    total_earnings = round(att_salary + total_ot_payable, 2)
 
     def format_hhmm(hours):
         h = int(hours)
@@ -433,7 +461,11 @@ def compute_monthly_summary(employee, year, month):
         "salary_slip_ot_hours_fmt": format_hhmm(capped_ot_hours),
         "salary_slip_ot_amount_2x": salary_slip_ot_amount,
         # Cash to Worker (difference)
+        "cash_ot_hours": remaining_ot_hours,
+        "cash_ot_value_before_adjustment": round(remaining_ot_value, 2),
+        "cash_salary_slip_adjustment": round(cash_adjustment, 2),
         "cash_to_worker": cash_to_worker,
+        "total_ot_payable": total_ot_payable,
         # Total Earnings
         "total_earnings": total_earnings,
         "daily_data": daily_data,

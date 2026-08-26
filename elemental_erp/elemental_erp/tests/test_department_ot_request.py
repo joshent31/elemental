@@ -44,6 +44,18 @@ class TestDepartmentOTRequest(unittest.TestCase):
 		self.assertIn('request_status == "Approved"', report)
 		self.assertIn("min(requested, actual)", report)
 
+	def test_payroll_uses_only_approved_ot_and_preserves_cash_adjustment(self):
+		overtime = (APP_ROOT / "utils" / "worker_overtime.py").read_text(encoding="utf-8")
+		self.assertIn('filters={"ot_date": date, "docstatus": 1, "status": "Approved"}', overtime)
+		self.assertIn("min(float(actual_ot_hours or 0), requested)", overtime)
+		self.assertIn("remaining_ot_hours = max(total_ot_hours - capped_ot_hours, 0)", overtime)
+		self.assertIn("cash_adjustment = salary_slip_ot_amount / 2", overtime)
+		self.assertIn("max(remaining_ot_value - cash_adjustment, 0)", overtime)
+		self.assertIn("total_ot_payable = round(salary_slip_ot_amount + cash_to_worker, 2)", overtime)
+		report = (APP_ROOT / "elemental_erp" / "report" / "worker_attendance_report" / "worker_attendance_report.py").read_text(encoding="utf-8")
+		self.assertIn('"Cash Gross (1×)"', report)
+		self.assertIn('"Less Slip OT ÷ 2"', report)
+
 
 if __name__ == "__main__":
 	unittest.main()

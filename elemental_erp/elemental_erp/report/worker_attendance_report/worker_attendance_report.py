@@ -7,7 +7,7 @@ Matches the PayRepWorkersAttn Excel format:
 - OT summary:
     Total OT (1×) = OT Hours × Hourly Rate (company tracking)
     Salary Slip (2×) = Capped OT × Hourly Rate × 2 (govt required, on slip)
-    Cash to Worker = Total OT (1×) − Salary Slip (2×) (paid in cash)
+    Cash to Worker = Remaining OT value − half Salary Slip OT (never below zero)
 - Daily columns (IN, OUT, OT Hrs, OT Amt, Job, Brand) per day
 
 Run at month end when all checkin data is complete.
@@ -96,13 +96,17 @@ def get_columns(year, month):
         {"label": "/Hour (Sal/Days/8)", "fieldname": "hourly_rate", "fieldtype": "Float", "width": 120, "precision": "2"},
         {"label": "Att.Salary", "fieldname": "att_salary", "fieldtype": "Currency", "width": 100},
         # Total OT (at 1× rate — company tracking)
-        {"label": "Total OT Hrs", "fieldname": "total_ot_hours_fmt", "fieldtype": "Data", "width": 90},
-        {"label": "Total OT Amt (1×)", "fieldname": "total_ot_amount_1x", "fieldtype": "Currency", "width": 130},
+        {"label": "Approved OT Hrs", "fieldname": "total_ot_hours_fmt", "fieldtype": "Data", "width": 105},
+        {"label": "Approved OT Value (1×)", "fieldname": "total_ot_amount_1x", "fieldtype": "Currency", "width": 145},
         # Salary Slip (at 2× rate — govt required, on slip)
         {"label": "Slip OT Hrs (≤15)", "fieldname": "salary_slip_ot_hours_fmt", "fieldtype": "Data", "width": 110},
         {"label": "Slip OT Amt (2×)", "fieldname": "salary_slip_ot_amount_2x", "fieldtype": "Currency", "width": 130},
-        # Cash to Worker (difference)
+        # Cash to Worker: remaining value less half of Salary Slip OT
+        {"label": "Cash OT Hrs", "fieldname": "cash_ot_hours", "fieldtype": "Float", "width": 90, "precision": "2"},
+        {"label": "Cash Gross (1×)", "fieldname": "cash_ot_value_before_adjustment", "fieldtype": "Currency", "width": 115},
+        {"label": "Less Slip OT ÷ 2", "fieldname": "cash_salary_slip_adjustment", "fieldtype": "Currency", "width": 120},
         {"label": "Cash to Worker", "fieldname": "cash_to_worker", "fieldtype": "Currency", "width": 120},
+        {"label": "Total OT Payable", "fieldname": "total_ot_payable", "fieldtype": "Currency", "width": 120},
         # Total Earnings
         {"label": "Total Earnings", "fieldname": "total_earnings", "fieldtype": "Currency", "width": 120},
     ]
@@ -147,7 +151,7 @@ def get_summary(data, year=None, month=None, is_month_complete=False):
         f"Formula: Monthly Salary / {days} days / {STANDARD_SHIFT} hrs = Hourly Rate | "
         f"Total OT (1x) = OT Hrs x Rate | "
         f"Salary Slip = min(OT, {GOV_OT_CAP_HOURS} hrs) x Rate x 2 | "
-        f"Cash = Total OT (1x) - Slip OT (2x)"
+        f"Cash = Remaining OT value - (Slip OT / 2), minimum zero"
     )
 
     month_status = "COMPLETE" if is_month_complete else "IN PROGRESS — run at month end for final data"
