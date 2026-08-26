@@ -24,6 +24,8 @@ class TestReportFiltersAndCharts(unittest.TestCase):
 				source = (self.report_root / report / f"{report}.js").read_text(encoding="utf-8")
 				self.assertIn('fieldname: "month"', source)
 				self.assertIn('fieldname: "year"', source)
+				self.assertIn('"JAN", "FEB", "MAR"', source)
+				self.assertIn("value: String(index + 1)", source)
 
 	def test_every_report_defines_a_chart(self):
 		for report in REPORTS:
