@@ -295,7 +295,7 @@ A closer read of the code surfaced five real issues (not just missing features) 
 
 ---
 
-## 12. Employee gate QR check-in / check-out → auto Attendance
+## 12. Employee gate QR check-in/out → HRMS Shift Auto Attendance
 
 Every `Employee` gets their own QR the moment the record is created — print it onto an ID
 badge (see the **Employee ID Badge** print format) and that single scan drives gate
@@ -304,28 +304,17 @@ attendance, no manual IN/OUT selection needed.
 | Piece | What it does |
 |---|---|
 | `Employee.employee_qr_value` / `employee_qr_image` (Custom Fields) | Auto-generated on `Employee.after_insert` (`employee_gate.generate_employee_qr`) — same QR pattern as everywhere else in this app |
-| `/gate-scan` (authenticated mobile page) | **Kiosk mode**, not a one-shot scan — an assigned `Elemental HR Gate User` or HOD signs in on the gate phone, taps Start once, and the camera stays on continuously. Each employee just holds their badge up to it; the page auto-processes and goes straight back to waiting for the next person. A client-side cooldown (8s per badge) stops one held-up badge from firing repeated scans across video frames |
-| `api.gate_scan` | Looks at the employee's **last** `Employee Checkin` (ERPNext's standard HR doctype) — if it was `IN`, this scan logs `OUT`; otherwise it logs `IN`. Alternates automatically, always |
-| `employee_gate.upsert_attendance_for_day` | Fires on every `OUT` scan — takes the day's first `IN` and last `OUT`, computes `working_hours`, and creates/updates that day's `Attendance` record (`Present`, or `Half Day` if under 4 hours). Attempts to **submit** it automatically; if that fails (approved leave, holiday, an existing conflicting record), it's left saved-but-unsubmitted for HR to sort out by hand rather than blocking the gate scan itself |
+| `/elemental-gate-scan` (authenticated mobile/desktop page) | Continuous kiosk mode for an assigned `Elemental HR Gate User` or HOD. Works with mobile cameras, laptop webcams and external USB webcams. The chosen camera is remembered. `/gate-scan` belongs to the separately installed Trip Dispatch app and is deliberately not used here. |
+| `api.gate_scan` | Creates standard `Employee Checkin` rows. The first scan of every calendar day is always `IN`; later same-day scans alternate `OUT`/`IN`. A missed prior-day OUT is flagged for HR without turning today's arrival into OUT. |
+| HRMS Shift Auto Attendance | Elemental never creates a competing Attendance from a gate scan. The resolved HRMS Shift Type processes the Checkins using its shift times, grace periods, holidays and working-hour rules. If the employee has no Auto Attendance shift, the gate result warns **HRMS Configuration Required**. |
+| Audio feedback | Successful IN/OUT gives a two-tone chime; an invalid badge gives a lower error tone. Supported mobile devices also vibrate. A Sound On/Off button is provided. |
 | **Employee ID Badge** (Print Format) | Name, designation, department, QR, and the Employee Code immediately below the QR — ready to print onto a badge |
 
-**Worth knowing before relying on this for payroll:**
+**Required HRMS configuration:** create the Shift Type, enable **Auto Attendance**, configure
+working-hour and grace-period rules, and give every worker a Shift Assignment or default shift.
+Elemental owns QR capture and operational warnings; HRMS owns payroll-relevant Attendance.
 
-- The working-hours calculation is **first-IN-to-last-OUT for the day** — it does not net out
-  a lunch break or any other gap in the middle. If staff scan out and back in for lunch, that
-  gap is currently *included* in working hours, not subtracted. If you need real break
-  deduction, that's a rule to add to `upsert_attendance_for_day`, not something assumed here.
-- The `Half Day` threshold (under 4 hours → Half Day, otherwise Present) is a simple hard-coded
-  guess in `employee_gate.py` — swap in your actual policy.
-- This bypasses ERPNext's built-in Shift Type / auto-attendance machinery entirely, in favour
-  of something that works with zero configuration. If you already use (or want) Shift Type
-  rules for late marking, grace periods, etc., that's a more sophisticated alternative worth
-  wiring in instead of — or alongside — this.
-- Auto-**submitting** Attendance is a meaningful choice: it means gate scans directly produce
-  payroll-relevant records with no human review step by default. If that's too automatic for
-  your comfort, remove the `att.submit()` call in `upsert_attendance_for_day` and let HR submit
-  Attendance manually instead.
-- `/gate-scan` and its lookup/write APIs require a signed-in user with `Elemental HR Gate User`
+- `/elemental-gate-scan` and its lookup/write APIs require a signed-in user with `Elemental HR Gate User`
   or `Elemental HR Gate HOD`. Keep a dedicated least-privilege account signed in on a fixed
   gate device if kiosk operation is required.
 - This generates a **QR code**, consistent with every other scan point in this app — not a
@@ -516,13 +505,30 @@ also included for teams that prefer sideloading one APK and selecting the site o
 |---|---|
 | `/mobile-app` | Unified home screen. It lists only the Production and Gate workflows allowed by the signed-in user's exact Elemental roles |
 | `/scan-menu` | Legacy/direct Production-only hub; individual scan routes and API endpoints retain their own server-side role checks |
-| `/gate-scan` | Continuous kiosk scanning for an authenticated Gate user, available as its own separate app |
+| `/elemental-gate-scan` | Continuous employee gate kiosk for an authenticated Gate user; supports mobile, laptop and USB cameras with sound feedback |
 | `public/apk/Elemental-Mobile.apk` | Debug-signed universal Android APK; first launch asks for a site URL and then opens `/mobile-app` |
 | `mobile/android/` | Android source and PowerShell build helper. The selected site origin is validated and saved on the device; it is not a build parameter |
 | `www/manifest-mobile.json` | Unified cross-platform PWA manifest with `/mobile-app` as its start URL |
 | `www/sw.js` | Minimal installability service worker. It caches only static Elemental assets; authenticated pages, login responses, and APIs are never cached on shared devices |
 | `public/icons/icon-192.png` / `icon-512.png` | Generated app icons (simple "E" mark on the same navy/gold as the customer guide) used by both manifests and as the Apple touch icon |
 | `public/js/pwa_install.js` | Shared logic behind the in-page "Install this app" button — shows the native Android/Chrome install prompt when available, shows manual "tap Share → Add to Home Screen" instructions on iOS (which doesn't expose an install prompt at all), and hides itself once already installed |
+
+All mobile pages are explicitly registered in `hooks.py` to avoid route collisions with other
+installed apps. Important direct URLs are `/mobile-app`, `/scan-menu`,
+`/elemental-gate-scan`, `/worker-job-scan`, `/process-scan`, `/design-scan`, `/qc-scan`,
+`/transfer-out`, `/transfer-in`, `/pack-box`, `/dispatch-scan`, and `/site-scan`.
+
+Browser camera access requires HTTPS (except browser-defined localhost exceptions). HTTP may
+work inside the trusted Android wrapper but should not be used for production credentials or
+desktop webcams. After changing routes/assets, deploy with:
+
+```bash
+bench --site your-site.local migrate
+bench build --app elemental_erp
+bench --site your-site.local clear-cache
+bench --site your-site.local clear-website-cache
+bench restart
+```
 
 The APKs are native Android wrappers around the existing web pages, not offline rewrites of the
 ERP workflow. Camera access, same-origin navigation containment, site switching, cookies and the
@@ -541,7 +547,7 @@ produced by the Windows Android build.
 app's `www/` folder (served at the site root — `/sw.js`, `/manifest-mobile.json`) rather than
 under `public/` (served at `/assets/elemental_erp/...`). A service worker's default control
 scope is limited to its own directory and below — one served from under `/assets/...` would
-not be able to control pages like `/scan-menu` or `/gate-scan` at all, which would silently
+not be able to control pages like `/scan-menu` or `/elemental-gate-scan` at all, which would silently
 break installability. Serving it from the root avoids that entirely. If you ever move or rename
 these files, keep the service worker itself at (or above) the root of whatever pages it needs
 to control.
@@ -713,8 +719,9 @@ Access: `/app/management-dashboard` or via **Elemental Fixtures** workspace shor
 
 ## 19. Worker Attendance Report & OT Tracking
 
-For **Worker-category employees** only (not Staff). Tracks daily check-in/out, calculates
-overtime, and generates government-compliant reports.
+For **Worker-category employees** only (not Staff). Tracks daily check-in/out, reconciles
+actual OT against the supervisor's submitted **Department OT Request**, requires HR approval,
+and generates payroll/cash detail. Pending, rejected or missing OT requests pay zero.
 
 ### 19.1 OT Rate Formula
 
@@ -738,22 +745,36 @@ Hourly Rate = Monthly Salary / Days in Month / 8
 | **Govt Holiday** (no work) | PH — no OT |
 | **Govt Holiday** (works) | **ALL hours = OT** |
 
+Actual OT is derived from Employee Checkins. Daily payable OT is then restricted to:
+
+```
+Payable OT = min(Actual OT, HR-approved requested OT)
+```
+
+`Department OT Request` is department/date-specific, contains multiple workers and requested
+hours, and is submitted by the supervisor to HR. The **OT Request vs Checkout** report shows
+requested, actual, variance, approval status and payable hours, including unauthorized OT,
+rejected OT worked, excess OT, missing checkout and approval-pending exceptions.
+
 ### 19.3 Report Columns
 
 | Column | Formula | Rate |
 |--------|---------|------|
-| Total OT Hours | Sum of all daily OT | — |
-| Total OT Amount | OT Hours × Hourly Rate | **1×** (company tracking) |
+| Approved OT Hours | Sum of daily `min(actual, approved request)` | — |
+| Approved OT Value | Approved OT Hours × Hourly Rate | **1×** (company tracking) |
 | Salary Slip | min(OT, 15 hrs) × Rate × 2 | **2×** (govt required) |
-| Cash to Worker | Total OT (1×) − Slip OT (2×) | Difference |
-| Total Earnings | Att.Salary + Total OT (1×) | — |
+| Cash Gross | max(Approved OT − Slip Hours, 0) × Rate | **1×** |
+| Cash Adjustment | Salary Slip OT Amount ÷ 2 | Deduct from Cash Gross |
+| Cash to Worker | max(Cash Gross − Cash Adjustment, 0) | Paid separately |
+| Total OT Payable | Salary Slip OT Amount + Cash to Worker | — |
 
-### 19.4 Two Reports
+### 19.4 Attendance and OT Reports
 
 | Report | Access | Purpose |
 |--------|--------|---------|
 | **Worker Attendance Report** | `/app/query-report/Worker Attendance Report` | Full detail — Excel format with IN/OUT, OT, Salary, Cash |
 | **Worker OT Summary (Govt)** | `/app/query-report/Worker OT Summary` | Government only — daily OT hours, total ≤15, no cash column |
+| **OT Request vs Checkout** | `/app/query-report/OT Request vs Checkout` | HR reconciliation — request, actual checkout, variance and payable OT |
 
 ### 19.5 Custom Fields on Employee
 
@@ -762,8 +783,9 @@ Hourly Rate = Monthly Salary / Days in Month / 8
 | `employee_category` | Select | Staff / Worker |
 | `standard_shift_hours` | Float | Default: 8 |
 
-**Government Cap:** Max 15 OT hours/month. Salary Slip shows 12 hrs × 2× rate.
-Cash to Worker = Total OT (1×) − Slip OT (2×).
+**Salary Slip Cap:** Maximum 15 approved OT hours per month at 2× rate. Remaining approved
+hours are handled in cash at 1× after deducting half of the Salary Slip OT amount. Cash is
+floored at zero and can never become negative.
 
 ---
 
@@ -836,14 +858,15 @@ Staff can take **one Saturday off per month** — paid, earned monthly, Saturday
 **Rule:** Staff only gets LOP for Absent or Leave Without Pay. All other statuses are paid.
 
 ---
-n## 23. Salary Slip OT Integration
+## 23. Salary Slip OT Integration
 
-For **Worker-category employees**, OT is auto-calculated on Salary Slip.
+For **Worker-category employees**, the **Calculate Worker OT** action fills the Salary Slip
+from approved payable OT; saving the Salary Slip then uses the `Overtime` Salary Component.
 
 | Piece | What it does |
 |---|---|
-| **"Calculate Worker OT"** button | Pulls checkin data for slip period, calculates OT |
-| `overtime_hours` field | Auto-filled: min(Total OT, 15 hrs) |
+| **"Calculate Worker OT"** button | Pulls Checkins and HR-approved OT Requests for the slip period |
+| `overtime_hours` field | Auto-filled: min(Approved Payable OT, 15 hrs) |
 | `overtime_rate` field | Auto-filled: Salary / Days / 8 |
 | `overtime_amount` field | Auto-filled: OT Hours × Rate × 2 |
 | **Overtime Salary Component** | Shipped as fixture for ERPNext payroll |
@@ -857,7 +880,23 @@ Earnings:
 Total Earnings:          18,959.00
 ```
 
-Cash to Worker (paid separately) = Total OT (1×) − Slip OT (2×)
+Detailed cash settlement (shown in Worker Attendance Report):
+
+```
+Cash Hours      = max(Approved OT − Slip OT Hours, 0)
+Cash Gross      = Cash Hours × Hourly Rate
+Slip Adjustment = Salary Slip OT Amount ÷ 2
+Cash to Worker  = max(Cash Gross − Slip Adjustment, 0)
+```
+
+Example for 60.5 approved hours at ₹68.20/hour:
+
+```
+Salary Slip = 15 × 68.20 × 2               = ₹2,046.00
+Cash Gross  = 45.5 × 68.20                 = ₹3,103.10
+Adjustment  = 2,046.00 ÷ 2                 = ₹1,023.00
+Final Cash  = 3,103.10 − 1,023.00          = ₹2,080.10
+```
 
 ---
 
@@ -876,20 +915,22 @@ Cash to Worker (paid separately) = Total OT (1×) − Slip OT (2×)
 
 ## 25. Test Suite
 
-28 unit tests covering core business logic:
+The current focused regression command runs **77 checks** covering naming, workspace links,
+mobile access, desktop cameras, QR/box flow, worker job tracking, purchase flow, OT approval,
+attendance integration, print labels and dashboard behavior.
 
 | Test File | Tests | Coverage |
 |-----------|-------|----------|
-| `tests/test_utils.py` | 7 | `hourly_rate()`, `compute_cost()`, `generate_qr_image()` |
-| `tests/test_api.py` | 14 | QR lookup, scan, transfers, BOM indent, job lifecycle, packing, invoice |
-| `tests/test_qr_code_master.py` | 7 | Status advancement, over-scan protection, job completion |
+| `tests/test_mobile_access.py` | Route protection, gate daily reset, HRMS ownership, camera/audio behavior |
+| `tests/test_department_ot_request.py` | OT request workflow, approval-only payroll and cash calculation |
+| `tests/test_worker_job_tracking.py` | Gate/worker/Job allocation traceability |
+| `tests/test_job_scan_and_box_contents.py` | Job-first scanning and box-content visibility |
+| `tests/test_naming_series.py` / `test_workspace.py` | DocType naming and workspace completeness |
 
 ### Run Tests:
 
 ```bash
-bench run-tests --module elemental_erp.elemental_erp.tests.test_utils
-bench run-tests --module elemental_erp.elemental_erp.tests.test_api
-bench run-tests --module elemental_erp.elemental_erp.tests.test_qr_code_master
+bench run-tests --app elemental_erp
 ```
 
 ---
@@ -905,7 +946,7 @@ bench run-tests --module elemental_erp.elemental_erp.tests.test_qr_code_master
 | Packing & Dispatch | ✅ | Box labels, scan loading, site receive/install |
 | QC Gate | ✅ | Must Pass before Packaging |
 | Sales Invoice | ✅ | Auto-create after full dispatch |
-| Employee Gate QR | ✅ | Auto Attendance from check-in/out |
+| Employee Gate QR | ✅ | Checkin capture, daily IN reset, sound/vibration; HRMS Shift Auto Attendance owns Attendance |
 | **Management Dashboard** | ✅ | KPI cards, charts, recent jobs |
 | **Worker Attendance Report** | ✅ | Excel format, daily IN/OUT, OT |
 | **Worker OT Summary (Govt)** | ✅ | Government compliance, ≤15 hrs |
@@ -914,6 +955,7 @@ bench run-tests --module elemental_erp.elemental_erp.tests.test_qr_code_master
 | **Saturday Off Leave Type** | ✅ | Paid, 1/month, earned, Saturday only |
 | **Client Scripts** | ✅ | Production/Packaging/Dispatch/WFH/SL |
 | **PO Initiation** | ✅ | Supplier dropdown, rate/MOQ auto-fill, editable PO Qty, excess-stock tracking |
-| **Salary Slip OT** | ✅ | Auto-populate OT for Workers |
-| **OT Calculation Engine** | ✅ | Sunday/Holiday = full OT, 15h cap |
-| **Test Suite** | ✅ | 28 unit tests |
+| **Salary Slip OT** | ✅ | HR-approved payable OT only; maximum 15 hours at 2× |
+| **OT Calculation Engine** | ✅ | Request vs actual, Sunday/Holiday OT, 15h Slip cap, adjusted cash settlement |
+| **Department OT Request** | ✅ | Supervisor daily request, HR approval/rejection, checkout reconciliation |
+| **Test Suite** | ✅ | 77 focused regression checks plus Frappe bench tests |
