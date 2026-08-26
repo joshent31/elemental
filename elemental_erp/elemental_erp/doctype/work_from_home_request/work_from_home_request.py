@@ -105,9 +105,9 @@ def _create_wfh_attendance(wfh_doc):
     end_date = getdate(wfh_doc.to_date)
 
     while current_date <= end_date:
-        # Skip weekends (Saturday=5, Sunday=6) — optional, can be removed
-        # if your company works on weekends
-        # if current_date.weekday() >= 5:
+        # If weekly-off days are excluded later, skip Sunday only (weekday 6).
+        # Saturday is a normal working day for Elemental.
+        # if current_date.weekday() == 6:
         #     current_date = add_days(current_date, 1)
         #     continue
 

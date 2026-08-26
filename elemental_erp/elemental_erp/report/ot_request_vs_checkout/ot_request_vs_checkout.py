@@ -97,7 +97,9 @@ def get_checkouts(filters):
 		shift_hours = float(employee.get("standard_shift_hours") or 8)
 		work_date = getdate(key[0])
 		is_holiday = bool(employee.holiday_list and frappe.db.exists("Holiday", {"parent": employee.holiday_list, "holiday_date": work_date}))
-		actual_ot = total_hours if work_date.weekday() >= 5 or is_holiday else max(total_hours - shift_hours, 0)
+		# Saturday is worked normally. Only Sunday (weekday 6) or an explicit
+		# Holiday List date treats all worked hours as OT.
+		actual_ot = total_hours if work_date.weekday() == 6 or is_holiday else max(total_hours - shift_hours, 0)
 		result[key] = frappe._dict(
 			date=work_date, employee=employee.name, employee_name=employee.employee_name,
 			department=employee.department, first_in=first_in, last_out=last_out,

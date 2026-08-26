@@ -126,7 +126,8 @@ def build_day_row(emp, date_str, sno):
 
     # OT: span - 8 hours (or full span on Sunday/Holiday)
     date_obj = getdate(date_str)
-    is_weekend = date_obj.weekday() >= 5
+    # Saturday is a normal working day; only Sunday is weekly off.
+    is_weekend = date_obj.weekday() == 6
 
     # Check for holiday
     holiday_list = frappe.db.get_value("Employee", emp.name, "holiday_list")

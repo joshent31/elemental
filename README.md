@@ -780,6 +780,10 @@ Employee Checkin, Checkout, Attendance, and OT reports display time in the 24-ho
 format. Calculations use the original Frappe `Datetime` values (including their date), so the
 display formatting never changes worked hours or approved OT calculations.
 
+The standard work week is **Monday through Saturday**. Only **Sunday** is the automatic weekly
+off for employees and workers. Dates explicitly configured in an employee's HRMS Holiday List
+remain holidays. A Saturday is off only when an applicable leave or holiday is approved/configured.
+
 | Report | Access | Purpose |
 |--------|--------|---------|
 | **Worker Attendance Report** | `/app/query-report/Worker Attendance Report` | Full detail — Excel format with IN/OUT, OT, Salary, Cash |
@@ -823,6 +827,9 @@ marked as **Present** for each WFH date.
 ---
 
 ## 21. Saturday Off Leave Type (Staff Only)
+
+Saturday remains a normal working day. This optional leave type is an approved-leave exception;
+it does not make every Saturday a weekly off.
 
 Staff can take **one Saturday off per month** — paid, earned monthly, Saturday only.
 

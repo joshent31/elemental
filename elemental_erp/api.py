@@ -2652,8 +2652,8 @@ def calculate_slip_ot(employee, start_date, end_date):
 				{"parent": holiday_list, "holiday_date": date_str},
 			)
 
-		# Check if weekend
-		is_weekend = current.weekday() >= 5
+		# Saturday is a normal working day; only Sunday is weekly off.
+		is_weekend = current.weekday() == 6
 		is_day_off = is_holiday or is_weekend
 
 		result = compute_daily_ot(employee, date_str, is_holiday=is_day_off)

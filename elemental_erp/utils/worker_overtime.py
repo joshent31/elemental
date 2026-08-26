@@ -297,7 +297,9 @@ def compute_monthly_summary(employee, year, month):
     for day in range(1, days_in_month + 1):
         date_str = f"{year}-{month:02d}-{day:02d}"
         date_obj = getdate(date_str)
-        is_weekend = date_obj.weekday() >= 5
+        # Python weekday: Monday=0 ... Saturday=5, Sunday=6.
+        # Saturday is a normal working day; only Sunday is weekly off.
+        is_weekend = date_obj.weekday() == 6
 
         is_holiday = str(date_obj) in holiday_dates
 

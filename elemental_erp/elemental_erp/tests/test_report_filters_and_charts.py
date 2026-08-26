@@ -43,6 +43,19 @@ class TestReportFiltersAndCharts(unittest.TestCase):
 				self.assertIn('strftime("%H:%M")', source)
 				self.assertNotIn('strftime("%I:%M', source)
 
+	def test_only_sunday_is_automatic_weekly_off(self):
+		paths = (
+			Path(__file__).resolve().parents[2] / "utils" / "worker_overtime.py",
+			Path(__file__).resolve().parents[2] / "api.py",
+			self.report_root / "worker_checkin_detail" / "worker_checkin_detail.py",
+			self.report_root / "ot_request_vs_checkout" / "ot_request_vs_checkout.py",
+		)
+		for path in paths:
+			with self.subTest(path=path.name):
+				source = path.read_text(encoding="utf-8")
+				self.assertIn("weekday() == 6", source)
+				self.assertNotIn("weekday() >= 5", source)
+
 
 if __name__ == "__main__":
 	unittest.main()
