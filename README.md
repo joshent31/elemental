@@ -776,6 +776,10 @@ Job Consumption, OT Request vs Checkout, WFH Summary, Worker Attendance, Worker 
 Detail, Worker Job Cost, and Worker OT Summary. Report-specific filters such as Employee,
 Department, Job, Customer, Workstation, and Status remain available where relevant.
 
+Employee Checkin, Checkout, Attendance, and OT reports display time in the 24-hour `HH:MM`
+format. Calculations use the original Frappe `Datetime` values (including their date), so the
+display formatting never changes worked hours or approved OT calculations.
+
 | Report | Access | Purpose |
 |--------|--------|---------|
 | **Worker Attendance Report** | `/app/query-report/Worker Attendance Report` | Full detail — Excel format with IN/OUT, OT, Salary, Cash |

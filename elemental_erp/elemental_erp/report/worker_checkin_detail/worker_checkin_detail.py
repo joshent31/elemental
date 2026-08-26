@@ -144,7 +144,7 @@ def build_day_row(emp, date_str, sno):
 
     ot_hours = round(ot_hours, 2)
 
-    # Build entry strings: "IN 9:00AM → OUT 1:30PM → IN 2:15PM → OUT 6:45PM"
+    # Build 24-hour entry strings: "IN 09:00 → OUT 13:30 → IN 14:15 → OUT 18:45"
     entry_parts = []
     has_photo = False
     gps_info = ""
@@ -201,12 +201,12 @@ def build_day_row(emp, date_str, sno):
 
 
 def format_time(dt):
-    """Format datetime to AM/PM string."""
+    """Format a full Frappe datetime as unambiguous 24-hour HH:MM."""
     if not dt:
         return ""
     try:
-        from frappe.utils import getdate as _getdate
-        return _getdate(dt).strftime("%I:%M %p").lstrip("0")
+        from frappe.utils import get_datetime
+        return get_datetime(dt).strftime("%H:%M")
     except Exception:
         return str(dt)
 

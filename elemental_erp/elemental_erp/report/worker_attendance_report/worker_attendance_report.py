@@ -186,11 +186,11 @@ def get_summary(data, year=None, month=None, is_month_complete=False):
 
 
 def format_time(dt):
-    """Format datetime to AM/PM string like the Excel."""
+    """Format a full Frappe datetime as unambiguous 24-hour HH:MM."""
     if not dt:
         return ""
     try:
-        from frappe.utils import getdate as _getdate
-        return _getdate(dt).strftime("%I:%M%p").lstrip("0")
+        from frappe.utils import get_datetime
+        return get_datetime(dt).strftime("%H:%M")
     except Exception:
         return str(dt)

@@ -35,6 +35,14 @@ class TestReportFiltersAndCharts(unittest.TestCase):
 				functions = {node.name for node in tree.body if isinstance(node, ast.FunctionDef)}
 				self.assertIn("get_chart", functions)
 
+	def test_worker_times_use_full_datetime_and_24_hour_display(self):
+		for report in ("worker_attendance_report", "worker_checkin_detail"):
+			with self.subTest(report=report):
+				source = (self.report_root / report / f"{report}.py").read_text(encoding="utf-8")
+				self.assertIn("get_datetime(dt)", source)
+				self.assertIn('strftime("%H:%M")', source)
+				self.assertNotIn('strftime("%I:%M', source)
+
 
 if __name__ == "__main__":
 	unittest.main()
