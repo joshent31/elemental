@@ -19,8 +19,8 @@ from frappe.utils import fmt_money, getdate
 
 def execute(filters=None):
     filters = filters or {}
-    year = filters.get("year") or getdate().year
-    month = filters.get("month") or getdate().month
+    year = int(filters.get("year") or getdate().year)
+    month = int(filters.get("month") or getdate().month)
     department = filters.get("department")
 
     from elemental_erp.utils.worker_overtime import get_worker_attendance_report_data, get_days_in_month
@@ -71,7 +71,21 @@ def execute(filters=None):
                 row[f"{prefix}_job"] = day_info.get("job", "")
                 row[f"{prefix}_brand"] = day_info.get("brand", "")
 
-    return columns, data, None, summary
+    return columns, data, summary.get("message") if summary else None, get_chart(data)
+
+
+def get_chart(data):
+    if not data:
+        return None
+    top = sorted(data, key=lambda row: row.get("total_ot_hours", 0), reverse=True)[:15]
+    return {
+        "data": {
+            "labels": [row.get("employee_name") or row.get("employee") for row in top],
+            "datasets": [{"name": "Approved OT Hours", "values": [row.get("total_ot_hours", 0) for row in top]}],
+        },
+        "type": "bar",
+        "colors": ["#1565c0"],
+    }
 
 
 def get_columns(year, month):

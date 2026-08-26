@@ -6,6 +6,7 @@ def execute(filters=None):
 	columns = get_columns()
 	has_sales_invoice_job = frappe.db.has_column("Sales Invoice", "elemental_job")
 	data = get_data(filters, has_sales_invoice_job=has_sales_invoice_job)
+	chart = get_chart(data)
 	message = None
 	if not has_sales_invoice_job:
 		message = (
@@ -13,7 +14,7 @@ def execute(filters=None):
 			"Run bench migrate to create the elemental_job custom field; "
 			"profitability is unavailable until then."
 		)
-	return columns, data, message
+	return columns, data, message, chart
 
 
 def get_columns():
@@ -64,6 +65,12 @@ def get_data(filters, has_sales_invoice_job=None):
 		conditions += " AND j.name = %(job)s"
 	if filters.get("customer"):
 		conditions += " AND j.customer = %(customer)s"
+	if filters.get("year"):
+		conditions += " AND YEAR(j.creation) = %(year)s"
+		filters["year"] = int(filters["year"])
+	if filters.get("month"):
+		conditions += " AND MONTH(j.creation) = %(month)s"
+		filters["month"] = int(filters["month"])
 
 	jobs = frappe.db.sql(
 		f"""
@@ -306,3 +313,21 @@ def get_data(filters, has_sales_invoice_job=None):
 		)
 
 	return data
+
+
+def get_chart(data):
+	if not data:
+		return None
+	rows = data[:12]
+	return {
+		"data": {
+			"labels": [row.get("job") for row in rows],
+			"datasets": [
+				{"name": "Revenue", "values": [row.get("sales_invoice_value") or 0 for row in rows]},
+				{"name": "Total Cost", "values": [row.get("total_cost") or 0 for row in rows]},
+				{"name": "Profit / Loss", "values": [row.get("profit") or 0 for row in rows]},
+			],
+		},
+		"type": "bar",
+		"colors": ["#2e7d32", "#ef6c00", "#1565c0"],
+	}

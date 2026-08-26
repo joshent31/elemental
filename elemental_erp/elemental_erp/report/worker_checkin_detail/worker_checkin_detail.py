@@ -19,8 +19,8 @@ from frappe.utils import getdate, time_diff_in_hours
 
 def execute(filters=None):
     filters = filters or {}
-    year = filters.get("year") or getdate().year
-    month = filters.get("month") or getdate().month
+    year = int(filters.get("year") or getdate().year)
+    month = int(filters.get("month") or getdate().month)
     employee = filters.get("employee")
     department = filters.get("department")
 
@@ -55,7 +55,24 @@ def execute(filters=None):
             if row:
                 data.append(row)
 
-    return columns, data, None, None
+    return columns, data, None, get_chart(data)
+
+
+def get_chart(data):
+    if not data:
+        return None
+    totals = {}
+    labels = {}
+    for row in data:
+        employee = row.get("employee")
+        totals[employee] = totals.get(employee, 0) + (row.get("ot_hours") or 0)
+        labels[employee] = row.get("employee_name") or employee
+    top = sorted(totals, key=totals.get, reverse=True)[:15]
+    return {
+        "data": {"labels": [labels[key] for key in top], "datasets": [{"name": "Recorded OT Hours", "values": [round(totals[key], 2) for key in top]}]},
+        "type": "bar",
+        "colors": ["#7b61ff"],
+    }
 
 
 def build_day_row(emp, date_str, sno):

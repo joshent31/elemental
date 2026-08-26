@@ -1,7 +1,8 @@
-from collections import defaultdict
+import calendar
+from collections import Counter, defaultdict
 
 import frappe
-from frappe.utils import add_days, getdate, nowdate, time_diff_in_hours
+from frappe.utils import getdate, time_diff_in_hours
 
 
 TOLERANCE_HOURS = 0.25
@@ -9,15 +10,26 @@ TOLERANCE_HOURS = 0.25
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
-	filters.from_date = getdate(filters.from_date or add_days(nowdate(), -7))
-	filters.to_date = getdate(filters.to_date or nowdate())
-	if filters.from_date > filters.to_date:
-		frappe.throw("From Date cannot be after To Date.")
+	year = int(filters.get("year") or getdate().year)
+	month = int(filters.get("month") or getdate().month)
+	filters.from_date = getdate(f"{year}-{month:02d}-01")
+	filters.to_date = getdate(f"{year}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}")
 
 	requests = get_requests(filters)
 	checkouts = get_checkouts(filters)
 	rows = build_rows(requests, checkouts, filters)
-	return get_columns(), rows, "Payable OT is calculated only for HR-approved requests and is capped at the lower of requested versus actual OT."
+	return get_columns(), rows, "Payable OT is calculated only for HR-approved requests and is capped at the lower of requested versus actual OT.", get_chart(rows)
+
+
+def get_chart(rows):
+	if not rows:
+		return None
+	counts = Counter(row.get("reconciliation") or "Unknown" for row in rows)
+	return {
+		"data": {"labels": list(counts), "datasets": [{"name": "Employees", "values": list(counts.values())}]},
+		"type": "donut",
+		"colors": ["#2e7d32", "#c62828", "#ef6c00", "#1565c0", "#7b61ff", "#546e7a"],
+	}
 
 
 def get_requests(filters):

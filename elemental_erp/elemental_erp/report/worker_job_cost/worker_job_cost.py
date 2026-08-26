@@ -1,20 +1,22 @@
+import calendar
+
 import frappe
+from frappe.utils import getdate
 
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
+	year = int(filters.get("year") or getdate().year)
+	month = int(filters.get("month") or getdate().month)
 	conditions = []
 	values = {}
 	for fieldname in ("job", "employee", "workstation", "status"):
 		if filters.get(fieldname):
 			conditions.append(f"w.{fieldname} = %({fieldname})s")
 			values[fieldname] = filters[fieldname]
-	if filters.get("from_date"):
-		conditions.append("w.work_date >= %(from_date)s")
-		values["from_date"] = filters.from_date
-	if filters.get("to_date"):
-		conditions.append("w.work_date <= %(to_date)s")
-		values["to_date"] = filters.to_date
+	conditions.append("w.work_date BETWEEN %(from_date)s AND %(to_date)s")
+	values["from_date"] = f"{year}-{month:02d}-01"
+	values["to_date"] = f"{year}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}"
 	where = " AND ".join(conditions) or "1=1"
 	data = frappe.db.sql(
 		f"""
@@ -36,7 +38,23 @@ def execute(filters=None):
 		values,
 		as_dict=True,
 	)
-	return get_columns(), data
+	return get_columns(), data, None, get_chart(data)
+
+
+def get_chart(data):
+	if not data:
+		return None
+	totals = {}
+	labels = {}
+	for row in data:
+		totals[row.job] = totals.get(row.job, 0) + (row.labour_cost or 0)
+		labels[row.job] = row.job_name or row.job
+	top = sorted(totals, key=totals.get, reverse=True)[:15]
+	return {
+		"data": {"labels": [labels[key] for key in top], "datasets": [{"name": "Labour Cost", "values": [round(totals[key], 2) for key in top]}]},
+		"type": "bar",
+		"colors": ["#00897b"],
+	}
 
 
 def get_columns():

@@ -770,6 +770,12 @@ rejected OT worked, excess OT, missing checkout and approval-pending exceptions.
 
 ### 19.4 Attendance and OT Reports
 
+All Elemental query reports use the same required **Month** and **Year** selectors (defaulting
+to the current month) and provide a dashboard chart for the filtered result. This applies to
+Job Consumption, OT Request vs Checkout, WFH Summary, Worker Attendance, Worker Checkin
+Detail, Worker Job Cost, and Worker OT Summary. Report-specific filters such as Employee,
+Department, Job, Customer, Workstation, and Status remain available where relevant.
+
 | Report | Access | Purpose |
 |--------|--------|---------|
 | **Worker Attendance Report** | `/app/query-report/Worker Attendance Report` | Full detail — Excel format with IN/OUT, OT, Salary, Cash |
@@ -915,7 +921,7 @@ Final Cash  = 3,103.10 − 1,023.00          = ₹2,080.10
 
 ## 25. Test Suite
 
-The current focused regression command runs **77 checks** covering naming, workspace links,
+The current focused regression command runs the report and transaction checks covering naming, workspace links,
 mobile access, desktop cameras, QR/box flow, worker job tracking, purchase flow, OT approval,
 attendance integration, print labels and dashboard behavior.
 
@@ -958,4 +964,4 @@ bench run-tests --app elemental_erp
 | **Salary Slip OT** | ✅ | HR-approved payable OT only; maximum 15 hours at 2× |
 | **OT Calculation Engine** | ✅ | Request vs actual, Sunday/Holiday OT, 15h Slip cap, adjusted cash settlement |
 | **Department OT Request** | ✅ | Supervisor daily request, HR approval/rejection, checkout reconciliation |
-| **Test Suite** | ✅ | 77 focused regression checks plus Frappe bench tests |
+| **Test Suite** | ✅ | Focused regression checks plus Frappe bench tests |

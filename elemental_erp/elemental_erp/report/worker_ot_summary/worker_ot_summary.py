@@ -17,8 +17,8 @@ from frappe.utils import getdate
 
 def execute(filters=None):
     filters = filters or {}
-    year = filters.get("year") or getdate().year
-    month = filters.get("month") or getdate().month
+    year = int(filters.get("year") or getdate().year)
+    month = int(filters.get("month") or getdate().month)
     department = filters.get("department")
 
     from elemental_erp.utils.worker_overtime import (
@@ -71,7 +71,24 @@ def execute(filters=None):
         govt_m = int(round((row["govt_ot_hours"] - govt_h) * 60))
         row["govt_ot_hours_fmt"] = f"{govt_h}:{govt_m:02d}"
 
-    return columns, data, None, summary
+    return columns, data, summary.get("message") if summary else None, get_chart(data)
+
+
+def get_chart(data):
+    if not data:
+        return None
+    top = sorted(data, key=lambda row: row.get("total_ot_hours", 0), reverse=True)[:15]
+    return {
+        "data": {
+            "labels": [row.get("employee_name") or row.get("employee") for row in top],
+            "datasets": [
+                {"name": "Approved OT", "values": [row.get("total_ot_hours", 0) for row in top]},
+                {"name": "Salary Slip OT", "values": [row.get("govt_ot_hours", 0) for row in top]},
+            ],
+        },
+        "type": "bar",
+        "colors": ["#ef6c00", "#2e7d32"],
+    }
 
 
 def get_columns(year, month):
