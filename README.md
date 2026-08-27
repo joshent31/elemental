@@ -917,7 +917,45 @@ Final Cash  = 3,103.10 − 1,023.00          = ₹2,080.10
 
 ---
 
-## 24. Client Scripts (New)
+## 24. Employee-Specific Salary Packages
+
+Elemental salary breakups are not forced into a single Basic/HRA/Allowance percentage. HR can
+submit an **Employee Salary Package** containing the exact approved monthly or annual amount for
+each earning, employee deduction, and employer contribution. The effective date preserves salary
+revision history.
+
+For the annual one-shot exercise, create **Annual Salary Revision**, select the company and
+effective date, then add/import one child row per Employee + Salary Component. Repeat the employee
+for all of their components. `Monthly` basis calculates annual amount × 12; `Annual` basis divides
+the exact annual amount by 12, avoiding rounding differences such as ₹95,000 annual bonus.
+Submitting once creates and submits one Employee Salary Package per employee.
+
+Payroll safety and compatibility:
+
+- An employee is opted in only after their first package is submitted; existing payroll remains
+  unchanged during rollout.
+- Payroll Entry, Salary Structure Assignment, payment-day proration, tax calculation, gross/net
+  totals, accounting and bank entries remain standard ERPNext/Frappe HR behavior.
+- Every employee still needs a submitted standard Salary Structure Assignment. Keep all potentially
+  used fixed earning/deduction components in the appropriate Worker/Staff structure; the package
+  supplies their employee-specific amounts.
+- Before standard Salary Slip validation, the latest submitted package effective for the slip end
+  date supplies the fixed earnings/deductions. Employer contributions remain CTC-only and are not
+  added to take-home salary.
+- Worker OT is calculated automatically for bulk Payroll Entry from approved OT requests and
+  Employee Checkins. Its hourly rate uses the effective package's Monthly Earnings ÷ calendar
+  days ÷ 8; employees not yet opted in continue using Employee CTC. The existing manual button
+  remains available for review/recalculation.
+- The Salary Slip records the exact package used. A package or annual revision cannot be cancelled
+  after a submitted Salary Slip references it.
+- Payroll is blocked only for opted-in employees when no submitted package covers the slip period.
+
+For a new joiner, create and submit their package with `Effective From = Date of Joining` before
+running payroll. Mid-month proration continues to use standard HRMS payment days.
+
+---
+
+## 25. Client Scripts (New)
 
 | Doctype | File | Features |
 |---------|------|----------|
@@ -930,7 +968,7 @@ Final Cash  = 3,103.10 − 1,023.00          = ₹2,080.10
 
 ---
 
-## 25. Test Suite
+## 26. Test Suite
 
 The current focused regression command runs the report and transaction checks covering naming, workspace links,
 mobile access, desktop cameras, QR/box flow, worker job tracking, purchase flow, OT approval,

@@ -1,0 +1,40 @@
+{
+ "doctype":"DocType",
+ "name":"Employee Salary Package",
+ "module":"Elemental ERP",
+ "custom":0,
+ "autoname":"naming_series:",
+ "is_submittable":1,
+ "engine":"InnoDB",
+ "track_changes":1,
+ "title_field":"employee_name",
+ "search_fields":"employee,employee_name,effective_from",
+ "fields":[
+  {"fieldname":"naming_series","label":"Series","fieldtype":"Select","options":"ESP-.YYYY.-.#####","default":"ESP-.YYYY.-.#####","reqd":1},
+  {"fieldname":"employee","label":"Employee","fieldtype":"Link","options":"Employee","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"employee_name","label":"Employee Name","fieldtype":"Data","fetch_from":"employee.employee_name","read_only":1,"in_list_view":1},
+  {"fieldname":"company","label":"Company","fieldtype":"Link","options":"Company","fetch_from":"employee.company","read_only":1,"in_standard_filter":1},
+  {"fieldname":"column_break_1","fieldtype":"Column Break"},
+  {"fieldname":"effective_from","label":"Effective From","fieldtype":"Date","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"currency","label":"Currency","fieldtype":"Link","options":"Currency","reqd":1,"default":"INR"},
+  {"fieldname":"annual_revision","label":"Annual Salary Revision","fieldtype":"Link","options":"Annual Salary Revision","read_only":1},
+  {"fieldname":"section_components","label":"Approved Employee-Specific Components","fieldtype":"Section Break","description":"Enter the approved amount for every component. No fixed Basic/HRA percentage is imposed."},
+  {"fieldname":"components","label":"Components","fieldtype":"Table","options":"Salary Package Component","reqd":1},
+  {"fieldname":"section_totals","label":"Calculated Package Totals","fieldtype":"Section Break"},
+  {"fieldname":"monthly_earnings","label":"Monthly Earnings","fieldtype":"Currency","read_only":1},
+  {"fieldname":"monthly_deductions","label":"Monthly Employee Deductions","fieldtype":"Currency","read_only":1},
+  {"fieldname":"monthly_take_home","label":"Monthly Take Home","fieldtype":"Currency","read_only":1},
+  {"fieldname":"column_break_totals","fieldtype":"Column Break"},
+  {"fieldname":"monthly_employer_contribution","label":"Monthly Employer Contribution","fieldtype":"Currency","read_only":1},
+  {"fieldname":"monthly_ctc","label":"Monthly CTC","fieldtype":"Currency","read_only":1},
+  {"fieldname":"annual_ctc","label":"Annual CTC","fieldtype":"Currency","read_only":1},
+  {"fieldname":"notes","label":"HR Notes","fieldtype":"Small Text"},
+  {"fieldname":"amended_from","label":"Amended From","fieldtype":"Link","options":"Employee Salary Package","read_only":1,"no_copy":1}
+ ],
+ "permissions":[
+  {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"submit":1,"cancel":1,"amend":1,"report":1,"print":1,"export":1,"import":1,"share":1},
+  {"role":"HR Manager","read":1,"write":1,"create":1,"delete":1,"submit":1,"cancel":1,"amend":1,"report":1,"print":1,"export":1,"import":1}
+ ],
+ "sort_field":"effective_from",
+ "sort_order":"DESC"
+}

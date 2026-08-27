@@ -296,6 +296,26 @@
         {
             "hidden": 0,
             "is_query_report": 0,
+            "label": "Employee Salary Package",
+            "link_count": 0,
+            "link_to": "Employee Salary Package",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
+            "label": "Annual Salary Revision",
+            "link_count": 0,
+            "link_to": "Annual Salary Revision",
+            "link_type": "DocType",
+            "onboard": 1,
+            "type": "Link"
+        },
+        {
+            "hidden": 0,
+            "is_query_report": 0,
             "label": "Department Transfer",
             "link_count": 0,
             "link_to": "Department Transfer",

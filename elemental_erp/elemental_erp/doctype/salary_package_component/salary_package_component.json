@@ -1,0 +1,17 @@
+{
+ "doctype": "DocType",
+ "name": "Salary Package Component",
+ "module": "Elemental ERP",
+ "istable": 1,
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "fields": [
+  {"fieldname":"employee","label":"Employee","fieldtype":"Link","options":"Employee","in_list_view":1,"columns":2},
+  {"fieldname":"salary_component","label":"Salary Component","fieldtype":"Link","options":"Salary Component","reqd":1,"in_list_view":1,"columns":2},
+  {"fieldname":"treatment","label":"Treatment","fieldtype":"Select","options":"Earning\nDeduction\nEmployer Contribution","reqd":1,"in_list_view":1,"columns":2},
+  {"fieldname":"amount_basis","label":"Amount Basis","fieldtype":"Select","options":"Monthly\nAnnual","default":"Monthly","reqd":1,"in_list_view":1,"columns":1},
+  {"fieldname":"monthly_amount","label":"Monthly Amount","fieldtype":"Currency","non_negative":1,"in_list_view":1,"columns":2},
+  {"fieldname":"annual_amount","label":"Annual Amount","fieldtype":"Currency","non_negative":1,"in_list_view":1,"columns":2},
+  {"fieldname":"salary_package","label":"Generated Package","fieldtype":"Link","options":"Employee Salary Package","read_only":1,"in_list_view":1,"columns":2}
+ ]
+}

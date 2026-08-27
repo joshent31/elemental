@@ -1,6 +1,31 @@
 [
  {
   "doctype": "Custom Field",
+  "name": "Employee-use_elemental_salary_package",
+  "dt": "Employee",
+  "fieldname": "use_elemental_salary_package",
+  "label": "Use Elemental Salary Package",
+  "fieldtype": "Check",
+  "insert_after": "standard_shift_hours",
+  "read_only": 1,
+  "description": "Enabled automatically after the first Employee Salary Package is submitted.",
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Salary Slip-elemental_salary_package",
+  "dt": "Salary Slip",
+  "fieldname": "elemental_salary_package",
+  "label": "Employee Salary Package",
+  "fieldtype": "Link",
+  "options": "Employee Salary Package",
+  "insert_after": "salary_structure",
+  "read_only": 1,
+  "description": "Approved employee-specific package used to populate this Salary Slip.",
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
   "name": "Sales Invoice-elemental_job",
   "dt": "Sales Invoice",
   "fieldname": "elemental_job",

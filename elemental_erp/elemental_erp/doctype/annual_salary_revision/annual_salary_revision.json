@@ -1,0 +1,28 @@
+{
+ "doctype":"DocType",
+ "name":"Annual Salary Revision",
+ "module":"Elemental ERP",
+ "custom":0,
+ "autoname":"naming_series:",
+ "is_submittable":1,
+ "engine":"InnoDB",
+ "track_changes":1,
+ "fields":[
+  {"fieldname":"naming_series","label":"Series","fieldtype":"Select","options":"ASR-.YYYY.-.#####","default":"ASR-.YYYY.-.#####","reqd":1},
+  {"fieldname":"company","label":"Company","fieldtype":"Link","options":"Company","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"effective_from","label":"Effective From","fieldtype":"Date","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"column_break_1","fieldtype":"Column Break"},
+  {"fieldname":"currency","label":"Currency","fieldtype":"Link","options":"Currency","reqd":1,"default":"INR"},
+  {"fieldname":"generated_packages","label":"Generated Packages","fieldtype":"Int","read_only":1},
+  {"fieldname":"instructions","label":"Annual Upload Instructions","fieldtype":"HTML","options":"<div class='alert alert-info'>Add or import one row per Employee + Salary Component. Repeat the employee for every component. Select Monthly or Annual basis. Submitting once creates one approved Employee Salary Package per employee.</div>"},
+  {"fieldname":"components","label":"All Employee Components","fieldtype":"Table","options":"Salary Package Component","reqd":1},
+  {"fieldname":"notes","label":"HR Revision Notes","fieldtype":"Small Text"},
+  {"fieldname":"amended_from","label":"Amended From","fieldtype":"Link","options":"Annual Salary Revision","read_only":1,"no_copy":1}
+ ],
+ "permissions":[
+  {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"submit":1,"cancel":1,"amend":1,"report":1,"print":1,"export":1,"import":1,"share":1},
+  {"role":"HR Manager","read":1,"write":1,"create":1,"delete":1,"submit":1,"cancel":1,"amend":1,"report":1,"print":1,"export":1,"import":1}
+ ],
+ "sort_field":"effective_from",
+ "sort_order":"DESC"
+}

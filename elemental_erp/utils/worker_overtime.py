@@ -70,12 +70,12 @@ def hourly_rate(employee, year=None, month=None):
     if has_cat and emp.employee_category != "Worker":
         return 0
 
-    ctc = emp.ctc or 0
     if not year or not month:
         today = getdate()
         year = today.year
         month = today.month
 
+    ctc = get_monthly_fixed_salary(employee, year, month, emp.ctc or 0)
     days = get_days_in_month(year, month)
     denominator = days * STANDARD_SHIFT  # e.g. 31 * 8 = 248
     return ctc / denominator if denominator else 0
@@ -93,14 +93,30 @@ def daily_rate(employee, year=None, month=None):
     if has_cat and emp.employee_category != "Worker":
         return 0
 
-    ctc = emp.ctc or 0
     if not year or not month:
         today = getdate()
         year = today.year
         month = today.month
 
+    ctc = get_monthly_fixed_salary(employee, year, month, emp.ctc or 0)
     days = get_days_in_month(year, month)
     return ctc / days if days else 0
+
+
+def get_monthly_fixed_salary(employee, year, month, fallback_ctc=0):
+    """Use the effective approved package gross, falling back during rollout."""
+    if not frappe.db.has_column("Employee", "use_elemental_salary_package"):
+        return fallback_ctc
+    if not frappe.db.get_value("Employee", employee, "use_elemental_salary_package"):
+        return fallback_ctc
+    month_end = f"{year}-{month:02d}-{get_days_in_month(year, month):02d}"
+    package = frappe.db.get_value(
+        "Employee Salary Package",
+        {"employee": employee, "effective_from": ["<=", month_end], "docstatus": 1},
+        "monthly_earnings",
+        order_by="effective_from desc, creation desc",
+    )
+    return package if package is not None else fallback_ctc
 
 
 def approved_ot_hours(employee, date, actual_ot_hours):

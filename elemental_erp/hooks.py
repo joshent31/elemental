@@ -48,6 +48,9 @@ doc_events = {
 	"Leave Application": {
 		"validate": "elemental_erp.utils.leave_validation.validate_leave_application",
 	},
+	"Salary Slip": {
+		"before_validate": "elemental_erp.utils.salary_package.apply_employee_salary_package",
+	},
 	"Purchase Order": {
 		"validate": "elemental_erp.utils.purchase_order.validate_material_indent_linkage",
 		"after_insert": "elemental_erp.utils.purchase_order.mark_material_indents_in_purchase",
@@ -75,6 +78,9 @@ website_route_rules = [
 
 # Client scripts loaded per DocType.
 doctype_js = {
+	"Employee": "public/js/employee.js",
+	"Employee Salary Package": "public/js/salary_package.js",
+	"Annual Salary Revision": "public/js/salary_package.js",
 	"Department OT Request": "public/js/department_ot_request.js",
 	"Finished Good": "public/js/finished_good.js",
 	"Job": "public/js/job.js",

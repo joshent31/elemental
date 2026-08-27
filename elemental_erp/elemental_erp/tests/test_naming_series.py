@@ -9,10 +9,12 @@ APP_ROOT = Path(__file__).resolve().parents[2]
 DOCTYPE_ROOT = APP_ROOT / "elemental_erp" / "doctype"
 
 EXPECTED_SERIES = {
+	"Annual Salary Revision": "ASR-.YYYY.-.#####",
 	"Department OT Request": "OTR-.YYYY.-",
 	"Department Transfer": "TRF-.YYYY.-",
 	"Dispatch Entry": "DSP-.YYYY.-",
 	"Elemental Quotation": "QTN-.YYYY.-",
+	"Employee Salary Package": "ESP-.YYYY.-.#####",
 	"Job": "JOB-.YYYY.-",
 	"Job Subpart Label": "JSL-.YYYY.-",
 	"Material Indent": "IND-.YYYY.-",
