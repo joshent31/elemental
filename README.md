@@ -924,13 +924,83 @@ submit an **Employee Salary Package** containing the exact approved monthly or a
 each earning, employee deduction, and employer contribution. The effective date preserves salary
 revision history.
 
+### 24.1 What changes—and what does not
+
+This feature is an employee-by-employee **opt-in layer**, not a replacement payroll engine:
+
+- Employees without a submitted Employee Salary Package continue through their existing Salary
+  Structure and Salary Structure Assignment exactly as before.
+- Submitting an employee's first package enables package-based fixed amounts only for that employee.
+- Existing submitted Salary Slips and historical payroll entries are never rewritten.
+- Payroll Entry, attendance/leave processing, payment days, tax, gross/net totals, Salary Slip
+  submission, accounting and bank entries remain standard ERPNext/Frappe HR processes.
+- The package answers only: **what is this employee's approved Basic, HRA, allowance, deduction and
+  employer-contribution amount from this effective date?**
+
+### 24.2 Annual one-shot update for all employees
+
 For the annual one-shot exercise, create **Annual Salary Revision**, select the company and
 effective date, then add/import one child row per Employee + Salary Component. Repeat the employee
 for all of their components. `Monthly` basis calculates annual amount × 12; `Annual` basis divides
 the exact annual amount by 12, avoiding rounding differences such as ₹95,000 annual bonus.
 Submitting once creates and submits one Employee Salary Package per employee.
 
-Payroll safety and compatibility:
+Example input:
+
+| Employee | Salary Component | Treatment | Basis | Approved Amount |
+|---|---|---|---|---:|
+| EMP-001 | Basic | Earning | Monthly | ₹21,500 |
+| EMP-001 | CCA | Earning | Monthly | ₹7,125 |
+| EMP-001 | HRA | Earning | Monthly | ₹5,375 |
+| EMP-001 | PF | Deduction | Monthly | employee-specific amount |
+| EMP-002 | Basic | Earning | Monthly | ₹36,524 |
+| EMP-002 | Bonus | Employer Contribution | Annual | ₹95,000 |
+
+Use `Employer Contribution` for CTC-only entries such as employer PF, gratuity or employer ESIC.
+They contribute to the package CTC but are deliberately not inserted into employee take-home pay.
+
+### 24.3 New joiner and later revision
+
+For a new joiner, open the Employee and use **Payroll → New Salary Package**. Enter their exact
+approved components, set `Effective From = Date of Joining`, save and submit before running payroll.
+
+For an increment or restructuring, do not edit historical submitted packages. Create a new package
+with the new effective date. Salary Slip selects the latest submitted package whose effective date
+is on or before the slip end date, preserving a traceable revision history.
+
+### 24.4 Attendance, absence and payment-day calculation
+
+The package stores the employee's full approved monthly values. Standard HRMS then calculates
+Present, Absent, Leave Without Pay and Payment Days and prorates each applicable component.
+
+Example: Basic ₹30,000, 30 payroll days and 27 payment days gives payable Basic of
+`₹30,000 ÷ 30 × 27 = ₹27,000` **when Basic has `Depends on Payment Days` enabled**.
+
+Configure Salary Components deliberately:
+
+- Enable **Depends on Payment Days** for Basic, HRA and allowances that must reduce for absence/LWP.
+- Leave it disabled for a genuinely fixed earning or deduction that must not be prorated.
+- Keep PF, ESI, PT, income tax and other statutory components on their correct ERPNext
+  formula/threshold settings; the package does not replace statutory rules.
+- Complete Employee Checkins, Shift Assignments, Holiday Lists, Attendance and Leave processing
+  before creating the final Payroll Entry. Incorrect or missing attendance input will naturally
+  produce incorrect payment days.
+
+### 24.5 Normal monthly payroll sequence
+
+1. Complete check-ins, shifts, holidays, attendance and approved leave for the payroll period.
+2. Ensure the employee has a submitted Salary Structure Assignment covering that period.
+3. For opted-in employees, ensure a submitted Employee Salary Package covers the Salary Slip end date.
+4. Use the standard **Payroll Entry → Get Employees → Create Salary Slips** process.
+5. Open draft slips and verify working days, payment days, absence/LWP, prorated earnings,
+   deductions, OT, gross pay and net pay.
+6. Submit Salary Slips and Payroll Entry through standard ERPNext only after review.
+
+When Salary Slip validation starts, Elemental first loads the assigned standard structure, overlays
+the package's approved employee-specific fixed amounts, and then allows standard HRMS validation and
+proration to continue. The exact package used is linked on the Salary Slip for audit.
+
+### 24.6 Payroll safety and compatibility
 
 - An employee is opted in only after their first package is submitted; existing payroll remains
   unchanged during rollout.
@@ -947,11 +1017,24 @@ Payroll safety and compatibility:
   days ÷ 8; employees not yet opted in continue using Employee CTC. The existing manual button
   remains available for review/recalculation.
 - The Salary Slip records the exact package used. A package or annual revision cannot be cancelled
-  after a submitted Salary Slip references it.
+  while a non-cancelled draft or submitted Salary Slip references it.
 - Payroll is blocked only for opted-in employees when no submitted package covers the slip period.
 
-For a new joiner, create and submit their package with `Effective From = Date of Joining` before
-running payroll. Mid-month proration continues to use standard HRMS payment days.
+### 24.7 Safe rollout checklist
+
+Do not enable the entire workforce first. Submit one package for one test employee, generate a draft
+Salary Slip and compare it with the previous method. Verify:
+
+- total working days, payment days, absent days and LWP days;
+- Basic, HRA and each allowance after payment-day proration;
+- PF, ESI, PT, tax and every employee deduction;
+- approved OT hours, OT rate and OT amount;
+- gross pay, total deductions and net pay; and
+- the Employee Salary Package link on the Salary Slip.
+
+After HR confirms the comparison, submit the Annual Salary Revision for the remaining employees.
+If a package has not been submitted, that employee stays on the old payroll calculation; there is no
+automatic bulk conversion merely from installing or migrating the app.
 
 ---
 
