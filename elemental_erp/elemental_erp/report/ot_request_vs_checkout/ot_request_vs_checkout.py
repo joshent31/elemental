@@ -54,6 +54,8 @@ def get_requests(filters):
 		):
 			if filters.employee and row.employee != filters.employee:
 				continue
+			if not employee_matches_category(row.employee, filters.get("employee_category")):
+				continue
 			result[(str(request.ot_date), row.employee)] = frappe._dict(
 				request=request.name,
 				request_status=request.status,
@@ -79,6 +81,8 @@ def get_checkouts(filters):
 		by_day[(str(getdate(checkin.time)), checkin.employee)].append(checkin)
 
 	employee_fields = ["name", "employee_name", "department", "holiday_list"]
+	if frappe.db.has_column("Employee", "employee_category"):
+		employee_fields.append("employee_category")
 	if frappe.get_meta("Employee").has_field("standard_shift_hours"):
 		employee_fields.append("standard_shift_hours")
 	employees = {
@@ -90,6 +94,8 @@ def get_checkouts(filters):
 	for key, entries in by_day.items():
 		employee = employees.get(key[1])
 		if not employee or (filters.department and employee.department != filters.department):
+			continue
+		if filters.get("employee_category") and employee.get("employee_category") != filters.employee_category:
 			continue
 		first_in = min((row.time for row in entries if row.log_type == "IN"), default=None)
 		last_out = max((row.time for row in entries if row.log_type == "OUT"), default=None)
@@ -106,6 +112,12 @@ def get_checkouts(filters):
 			total_hours=total_hours, shift_hours=shift_hours, actual_ot_hours=round(actual_ot, 2),
 		)
 	return result
+
+
+def employee_matches_category(employee, employee_category):
+	if not employee_category or not frappe.db.has_column("Employee", "employee_category"):
+		return True
+	return frappe.db.get_value("Employee", employee, "employee_category") == employee_category
 
 
 def build_rows(requests, checkouts, filters):

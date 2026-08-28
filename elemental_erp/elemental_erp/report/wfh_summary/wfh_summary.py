@@ -15,9 +15,10 @@ def execute(filters=None):
 	employee = filters.get("employee")
 	department = filters.get("department")
 	company = filters.get("company")
+	employee_category = filters.get("employee_category")
 
 	columns = get_columns(year, month)
-	data = get_data(year, month, employee, department, company)
+	data = get_data(year, month, employee, department, company, employee_category)
 	chart = get_chart(data, year, month)
 
 	return columns, data, None, chart
@@ -72,7 +73,7 @@ def get_columns(year, month):
 	return columns
 
 
-def get_data(year, month, employee_filter=None, department_filter=None, company_filter=None):
+def get_data(year, month, employee_filter=None, department_filter=None, company_filter=None, employee_category=None):
 	"""Query approved WFH requests and aggregate the selected month."""
 	month_start = f"{year}-{month:02d}-01"
 	month_end = f"{year}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}"
@@ -91,6 +92,10 @@ def get_data(year, month, employee_filter=None, department_filter=None, company_
 	if company_filter:
 		conditions += " AND wfh.company = %(company)s"
 		params["company"] = company_filter
+
+	if employee_category and frappe.db.has_column("Employee", "employee_category"):
+		conditions += " AND emp.employee_category = %(employee_category)s"
+		params["employee_category"] = employee_category
 
 	# Get all approved WFH requests with their employee info
 	rows = frappe.db.sql(

@@ -13,6 +13,8 @@ REPORTS = (
 	"worker_ot_summary",
 )
 
+EMPLOYEE_REPORTS = tuple(report for report in REPORTS if report != "job_consumption_report")
+
 
 class TestReportFiltersAndCharts(unittest.TestCase):
 	def setUp(self):
@@ -34,6 +36,14 @@ class TestReportFiltersAndCharts(unittest.TestCase):
 				tree = ast.parse(path.read_text(encoding="utf-8"))
 				functions = {node.name for node in tree.body if isinstance(node, ast.FunctionDef)}
 				self.assertIn("get_chart", functions)
+
+	def test_employee_reports_filter_employee_category_in_ui_and_server(self):
+		for report in EMPLOYEE_REPORTS:
+			with self.subTest(report=report):
+				client = (self.report_root / report / f"{report}.js").read_text(encoding="utf-8")
+				server = (self.report_root / report / f"{report}.py").read_text(encoding="utf-8")
+				self.assertIn('fieldname: "employee_category"', client)
+				self.assertIn('filters.get("employee_category")', server)
 
 	def test_worker_times_use_full_datetime_and_24_hour_display(self):
 		for report in ("worker_attendance_report", "worker_checkin_detail"):

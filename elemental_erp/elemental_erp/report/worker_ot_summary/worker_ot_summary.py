@@ -20,6 +20,7 @@ def execute(filters=None):
     year = int(filters.get("year") or getdate().year)
     month = int(filters.get("month") or getdate().month)
     department = filters.get("department")
+    employee_category = filters.get("employee_category") or "Worker"
 
     from elemental_erp.utils.worker_overtime import (
         get_worker_attendance_report_data, get_days_in_month,
@@ -34,7 +35,7 @@ def execute(filters=None):
         (today.year == year and today.month == month and today.day >= days_in_month)
     )
 
-    data = get_worker_attendance_report_data(year, month, department)
+    data = get_worker_attendance_report_data(year, month, department, employee_category=employee_category)
     columns = get_columns(year, month)
     summary = get_summary(data, year, month, is_month_complete)
 

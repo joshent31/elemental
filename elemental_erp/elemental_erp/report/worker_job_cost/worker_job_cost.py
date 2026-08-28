@@ -14,6 +14,9 @@ def execute(filters=None):
 		if filters.get(fieldname):
 			conditions.append(f"w.{fieldname} = %({fieldname})s")
 			values[fieldname] = filters[fieldname]
+	if filters.get("employee_category") and frappe.db.has_column("Employee", "employee_category"):
+		conditions.append("emp.employee_category = %(employee_category)s")
+		values["employee_category"] = filters.employee_category
 	conditions.append("w.work_date BETWEEN %(from_date)s AND %(to_date)s")
 	values["from_date"] = f"{year}-{month:02d}-01"
 	values["to_date"] = f"{year}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}"
@@ -32,6 +35,7 @@ def execute(filters=None):
 		       w.started_by, w.closed_by, w.remarks
 		FROM `tabWorker Job Time Log` w
 		INNER JOIN `tabJob` j ON j.name = w.job
+		INNER JOIN `tabEmployee` emp ON emp.name = w.employee
 		WHERE {where}
 		ORDER BY w.work_date DESC, w.start_time DESC
 		""",

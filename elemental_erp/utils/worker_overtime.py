@@ -50,7 +50,7 @@ def get_days_in_month(year, month):
     return calendar.monthrange(year, month)[1]
 
 
-def hourly_rate(employee, year=None, month=None):
+def hourly_rate(employee, year=None, month=None, enforce_worker=True):
     """Compute hourly rate for a Worker.
 
     Formula: Monthly Salary / Days in Month / 8
@@ -67,7 +67,7 @@ def hourly_rate(employee, year=None, month=None):
     emp = frappe.db.get_value("Employee", employee, fields, as_dict=True)
     if not emp:
         return 0
-    if has_cat and emp.employee_category != "Worker":
+    if enforce_worker and has_cat and emp.employee_category != "Worker":
         return 0
 
     if not year or not month:
@@ -81,7 +81,7 @@ def hourly_rate(employee, year=None, month=None):
     return ctc / denominator if denominator else 0
 
 
-def daily_rate(employee, year=None, month=None):
+def daily_rate(employee, year=None, month=None, enforce_worker=True):
     """Daily Rate = Monthly Salary / Days in Month."""
     has_cat = frappe.db.has_column("Employee", "employee_category")
     fields = ["ctc"]
@@ -90,7 +90,7 @@ def daily_rate(employee, year=None, month=None):
     emp = frappe.db.get_value("Employee", employee, fields, as_dict=True)
     if not emp:
         return 0
-    if has_cat and emp.employee_category != "Worker":
+    if enforce_worker and has_cat and emp.employee_category != "Worker":
         return 0
 
     if not year or not month:
@@ -141,7 +141,7 @@ def approved_ot_hours(employee, date, actual_ot_hours):
     return round(min(float(actual_ot_hours or 0), requested), 2)
 
 
-def compute_daily_ot(employee, date, is_holiday=False):
+def compute_daily_ot(employee, date, is_holiday=False, enforce_worker=True):
     """Compute OT hours for a single day from Employee Checkin records.
 
     Rules:
@@ -157,7 +157,7 @@ def compute_daily_ot(employee, date, is_holiday=False):
     emp = frappe.db.get_value("Employee", employee, fields, as_dict=True)
     if not emp:
         return None
-    if has_cat and emp.employee_category != "Worker":
+    if enforce_worker and has_cat and emp.employee_category != "Worker":
         return None
 
     shift = emp.standard_shift_hours or STANDARD_SHIFT
@@ -224,7 +224,7 @@ def compute_daily_ot(employee, date, is_holiday=False):
     ot_hours = approved_ot_hours(employee, date, actual_ot_hours)
 
     date_obj = getdate(date)
-    hr = hourly_rate(employee, date_obj.year, date_obj.month)
+    hr = hourly_rate(employee, date_obj.year, date_obj.month, enforce_worker=enforce_worker)
     ot_amount = round(ot_hours * hr, 2)
 
     return {
@@ -240,7 +240,7 @@ def compute_daily_ot(employee, date, is_holiday=False):
     }
 
 
-def compute_monthly_summary(employee, year, month):
+def compute_monthly_summary(employee, year, month, enforce_worker=True):
     """Compute full monthly OT summary for a Worker.
 
     Report columns:
@@ -259,13 +259,13 @@ def compute_monthly_summary(employee, year, month):
     emp = frappe.db.get_value("Employee", employee, fields, as_dict=True)
     if not emp:
         return None
-    if has_cat and emp.employee_category != "Worker":
+    if enforce_worker and has_cat and emp.employee_category != "Worker":
         return None
 
     shift = emp.standard_shift_hours or STANDARD_SHIFT
     days_in_month = get_days_in_month(year, month)
-    hr = hourly_rate(employee, year, month)
-    dr = daily_rate(employee, year, month)
+    hr = hourly_rate(employee, year, month, enforce_worker=enforce_worker)
+    dr = daily_rate(employee, year, month, enforce_worker=enforce_worker)
 
     month_start = f"{year}-{month:02d}-01"
     month_end = f"{year}-{month:02d}-{days_in_month}"
@@ -334,7 +334,7 @@ def compute_monthly_summary(employee, year, month):
                      "in_time": ["is", "set"], "out_time": ["is", "set"]},
                 )
             if has_scan or has_manual_att:
-                result = compute_daily_ot(employee, date_str, is_holiday=True)
+                result = compute_daily_ot(employee, date_str, is_holiday=True, enforce_worker=enforce_worker)
                 if result["status"] == "P":
                     qr_days += 1
                     paid_days += 1
@@ -400,7 +400,7 @@ def compute_monthly_summary(employee, year, month):
 
         # compute_daily_ot handles both checkin and manual attendance
         # Sunday (weekend) with check-in or manual att = ALL hours are OT
-        result = compute_daily_ot(employee, date_str, is_holiday=is_weekend)
+        result = compute_daily_ot(employee, date_str, is_holiday=is_weekend, enforce_worker=enforce_worker)
         if result["status"] == "A":
             daily_data.append({"date": date_str, "status": "A", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
             lop_days += 1
@@ -490,15 +490,15 @@ def compute_monthly_summary(employee, year, month):
     }
 
 
-def get_worker_attendance_report_data(year, month, department=None, location=None):
+def get_worker_attendance_report_data(year, month, department=None, location=None, employee_category="Worker"):
     """Get all Worker-category employees' attendance data for the report.
 
     Run at month end when all checkin data is complete.
     """
     filters = {}
     has_cat = frappe.db.has_column("Employee", "employee_category")
-    if has_cat:
-        filters["employee_category"] = "Worker"
+    if has_cat and employee_category:
+        filters["employee_category"] = employee_category
     if department:
         filters["department"] = department
 
@@ -513,7 +513,7 @@ def get_worker_attendance_report_data(year, month, department=None, location=Non
     for emp in employees:
         if location and emp.branch != location:
             continue
-        summary = compute_monthly_summary(emp.name, year, month)
+        summary = compute_monthly_summary(emp.name, year, month, enforce_worker=False)
         if summary:
             result.append(summary)
 

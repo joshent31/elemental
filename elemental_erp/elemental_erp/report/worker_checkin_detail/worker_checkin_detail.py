@@ -23,6 +23,7 @@ def execute(filters=None):
     month = int(filters.get("month") or getdate().month)
     employee = filters.get("employee")
     department = filters.get("department")
+    employee_category = filters.get("employee_category")
 
     days_in_month = calendar.monthrange(year, month)[1]
     month_start = f"{year}-{month:02d}-01"
@@ -31,8 +32,8 @@ def execute(filters=None):
     # Get workers — filter by employee_category only if the custom field exists
     emp_filters = {}
     has_category = frappe.db.has_column("Employee", "employee_category")
-    if has_category:
-        emp_filters["employee_category"] = "Worker"
+    if has_category and employee_category:
+        emp_filters["employee_category"] = employee_category
     if employee:
         emp_filters["name"] = employee
     if department:

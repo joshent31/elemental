@@ -5,6 +5,7 @@ frappe.query_reports["OT Request vs Checkout"] = {
 	filters: [
 		{ fieldname: "month", label: "Month", fieldtype: "Select", options: elementalMonths, default: String(new Date().getMonth() + 1), reqd: 1 },
 		{ fieldname: "year", label: "Year", fieldtype: "Int", default: new Date().getFullYear(), reqd: 1 },
+		{ fieldname: "employee_category", label: "Employee Category", fieldtype: "Select", options: "\nStaff\nWorker", default: "Worker" },
 		{ fieldname: "department", label: "Department", fieldtype: "Link", options: "Department" },
 		{ fieldname: "employee", label: "Employee", fieldtype: "Link", options: "Employee" },
 		{ fieldname: "request_status", label: "Request Status", fieldtype: "Select", options: "\nSent to HR\nApproved\nRejected" },
