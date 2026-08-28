@@ -18,11 +18,18 @@ class DepartmentOTRequest(Document):
 			if row.employee in seen:
 				frappe.throw(f"Employee {row.employee} is listed more than once.")
 			seen.add(row.employee)
-			employee = frappe.db.get_value(
-				"Employee", row.employee, ["employee_name", "department", "status"], as_dict=True
-			)
+			employee_fields = ["employee_name", "department", "status"]
+			has_category = frappe.db.has_column("Employee", "employee_category")
+			if has_category:
+				employee_fields.append("employee_category")
+			employee = frappe.db.get_value("Employee", row.employee, employee_fields, as_dict=True)
 			if not employee or employee.status != "Active":
 				frappe.throw(f"Employee {row.employee} is not active.")
+			if has_category and employee.employee_category != "Worker":
+				frappe.throw(
+					f"OT can be requested only for Worker-category employees. "
+					f"{employee.employee_name} is {employee.employee_category or 'not categorized'}."
+				)
 			if employee.department != self.department:
 				frappe.throw(
 					f"{employee.employee_name} belongs to {employee.department or 'no department'}, "

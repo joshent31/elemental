@@ -31,6 +31,8 @@ class TestDepartmentOTRequest(unittest.TestCase):
 	def test_controller_enforces_department_and_hr_review(self):
 		controller = (DOCTYPE_ROOT / "department_ot_request" / "department_ot_request.py").read_text(encoding="utf-8")
 		self.assertIn("employee.department != self.department", controller)
+		self.assertIn('employee.employee_category != "Worker"', controller)
+		self.assertIn("OT can be requested only for Worker-category employees", controller)
 		self.assertIn("hours <= 0 or hours > 12", controller)
 		self.assertIn('self.db_set("status", "Sent to HR"', controller)
 		self.assertIn("def approve_ot_request", controller)
@@ -52,6 +54,8 @@ class TestDepartmentOTRequest(unittest.TestCase):
 		self.assertIn("cash_adjustment = salary_slip_ot_amount / 2", overtime)
 		self.assertIn("max(remaining_ot_value - cash_adjustment, 0)", overtime)
 		self.assertIn("total_ot_payable = round(salary_slip_ot_amount + cash_to_worker, 2)", overtime)
+		self.assertIn('calculate_ot = not has_cat or emp.employee_category == "Worker"', overtime)
+		self.assertIn("approved_ot_hours(employee, date, actual_ot_hours) if calculate_ot else 0", overtime)
 		report = (APP_ROOT / "elemental_erp" / "report" / "worker_attendance_report" / "worker_attendance_report.py").read_text(encoding="utf-8")
 		self.assertIn('"Cash Gross (1×)"', report)
 		self.assertIn('"Less Slip OT ÷ 2"', report)

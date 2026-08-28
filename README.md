@@ -1016,6 +1016,9 @@ proration to continue. The exact package used is linked on the Salary Slip for a
   Employee Checkins. Its hourly rate uses the effective package's Monthly Earnings ÷ calendar
   days ÷ 8; employees not yet opted in continue using Employee CTC. The existing manual button
   remains available for review/recalculation.
+- OT is strictly limited to employees whose Employee Category is `Worker`. Staff may appear in
+  attendance/check-in reports, but their OT hours and OT amount remain zero, and the system rejects
+  any Department OT Request that includes a Staff or uncategorized employee.
 - The Salary Slip records the exact package used. A package or annual revision cannot be cancelled
   while a non-cancelled draft or submitted Salary Slip references it.
 - Payroll is blocked only for opted-in employees when no submitted package covers the slip period.

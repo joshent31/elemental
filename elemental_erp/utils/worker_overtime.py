@@ -160,6 +160,11 @@ def compute_daily_ot(employee, date, is_holiday=False, enforce_worker=True):
     if enforce_worker and has_cat and emp.employee_category != "Worker":
         return None
 
+    # Staff may be included in attendance reports, but OT is a Worker-only
+    # business process. Keep attendance/payment-day data while forcing every
+    # OT value to zero for non-Worker categories.
+    calculate_ot = not has_cat or emp.employee_category == "Worker"
+
     shift = emp.standard_shift_hours or STANDARD_SHIFT
 
     checkins = frappe.get_all(
@@ -220,8 +225,8 @@ def compute_daily_ot(employee, date, is_holiday=False, enforce_worker=True):
     else:
         ot_hours = max(total_hours - shift, 0)
 
-    actual_ot_hours = round(ot_hours, 2)
-    ot_hours = approved_ot_hours(employee, date, actual_ot_hours)
+    actual_ot_hours = round(ot_hours, 2) if calculate_ot else 0
+    ot_hours = approved_ot_hours(employee, date, actual_ot_hours) if calculate_ot else 0
 
     date_obj = getdate(date)
     hr = hourly_rate(employee, date_obj.year, date_obj.month, enforce_worker=enforce_worker)
@@ -261,6 +266,8 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
         return None
     if enforce_worker and has_cat and emp.employee_category != "Worker":
         return None
+
+    calculate_ot = not has_cat or emp.employee_category == "Worker"
 
     shift = emp.standard_shift_hours or STANDARD_SHIFT
     days_in_month = get_days_in_month(year, month)
@@ -334,7 +341,10 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
                      "in_time": ["is", "set"], "out_time": ["is", "set"]},
                 )
             if has_scan or has_manual_att:
-                result = compute_daily_ot(employee, date_str, is_holiday=True, enforce_worker=enforce_worker)
+                result = compute_daily_ot(employee, date_str, is_holiday=True, enforce_worker=False)
+                if result and not calculate_ot:
+                    result["ot_hours"] = 0
+                    result["ot_amount"] = 0
                 if result["status"] == "P":
                     qr_days += 1
                     paid_days += 1
@@ -400,7 +410,10 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
 
         # compute_daily_ot handles both checkin and manual attendance
         # Sunday (weekend) with check-in or manual att = ALL hours are OT
-        result = compute_daily_ot(employee, date_str, is_holiday=is_weekend, enforce_worker=enforce_worker)
+        result = compute_daily_ot(employee, date_str, is_holiday=is_weekend, enforce_worker=False)
+        if result and not calculate_ot:
+            result["ot_hours"] = 0
+            result["ot_amount"] = 0
         if result["status"] == "A":
             daily_data.append({"date": date_str, "status": "A", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
             lop_days += 1
