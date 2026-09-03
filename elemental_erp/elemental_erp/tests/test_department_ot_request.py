@@ -54,11 +54,22 @@ class TestDepartmentOTRequest(unittest.TestCase):
 		self.assertIn("cash_adjustment = salary_slip_ot_amount / 2", overtime)
 		self.assertIn("max(remaining_ot_value - cash_adjustment, 0)", overtime)
 		self.assertIn("total_ot_payable = round(salary_slip_ot_amount + cash_to_worker, 2)", overtime)
+		self.assertIn('"total_actual_ot_hours": total_actual_ot_hours', overtime)
 		self.assertIn('calculate_ot = not has_cat or emp.employee_category == "Worker"', overtime)
 		self.assertIn("approved_ot_hours(employee, date, actual_ot_hours) if calculate_ot else 0", overtime)
 		report = (APP_ROOT / "elemental_erp" / "report" / "worker_attendance_report" / "worker_attendance_report.py").read_text(encoding="utf-8")
 		self.assertIn('"Cash Gross (1×)"', report)
 		self.assertIn('"Less Slip OT ÷ 2"', report)
+
+	def test_government_report_separates_actual_from_approved_ot(self):
+		report = (
+			APP_ROOT / "elemental_erp" / "report" / "worker_ot_summary" / "worker_ot_summary.py"
+		).read_text(encoding="utf-8")
+		self.assertIn('day_info.get("actual_ot_hours", 0)', report)
+		self.assertIn('"Actual OT Hrs"', report)
+		self.assertIn('"Approved OT Hrs"', report)
+		self.assertIn('"Actual OT"', report)
+		self.assertIn('"Approved OT"', report)
 
 
 if __name__ == "__main__":

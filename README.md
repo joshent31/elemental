@@ -1019,6 +1019,9 @@ proration to continue. The exact package used is linked on the Salary Slip for a
 - OT is strictly limited to employees whose Employee Category is `Worker`. Staff may appear in
   attendance/check-in reports, but their OT hours and OT amount remain zero, and the system rejects
   any Department OT Request that includes a Staff or uncategorized employee.
+- Worker OT Summary separates **Actual OT** calculated from physical IN/OUT scans from **Approved
+  OT** authorized through the Department OT Request. Daily report columns show actual OT for
+  traceability; only approved OT feeds the ≤15-hour government/Salary Slip amount and payroll.
 - The Salary Slip records the exact package used. A package or annual revision cannot be cancelled
   while a non-cancelled draft or submitted Salary Slip references it.
 - Payroll is blocked only for opted-in employees when no submitted package covers the slip period.

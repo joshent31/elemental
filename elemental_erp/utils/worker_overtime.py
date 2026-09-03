@@ -310,6 +310,7 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
 
     # Compute daily data
     daily_data = []
+    total_actual_ot_hours = 0
     total_ot_hours = 0
     total_ot_amount = 0
     paid_days = 0
@@ -349,8 +350,9 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
                     qr_days += 1
                     paid_days += 1
                     total_ot_hours += result["ot_hours"]
+                    total_actual_ot_hours += result.get("actual_ot_hours", 0)
                     total_ot_amount += result["ot_amount"]
-                    daily_data.append({"date": date_str, "status": "PH-Work", "in_time": result["in_time"], "out_time": result["out_time"], "total_hours": result["total_hours"], "ot_hours": result["ot_hours"], "ot_amount": result["ot_amount"], "job": "", "brand": ""})
+                    daily_data.append({"date": date_str, "status": "PH-Work", "in_time": result["in_time"], "out_time": result["out_time"], "total_hours": result["total_hours"], "actual_ot_hours": result.get("actual_ot_hours", 0), "ot_hours": result["ot_hours"], "ot_amount": result["ot_amount"], "job": "", "brand": ""})
                 else:
                     daily_data.append({"date": date_str, "status": "PH", "in_time": None, "out_time": None, "ot_hours": 0, "ot_amount": 0, "job": "", "brand": ""})
                 ph_days += 1
@@ -422,6 +424,7 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
         qr_days += 1
         paid_days += 1
         total_ot_hours += result["ot_hours"]
+        total_actual_ot_hours += result.get("actual_ot_hours", 0)
         total_ot_amount += result["ot_amount"]
 
         daily_data.append({
@@ -430,6 +433,7 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
             "in_time": result["in_time"],
             "out_time": result["out_time"],
             "total_hours": result["total_hours"],
+            "actual_ot_hours": result.get("actual_ot_hours", 0),
             "ot_hours": result["ot_hours"],
             "ot_amount": result["ot_amount"],
             "job": "",
@@ -486,6 +490,8 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
         # Total OT (at 1× rate — company tracking)
         "total_ot_hours": total_ot_hours,
         "total_ot_hours_fmt": format_hhmm(total_ot_hours),
+        "total_actual_ot_hours": total_actual_ot_hours,
+        "total_actual_ot_hours_fmt": format_hhmm(total_actual_ot_hours),
         "total_ot_amount_1x": total_ot_amount_1x,
         # Salary Slip (at 2× rate — govt required)
         "salary_slip_ot_hours": capped_ot_hours,

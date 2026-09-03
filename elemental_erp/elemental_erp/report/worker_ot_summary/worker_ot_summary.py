@@ -45,7 +45,9 @@ def execute(filters=None):
             day = getdate(day_info["date"]).day
             prefix = f"d{day}"
             status = day_info.get("status", "")
-            ot_hrs = day_info.get("ot_hours", 0)
+            # Daily columns show physical OT derived from check-in/out. Approved
+            # OT remains separate and is the only value used for payroll.
+            ot_hrs = day_info.get("actual_ot_hours", 0)
 
             if status in ("A", "L", "PH", "W/O"):
                 row[f"{prefix}_ot"] = "—"
@@ -78,21 +80,23 @@ def execute(filters=None):
 def get_chart(data):
     if not data:
         return None
-    top = sorted(data, key=lambda row: row.get("total_ot_hours", 0), reverse=True)[:15]
+    top = sorted(data, key=lambda row: row.get("total_actual_ot_hours", 0), reverse=True)[:15]
+    actual_values = [float(row.get("total_actual_ot_hours") or 0) for row in top]
     approved_values = [float(row.get("total_ot_hours") or 0) for row in top]
     slip_values = [float(row.get("govt_ot_hours") or 0) for row in top]
-    if not any(approved_values) and not any(slip_values):
+    if not any(actual_values) and not any(approved_values) and not any(slip_values):
         return None
     return {
         "data": {
             "labels": [row.get("employee_name") or row.get("employee") for row in top],
             "datasets": [
+                {"name": "Actual OT", "values": actual_values},
                 {"name": "Approved OT", "values": approved_values},
                 {"name": "Salary Slip OT", "values": slip_values},
             ],
         },
         "type": "bar",
-        "colors": ["#ef6c00", "#2e7d32"],
+        "colors": ["#1565c0", "#ef6c00", "#2e7d32"],
     }
 
 
@@ -109,7 +113,8 @@ def get_columns(year, month):
         {"label": "Location", "fieldname": "location", "fieldtype": "Data", "width": 120},
         {"label": "Month Days", "fieldname": "days_in_month", "fieldtype": "Int", "width": 80},
         {"label": "Paid Days", "fieldname": "paid_days", "fieldtype": "Float", "width": 80, "precision": "1"},
-        {"label": "Total OT Hrs", "fieldname": "total_ot_hours_fmt", "fieldtype": "Data", "width": 90},
+        {"label": "Actual OT Hrs", "fieldname": "total_actual_ot_hours_fmt", "fieldtype": "Data", "width": 95},
+        {"label": "Approved OT Hrs", "fieldname": "total_ot_hours_fmt", "fieldtype": "Data", "width": 105},
         {"label": "Govt OT (≤15h)", "fieldname": "govt_ot_hours_fmt", "fieldtype": "Data", "width": 100},
     ]
 
@@ -127,7 +132,8 @@ def get_summary(data, year=None, month=None, is_month_complete=False):
         return None
 
     total_workers = len(data)
-    total_ot_hours = sum(d.get("total_ot_hours", 0) for d in data)
+    total_actual_ot = sum(d.get("total_actual_ot_hours", 0) for d in data)
+    total_approved_ot = sum(d.get("total_ot_hours", 0) for d in data)
     total_govt_ot = sum(min(d.get("total_ot_hours", 0), 15) for d in data)
 
     def fmt_hhmm(hours):
@@ -143,7 +149,8 @@ def get_summary(data, year=None, month=None, is_month_complete=False):
     return {
         "message": (
             f"<b>Workers: {total_workers}</b> | "
-            f"<b>Total OT (actual):</b> {fmt_hhmm(total_ot_hours)} | "
+            f"<b>Actual OT:</b> {fmt_hhmm(total_actual_ot)} | "
+            f"<b>Approved OT:</b> {fmt_hhmm(total_approved_ot)} | "
             f"<b>Govt OT (capped ≤{GOV_OT_CAP_HOURS}h):</b> {fmt_hhmm(total_govt_ot)}<br>"
             f"<span style='color:#888;'>OT = Hours worked beyond {STANDARD_SHIFT}h/day | "
             f"Sunday/Holiday work = ALL hours as OT | "
