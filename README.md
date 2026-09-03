@@ -1014,8 +1014,11 @@ proration to continue. The exact package used is linked on the Salary Slip for a
   added to take-home salary.
 - Worker OT is calculated automatically for bulk Payroll Entry from approved OT requests and
   Employee Checkins. Its hourly rate uses the effective package's Monthly Earnings ÷ calendar
-  days ÷ 8; employees not yet opted in continue using Employee CTC. The existing manual button
-  remains available for review/recalculation.
+  days ÷ 8. For employees not yet opted in, the Worker Attendance Report first uses Employee CTC
+  and, when CTC is blank, the latest submitted Salary Structure Assignment `base`. This keeps the
+  report's monthly salary, hourly rate, attendance salary, OT amounts and total earnings visible
+  while preserving the existing HRMS payroll setup. The existing manual button remains available
+  for review/recalculation.
 - OT is strictly limited to employees whose Employee Category is `Worker`. Staff may appear in
   attendance/check-in reports, but their OT hours and OT amount remain zero, and the system rejects
   any Department OT Request that includes a Staff or uncategorized employee.

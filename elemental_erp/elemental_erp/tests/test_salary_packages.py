@@ -74,7 +74,9 @@ class TestSalaryPackages(unittest.TestCase):
 		self.assertIn("def get_monthly_fixed_salary", overtime)
 		self.assertIn('"Employee Salary Package"', overtime)
 		self.assertIn('"monthly_earnings"', overtime)
-		self.assertIn("return fallback_ctc", overtime)
+		self.assertIn('"Salary Structure Assignment"', overtime)
+		self.assertIn('"base"', overtime)
+		self.assertIn('"monthly_salary": round(monthly_salary, 2)', overtime)
 
 
 if __name__ == "__main__":

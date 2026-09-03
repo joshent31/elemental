@@ -104,19 +104,37 @@ def daily_rate(employee, year=None, month=None, enforce_worker=True):
 
 
 def get_monthly_fixed_salary(employee, year, month, fallback_ctc=0):
-    """Use the effective approved package gross, falling back during rollout."""
-    if not frappe.db.has_column("Employee", "use_elemental_salary_package"):
-        return fallback_ctc
-    if not frappe.db.get_value("Employee", employee, "use_elemental_salary_package"):
-        return fallback_ctc
+    """Return the effective monthly salary used by attendance and OT.
+
+    Elemental Salary Package remains opt-in. During rollout, use Employee CTC
+    when populated, then fall back to the latest submitted HRMS Salary
+    Structure Assignment so existing payroll setups do not show zero amounts.
+    """
     month_end = f"{year}-{month:02d}-{get_days_in_month(year, month):02d}"
-    package = frappe.db.get_value(
-        "Employee Salary Package",
-        {"employee": employee, "effective_from": ["<=", month_end], "docstatus": 1},
-        "monthly_earnings",
-        order_by="effective_from desc, creation desc",
+    use_package = (
+        frappe.db.has_column("Employee", "use_elemental_salary_package")
+        and frappe.db.get_value("Employee", employee, "use_elemental_salary_package")
     )
-    return package if package is not None else fallback_ctc
+    if use_package:
+        package = frappe.db.get_value(
+            "Employee Salary Package",
+            {"employee": employee, "effective_from": ["<=", month_end], "docstatus": 1},
+            "monthly_earnings",
+            order_by="effective_from desc, creation desc",
+        )
+        if package is not None:
+            return float(package or 0)
+
+    if fallback_ctc:
+        return float(fallback_ctc)
+
+    assignment_base = frappe.db.get_value(
+        "Salary Structure Assignment",
+        {"employee": employee, "from_date": ["<=", month_end], "docstatus": 1},
+        "base",
+        order_by="from_date desc, creation desc",
+    )
+    return float(assignment_base or 0)
 
 
 def approved_ot_hours(employee, date, actual_ot_hours):
@@ -271,6 +289,7 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
 
     shift = emp.standard_shift_hours or STANDARD_SHIFT
     days_in_month = get_days_in_month(year, month)
+    monthly_salary = get_monthly_fixed_salary(employee, year, month, emp.ctc or 0)
     hr = hourly_rate(employee, year, month, enforce_worker=enforce_worker)
     dr = daily_rate(employee, year, month, enforce_worker=enforce_worker)
 
@@ -478,7 +497,7 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
         "department": emp.department,
         "designation": emp.designation,
         "location": emp.branch or "",
-        "monthly_salary": emp.ctc or 0,
+        "monthly_salary": round(monthly_salary, 2),
         "days_in_month": days_in_month,
         "hourly_rate": round(hr, 2),
         "daily_rate": round(dr, 2),
