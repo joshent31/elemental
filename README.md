@@ -760,6 +760,8 @@ rejected OT worked, excess OT, missing checkout and approval-pending exceptions.
 
 | Column | Formula | Rate |
 |--------|---------|------|
+| Actual OT Hours | Check-in/out working hours beyond the shift; all hours on Sunday/holiday work | — |
+| Actual OT Value | Actual OT Hours × Hourly Rate; visible for reconciliation, not automatically payable | **1×** |
 | Approved OT Hours | Sum of daily `min(actual, approved request)` | — |
 | Approved OT Value | Approved OT Hours × Hourly Rate | **1×** (company tracking) |
 | Salary Slip | min(OT, 15 hrs) × Rate × 2 | **2×** (govt required) |
@@ -767,6 +769,10 @@ rejected OT worked, excess OT, missing checkout and approval-pending exceptions.
 | Cash Adjustment | Salary Slip OT Amount ÷ 2 | Deduct from Cash Gross |
 | Cash to Worker | max(Cash Gross − Cash Adjustment, 0) | Paid separately |
 | Total OT Payable | Salary Slip OT Amount + Cash to Worker | — |
+
+The Worker Attendance Report's day-wise `Actual OT` and `Actual Amt` columns always show worked
+overtime when a complete IN/OUT pair exists. Approval affects only Approved OT and the downstream
+Salary Slip, cash and Total OT Payable columns.
 
 ### 19.4 Attendance and OT Reports
 

@@ -52,23 +52,23 @@ def execute(filters=None):
                 # Govt holiday with work — ALL hours = OT
                 row[f"{prefix}_in"] = format_time(day_info.get("in_time"))
                 row[f"{prefix}_out"] = format_time(day_info.get("out_time"))
-                ot_hrs = day_info.get("ot_hours", 0)
+                ot_hrs = day_info.get("actual_ot_hours", 0)
                 if ot_hrs > 0:
                     h = int(ot_hrs)
                     m = int(round((ot_hrs - h) * 60))
                     row[f"{prefix}_ot"] = f"{h}:{m:02d}"
-                    row[f"{prefix}_amt"] = day_info.get("ot_amount", 0)
+                    row[f"{prefix}_amt"] = round(ot_hrs * float(row.get("hourly_rate") or 0), 2)
                 row[f"{prefix}_job"] = day_info.get("job", "")
                 row[f"{prefix}_brand"] = day_info.get("brand", "")
             else:
                 row[f"{prefix}_in"] = format_time(day_info.get("in_time"))
                 row[f"{prefix}_out"] = format_time(day_info.get("out_time"))
-                ot_hrs = day_info.get("ot_hours", 0)
+                ot_hrs = day_info.get("actual_ot_hours", 0)
                 if ot_hrs > 0:
                     h = int(ot_hrs)
                     m = int(round((ot_hrs - h) * 60))
                     row[f"{prefix}_ot"] = f"{h}:{m:02d}"
-                    row[f"{prefix}_amt"] = day_info.get("ot_amount", 0)
+                    row[f"{prefix}_amt"] = round(ot_hrs * float(row.get("hourly_rate") or 0), 2)
                 row[f"{prefix}_job"] = day_info.get("job", "")
                 row[f"{prefix}_brand"] = day_info.get("brand", "")
 
@@ -78,17 +78,21 @@ def execute(filters=None):
 def get_chart(data):
     if not data:
         return None
-    top = sorted(data, key=lambda row: row.get("total_ot_hours", 0), reverse=True)[:15]
-    values = [float(row.get("total_ot_hours") or 0) for row in top]
-    if not any(values):
+    top = sorted(data, key=lambda row: row.get("total_actual_ot_hours", 0), reverse=True)[:15]
+    actual_values = [float(row.get("total_actual_ot_hours") or 0) for row in top]
+    approved_values = [float(row.get("total_ot_hours") or 0) for row in top]
+    if not any(actual_values) and not any(approved_values):
         return None
     return {
         "data": {
             "labels": [row.get("employee_name") or row.get("employee") for row in top],
-            "datasets": [{"name": "Approved OT Hours", "values": values}],
+            "datasets": [
+                {"name": "Actual OT Hours", "values": actual_values},
+                {"name": "Approved OT Hours", "values": approved_values},
+            ],
         },
         "type": "bar",
-        "colors": ["#1565c0"],
+        "colors": ["#ef6c00", "#2e7d32"],
     }
 
 
@@ -113,7 +117,10 @@ def get_columns(year, month):
         {"label": "/Month", "fieldname": "monthly_salary", "fieldtype": "Currency", "width": 90},
         {"label": "/Hour (Sal/Days/8)", "fieldname": "hourly_rate", "fieldtype": "Float", "width": 120, "precision": "2"},
         {"label": "Att.Salary", "fieldname": "att_salary", "fieldtype": "Currency", "width": 100},
-        # Total OT (at 1× rate — company tracking)
+        # Actual checkout OT is visible even before supervisor/HR approval.
+        {"label": "Actual OT Hrs", "fieldname": "total_actual_ot_hours_fmt", "fieldtype": "Data", "width": 100},
+        {"label": "Actual OT Value (1×)", "fieldname": "total_actual_ot_amount_1x", "fieldtype": "Currency", "width": 135},
+        # Approved OT controls payroll and cash calculations.
         {"label": "Approved OT Hrs", "fieldname": "total_ot_hours_fmt", "fieldtype": "Data", "width": 105},
         {"label": "Approved OT Value (1×)", "fieldname": "total_ot_amount_1x", "fieldtype": "Currency", "width": 145},
         # Salary Slip (at 2× rate — govt required, on slip)
@@ -134,8 +141,8 @@ def get_columns(year, month):
         prefix = f"d{day}"
         columns.append({"label": f"{day} IN", "fieldname": f"{prefix}_in", "fieldtype": "Data", "width": 75})
         columns.append({"label": f"{day} OUT", "fieldname": f"{prefix}_out", "fieldtype": "Data", "width": 75})
-        columns.append({"label": f"{day} OT", "fieldname": f"{prefix}_ot", "fieldtype": "Data", "width": 55})
-        columns.append({"label": f"{day} Amt", "fieldname": f"{prefix}_amt", "fieldtype": "Currency", "width": 75})
+        columns.append({"label": f"{day} Actual OT", "fieldname": f"{prefix}_ot", "fieldtype": "Data", "width": 80})
+        columns.append({"label": f"{day} Actual Amt", "fieldname": f"{prefix}_amt", "fieldtype": "Currency", "width": 90})
         columns.append({"label": f"{day} Job", "fieldname": f"{prefix}_job", "fieldtype": "Data", "width": 80})
         columns.append({"label": f"{day} Brand", "fieldname": f"{prefix}_brand", "fieldtype": "Data", "width": 90})
 
@@ -151,6 +158,8 @@ def get_summary(data, year=None, month=None, is_month_complete=False):
     total_ph = sum(d.get("ph_days", 0) for d in data)
     total_lop = sum(d.get("lop_days", 0) for d in data)
     total_att_salary = sum(d.get("att_salary", 0) for d in data)
+    total_actual_ot_hours = sum(d.get("total_actual_ot_hours", 0) for d in data)
+    total_actual_ot_1x = sum(d.get("total_actual_ot_amount_1x", 0) for d in data)
     total_ot_hours = sum(d.get("total_ot_hours", 0) for d in data)
     total_ot_1x = sum(d.get("total_ot_amount_1x", 0) for d in data)
     total_slip_2x = sum(d.get("salary_slip_ot_amount_2x", 0) for d in data)
@@ -179,7 +188,8 @@ def get_summary(data, year=None, month=None, is_month_complete=False):
             f"<b>Workers: {len(data)}</b> | "
             f"Paid Days: {total_paid:.0f} | PH: {total_ph} | LOP: {total_lop:.0f} | "
             f"Att.Salary: {fmt_money(total_att_salary)}<br>"
-            f"<b>Total OT:</b> {fmt_hhmm(total_ot_hours)} = <b>{fmt_money(total_ot_1x)}</b> (at 1x rate) | "
+            f"<b>Actual OT:</b> {fmt_hhmm(total_actual_ot_hours)} = <b>{fmt_money(total_actual_ot_1x)}</b> (checkout, 1x) | "
+            f"<b>Approved OT:</b> {fmt_hhmm(total_ot_hours)} = <b>{fmt_money(total_ot_1x)}</b> (payable, 1x) | "
             f"<b>Salary Slip:</b> {fmt_money(total_slip_2x)} (at 2x rate, ≤{GOV_OT_CAP_HOURS} hrs) | "
             f"<b>Cash to Worker:</b> {fmt_money(total_cash)} | "
             f"<b>Total Earnings:</b> {fmt_money(total_earnings)}<br>"

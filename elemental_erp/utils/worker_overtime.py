@@ -461,6 +461,10 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
         })
 
     # === OT Calculations ===
+    # Actual OT is always visible for supervisor/HR reconciliation, even when
+    # it has not been approved for payroll.
+    total_actual_ot_amount_1x = round(total_actual_ot_hours * hr, 2)
+
     # Total OT Amount = OT Hours × Hourly Rate (at 1× rate)
     # This is what the company tracks internally
     total_ot_amount_1x = round(total_ot_hours * hr, 2)
@@ -511,6 +515,7 @@ def compute_monthly_summary(employee, year, month, enforce_worker=True):
         "total_ot_hours_fmt": format_hhmm(total_ot_hours),
         "total_actual_ot_hours": total_actual_ot_hours,
         "total_actual_ot_hours_fmt": format_hhmm(total_actual_ot_hours),
+        "total_actual_ot_amount_1x": total_actual_ot_amount_1x,
         "total_ot_amount_1x": total_ot_amount_1x,
         # Salary Slip (at 2× rate — govt required)
         "salary_slip_ot_hours": capped_ot_hours,
