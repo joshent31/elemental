@@ -79,12 +79,16 @@ def get_chart(data):
     if not data:
         return None
     top = sorted(data, key=lambda row: row.get("total_ot_hours", 0), reverse=True)[:15]
+    approved_values = [float(row.get("total_ot_hours") or 0) for row in top]
+    slip_values = [float(row.get("govt_ot_hours") or 0) for row in top]
+    if not any(approved_values) and not any(slip_values):
+        return None
     return {
         "data": {
             "labels": [row.get("employee_name") or row.get("employee") for row in top],
             "datasets": [
-                {"name": "Approved OT", "values": [row.get("total_ot_hours", 0) for row in top]},
-                {"name": "Salary Slip OT", "values": [row.get("govt_ot_hours", 0) for row in top]},
+                {"name": "Approved OT", "values": approved_values},
+                {"name": "Salary Slip OT", "values": slip_values},
             ],
         },
         "type": "bar",

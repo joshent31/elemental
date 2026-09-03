@@ -37,6 +37,12 @@ class TestReportFiltersAndCharts(unittest.TestCase):
 				functions = {node.name for node in tree.body if isinstance(node, ast.FunctionDef)}
 				self.assertIn("get_chart", functions)
 
+	def test_numeric_charts_skip_empty_all_zero_datasets(self):
+		for report in set(REPORTS) - {"ot_request_vs_checkout"}:
+			with self.subTest(report=report):
+				source = (self.report_root / report / f"{report}.py").read_text(encoding="utf-8")
+				self.assertIn("if not any(", source)
+
 	def test_employee_reports_filter_employee_category_in_ui_and_server(self):
 		for report in EMPLOYEE_REPORTS:
 			with self.subTest(report=report):

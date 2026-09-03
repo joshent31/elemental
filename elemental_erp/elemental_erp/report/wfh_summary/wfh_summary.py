@@ -163,6 +163,9 @@ def get_chart(data, year, month):
 
 	# Top 10 employees by WFH days
 	top = sorted(data, key=lambda x: x.get("total_days", 0), reverse=True)[:10]
+	values = [float(d.get("total_days") or 0) for d in top]
+	if not any(values):
+		return None
 
 	return {
 		"data": {
@@ -170,7 +173,7 @@ def get_chart(data, year, month):
 			"datasets": [
 				{
 					"name": "WFH Days",
-					"values": [d.get("total_days", 0) for d in top],
+					"values": values,
 				}
 			],
 		},

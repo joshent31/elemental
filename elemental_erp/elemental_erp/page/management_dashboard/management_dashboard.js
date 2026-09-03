@@ -116,23 +116,32 @@ class ManagementDashboard {
 	}
 
 	render_charts(charts) {
+		const render_or_empty = (selector, options, values) => {
+			const clean_values = (values || []).map((value) => Number(value));
+			if (!clean_values.length || !clean_values.some((value) => Number.isFinite(value) && value !== 0)) {
+				this.$charts.find(selector).html('<div class="text-muted" style="padding:24px;">No chart data for this period.</div>');
+				return;
+			}
+			new frappe.Chart(selector, options);
+		};
+
 		// Chart 1: Jobs by Status (Pie)
-		frappe.query_report = frappe.query_report || {};
-		new frappe.Chart("#dash-chart-status", {
+		const statusValues = (charts.jobs_by_status || []).map((d) => Number(d.value) || 0);
+		render_or_empty("#dash-chart-status", {
 			title: "Jobs by Status",
 			type: "pie",
 			data: {
-				labels: charts.jobs_by_status.map((d) => d.label),
-				datasets: [{ values: charts.jobs_by_status.map((d) => d.value) }],
+				labels: (charts.jobs_by_status || []).map((d) => d.label),
+				datasets: [{ values: statusValues }],
 			},
 			colors: ["#2490ef", "#7b61ff", "#ff5858", "#f0ad4e", "#28a745", "#17a2b8", "#6f42c1", "#fd7e14", "#20c997", "#e83e8c", "#343a40", "#6c757d"],
-		});
+		}, statusValues);
 
 		// Chart 2: Monthly Jobs (Bar)
 		const monthLabels = charts.monthly_jobs.map((d) => d.label);
 		const monthCreated = charts.monthly_jobs.map((d) => d.created);
 		const monthClosed = charts.monthly_jobs.map((d) => d.closed);
-		new frappe.Chart("#dash-chart-monthly", {
+		render_or_empty("#dash-chart-monthly", {
 			title: "Jobs — Last 6 Months",
 			type: "bar",
 			data: {
@@ -144,12 +153,12 @@ class ManagementDashboard {
 			},
 			colors: ["#2490ef", "#28a745"],
 			barOptions: { spaceRatio: 0.25 },
-		});
+		}, [...monthCreated, ...monthClosed]);
 
 		// Chart 3: Department Activity (Bar — horizontal)
 		const deptLabels = charts.department_activity.map((d) => d.label);
 		const deptValues = charts.department_activity.map((d) => d.value);
-		new frappe.Chart("#dash-chart-department", {
+		render_or_empty("#dash-chart-department", {
 			title: "Active Transfers by Department",
 			type: "bar",
 			data: {
@@ -158,7 +167,7 @@ class ManagementDashboard {
 			},
 			colors: ["#ff5858"],
 			barOptions: { horizontalBars: true, spaceRatio: 0.25 },
-		});
+		}, deptValues);
 	}
 
 	render_recent_jobs(jobs) {

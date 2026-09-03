@@ -319,13 +319,18 @@ def get_chart(data):
 	if not data:
 		return None
 	rows = data[:12]
+	revenue = [float(row.get("sales_invoice_value") or 0) for row in rows]
+	cost = [float(row.get("total_cost") or 0) for row in rows]
+	profit = [float(row.get("profit") or 0) for row in rows]
+	if not any(revenue) and not any(cost) and not any(profit):
+		return None
 	return {
 		"data": {
 			"labels": [row.get("job") for row in rows],
 			"datasets": [
-				{"name": "Revenue", "values": [row.get("sales_invoice_value") or 0 for row in rows]},
-				{"name": "Total Cost", "values": [row.get("total_cost") or 0 for row in rows]},
-				{"name": "Profit / Loss", "values": [row.get("profit") or 0 for row in rows]},
+				{"name": "Revenue", "values": revenue},
+				{"name": "Total Cost", "values": cost},
+				{"name": "Profit / Loss", "values": profit},
 			],
 		},
 		"type": "bar",

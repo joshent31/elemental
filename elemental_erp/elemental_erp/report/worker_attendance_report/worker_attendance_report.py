@@ -79,10 +79,13 @@ def get_chart(data):
     if not data:
         return None
     top = sorted(data, key=lambda row: row.get("total_ot_hours", 0), reverse=True)[:15]
+    values = [float(row.get("total_ot_hours") or 0) for row in top]
+    if not any(values):
+        return None
     return {
         "data": {
             "labels": [row.get("employee_name") or row.get("employee") for row in top],
-            "datasets": [{"name": "Approved OT Hours", "values": [row.get("total_ot_hours", 0) for row in top]}],
+            "datasets": [{"name": "Approved OT Hours", "values": values}],
         },
         "type": "bar",
         "colors": ["#1565c0"],

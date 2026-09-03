@@ -27,6 +27,12 @@ class TestManagementDashboardClient(unittest.TestCase):
 		self.assertIn("error: () => this.render_error()", DASHBOARD_JS)
 		self.assertIn("Unable to load dashboard data", DASHBOARD_JS)
 
+	def test_empty_or_zero_chart_data_is_not_sent_to_svg_renderer(self):
+		self.assertIn("const render_or_empty", DASHBOARD_JS)
+		self.assertIn("Number.isFinite(value) && value !== 0", DASHBOARD_JS)
+		self.assertIn("No chart data for this period", DASHBOARD_JS)
+		self.assertNotIn("frappe.query_report = frappe.query_report || {}", DASHBOARD_JS)
+
 
 if __name__ == "__main__":
 	unittest.main()

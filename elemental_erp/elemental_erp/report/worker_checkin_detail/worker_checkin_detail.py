@@ -69,8 +69,11 @@ def get_chart(data):
         totals[employee] = totals.get(employee, 0) + (row.get("ot_hours") or 0)
         labels[employee] = row.get("employee_name") or employee
     top = sorted(totals, key=totals.get, reverse=True)[:15]
+    values = [round(float(totals[key] or 0), 2) for key in top]
+    if not any(values):
+        return None
     return {
-        "data": {"labels": [labels[key] for key in top], "datasets": [{"name": "Recorded OT Hours", "values": [round(totals[key], 2) for key in top]}]},
+        "data": {"labels": [labels[key] for key in top], "datasets": [{"name": "Recorded OT Hours", "values": values}]},
         "type": "bar",
         "colors": ["#7b61ff"],
     }

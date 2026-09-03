@@ -54,8 +54,11 @@ def get_chart(data):
 		totals[row.job] = totals.get(row.job, 0) + (row.labour_cost or 0)
 		labels[row.job] = row.job_name or row.job
 	top = sorted(totals, key=totals.get, reverse=True)[:15]
+	values = [round(float(totals[key] or 0), 2) for key in top]
+	if not any(values):
+		return None
 	return {
-		"data": {"labels": [labels[key] for key in top], "datasets": [{"name": "Labour Cost", "values": [round(totals[key], 2) for key in top]}]},
+		"data": {"labels": [labels[key] for key in top], "datasets": [{"name": "Labour Cost", "values": values}]},
 		"type": "bar",
 		"colors": ["#00897b"],
 	}
