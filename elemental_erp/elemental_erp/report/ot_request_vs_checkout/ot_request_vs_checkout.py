@@ -3,6 +3,7 @@ from collections import Counter, defaultdict
 
 import frappe
 from frappe.utils import getdate, time_diff_in_hours
+from elemental_erp.utils.worker_overtime import calculate_actual_ot_hours
 
 
 TOLERANCE_HOURS = 0.25
@@ -105,7 +106,9 @@ def get_checkouts(filters):
 		is_holiday = bool(employee.holiday_list and frappe.db.exists("Holiday", {"parent": employee.holiday_list, "holiday_date": work_date}))
 		# Saturday is worked normally. Only Sunday (weekday 6) or an explicit
 		# Holiday List date treats all worked hours as OT.
-		actual_ot = total_hours if work_date.weekday() == 6 or is_holiday else max(total_hours - shift_hours, 0)
+		actual_ot = calculate_actual_ot_hours(
+			first_in, last_out, work_date, is_holiday=(work_date.weekday() == 6 or is_holiday)
+		)
 		result[key] = frappe._dict(
 			date=work_date, employee=employee.name, employee_name=employee.employee_name,
 			department=employee.department, first_in=first_in, last_out=last_out,

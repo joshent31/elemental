@@ -3,8 +3,8 @@
 Business Logic (from client's Excel PayRepWorkersAttn):
 =========================================================
 
-Standard Shift: 9 AM to 6 PM = 8 working hours/day
-OT = Any hours beyond 8 per day
+Standard Shift: 9 AM to 6 PM = 8 working hours/day plus a break
+Normal-day OT = completed 30-minute blocks worked after 6 PM
 
 Government Rules:
 - Max OT per month = 15 hours (for government report)
@@ -35,19 +35,40 @@ Example (Worker with salary 16913, July 31 days):
     - Total Earnings   = Att.Salary + 4126.10
 """
 import calendar
+import math
 import frappe
-from frappe.utils import getdate, time_diff_in_hours
+from frappe.utils import getdate, get_datetime, time_diff_in_hours
 
 
 # Government OT cap per month
 GOV_OT_CAP_HOURS = 15
 # Standard shift = 8 working hours
 STANDARD_SHIFT = 8
+NORMAL_SHIFT_END = "18:00:00"
+OT_BLOCK_HOURS = 0.5
 
 
 def get_days_in_month(year, month):
     """Get actual calendar days in the month (28, 29, 30, or 31)."""
     return calendar.monthrange(year, month)[1]
+
+
+def completed_ot_blocks(hours):
+    """Round OT down to completed half-hour blocks; below 30 minutes is zero."""
+    hours = max(float(hours or 0), 0)
+    return math.floor((hours + 1e-9) / OT_BLOCK_HOURS) * OT_BLOCK_HOURS
+
+
+def calculate_actual_ot_hours(in_time, out_time, date, is_holiday=False):
+    """Calculate actual OT using the 18:00 cutoff or full holiday work."""
+    if not in_time or not out_time:
+        return 0
+    if is_holiday:
+        raw_ot = time_diff_in_hours(out_time, in_time)
+    else:
+        shift_end = get_datetime(f"{date} {NORMAL_SHIFT_END}")
+        raw_ot = time_diff_in_hours(out_time, shift_end)
+    return completed_ot_blocks(raw_ot)
 
 
 def hourly_rate(employee, year=None, month=None, enforce_worker=True):
@@ -183,8 +204,6 @@ def compute_daily_ot(employee, date, is_holiday=False, enforce_worker=True):
     # OT value to zero for non-Worker categories.
     calculate_ot = not has_cat or emp.employee_category == "Worker"
 
-    shift = emp.standard_shift_hours or STANDARD_SHIFT
-
     checkins = frappe.get_all(
         "Employee Checkin",
         filters={"employee": employee, "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]},
@@ -236,14 +255,9 @@ def compute_daily_ot(employee, date, is_holiday=False, enforce_worker=True):
 
     total_hours = round(time_diff_in_hours(out_time, in_time), 2)
 
-    # Holiday/Sunday: ALL hours = OT (full day is OT)
-    # Normal day: only hours beyond 8 = OT
-    if is_holiday:
-        ot_hours = total_hours  # ALL hours are OT on holidays
-    else:
-        ot_hours = max(total_hours - shift, 0)
-
-    actual_ot_hours = round(ot_hours, 2) if calculate_ot else 0
+    # Sunday/holiday: all worked time is OT. Normal day: only completed
+    # half-hour blocks after 18:00 are OT, regardless of arrival time.
+    actual_ot_hours = calculate_actual_ot_hours(in_time, out_time, date, is_holiday) if calculate_ot else 0
     ot_hours = approved_ot_hours(employee, date, actual_ot_hours) if calculate_ot else 0
 
     date_obj = getdate(date)

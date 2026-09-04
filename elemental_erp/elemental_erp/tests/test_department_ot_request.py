@@ -58,6 +58,11 @@ class TestDepartmentOTRequest(unittest.TestCase):
 		self.assertIn('"total_actual_ot_amount_1x": total_actual_ot_amount_1x', overtime)
 		self.assertIn('calculate_ot = not has_cat or emp.employee_category == "Worker"', overtime)
 		self.assertIn("approved_ot_hours(employee, date, actual_ot_hours) if calculate_ot else 0", overtime)
+		self.assertIn('NORMAL_SHIFT_END = "18:00:00"', overtime)
+		self.assertIn("def completed_ot_blocks(hours)", overtime)
+		self.assertIn("math.floor((hours + 1e-9) / OT_BLOCK_HOURS) * OT_BLOCK_HOURS", overtime)
+		self.assertIn("def calculate_actual_ot_hours(in_time, out_time, date, is_holiday=False)", overtime)
+		self.assertIn('get_datetime(f"{date} {NORMAL_SHIFT_END}")', overtime)
 		report = (APP_ROOT / "elemental_erp" / "report" / "worker_attendance_report" / "worker_attendance_report.py").read_text(encoding="utf-8")
 		self.assertIn('"Cash Gross (1×)"', report)
 		self.assertIn('"Less Slip OT ÷ 2"', report)
@@ -75,6 +80,11 @@ class TestDepartmentOTRequest(unittest.TestCase):
 		self.assertIn('"Approved OT Hrs"', report)
 		self.assertIn('"Actual OT"', report)
 		self.assertIn('"Approved OT"', report)
+
+	def test_reconciliation_uses_same_1800_half_hour_rule(self):
+		report = (REPORT_ROOT / "ot_request_vs_checkout.py").read_text(encoding="utf-8")
+		self.assertIn("from elemental_erp.utils.worker_overtime import calculate_actual_ot_hours", report)
+		self.assertIn("actual_ot = calculate_actual_ot_hours(", report)
 
 
 if __name__ == "__main__":

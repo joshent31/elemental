@@ -739,7 +739,7 @@ Hourly Rate = Monthly Salary / Days in Month / 8
 
 | Day Type | OT Rule |
 |----------|---------|
-| Normal day (9 AM – 6 PM) | Hours beyond 8 = OT |
+| Normal day (9 AM – 6 PM) | OT begins after 6 PM and is rounded down to completed 30-minute blocks |
 | **Sunday** (no work) | W/O — no OT |
 | **Sunday** (works) | **ALL hours = OT** |
 | **Govt Holiday** (no work) | PH — no OT |
@@ -750,6 +750,11 @@ Actual OT is derived from Employee Checkins. Daily payable OT is then restricted
 ```
 Payable OT = min(Actual OT, HR-approved requested OT)
 ```
+
+Normal-day examples: checkout before 18:30 = 0 OT; 18:30–18:59 = 0.5 hour;
+19:00–19:29 = 1 hour; 19:30–19:59 = 1.5 hours. Arrival time does not create OT.
+Sunday and holiday work counts the full worked duration, rounded down to the same completed
+30-minute blocks.
 
 `Department OT Request` is department/date-specific, contains multiple workers and requested
 hours, and is submitted by the supervisor to HR. The **OT Request vs Checkout** report shows
