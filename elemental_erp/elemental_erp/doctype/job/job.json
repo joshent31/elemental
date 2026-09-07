@@ -129,6 +129,12 @@
    "reqd": 1
   },
   {
+   "fieldname": "fg_change_reason",
+   "label": "FG Change Reason",
+   "fieldtype": "Small Text",
+   "description": "Required when an existing Finished Good quantity is increased or reduced. Cleared after the audit entry is saved."
+  },
+  {
    "fieldname": "section_break_po",
    "label": "Customer PO (arrives later, if at all, without blocking work)",
    "fieldtype": "Section Break",

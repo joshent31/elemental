@@ -1429,13 +1429,15 @@ def generate_indent_items_from_bom(job):
 	totals = {}
 	covered_fgs = []
 	for fg_row in job_doc.fg_items:
-		if fg_row.indent_raised:
+		production_required = max(float(fg_row.job_qty or 0) - float(fg_row.virtual_stock_qty or 0), 0)
+		qty_to_indent = max(production_required - float(fg_row.indented_production_qty or 0), 0)
+		if qty_to_indent <= 0:
 			continue
 		fg = frappe.get_doc("Finished Good", fg_row.finished_good)
 		if fg.bom_items:
 			covered_fgs.append(fg_row.finished_good)
 		for bom_row in fg.bom_items:
-			qty = (bom_row.qty_per_fg or 0) * (fg_row.job_qty or 0)
+			qty = (bom_row.qty_per_fg or 0) * qty_to_indent
 			key = bom_row.raw_material
 			if key not in totals:
 				totals[key] = {"raw_material": key, "uom": bom_row.uom, "required_qty": 0}

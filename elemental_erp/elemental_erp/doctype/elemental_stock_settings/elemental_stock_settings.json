@@ -1,0 +1,12 @@
+{
+ "doctype":"DocType","name":"Elemental Stock Settings","module":"Elemental ERP","issingle":1,"autoname":"Prompt","engine":"InnoDB",
+ "fields":[
+  {"fieldname":"company","label":"Company","fieldtype":"Link","options":"Company","reqd":1},
+  {"fieldname":"virtual_fg_warehouse","label":"Virtual Finished Goods Warehouse","fieldtype":"Link","options":"Warehouse","reqd":1,"description":"Dedicated ERPNext warehouse holding undispatched customer-owned finished goods."},
+  {"fieldname":"default_target_warehouse","label":"Default Allocation Target Warehouse","fieldtype":"Link","options":"Warehouse"},
+  {"fieldname":"ageing_days","label":"Unused Stock Alert After (Days)","fieldtype":"Int","default":"30"},
+  {"fieldname":"send_daily_fg_digest","label":"Send Daily FG Change Digest","fieldtype":"Check","default":"1"},
+  {"fieldname":"send_ageing_alert","label":"Send Virtual Stock Ageing Alert","fieldtype":"Check","default":"1"}
+ ],
+ "permissions":[{"role":"System Manager","read":1,"write":1,"create":1},{"role":"Elemental Packaging HOD","read":1,"write":1}]
+}

@@ -36,6 +36,18 @@ frappe.ui.form.on("Job", {
 		if (frm.is_new()) return;
 
 		const isTerminal = frm.doc.status === "Closed" || frm.doc.status === "Cancelled";
+		const canManageVirtualStock = ["System Manager", "Elemental Packaging User", "Elemental Packaging HOD"]
+			.some((role) => (frappe.user_roles || []).includes(role));
+		if (canManageVirtualStock && !isTerminal) {
+			frm.add_custom_button("Check Availability", () => {
+				frappe.call({method:"elemental_erp.utils.fg_change_management.get_job_virtual_availability",args:{job:frm.doc.name},freeze:true,callback:(r)=>{
+					const rows=(r.message||[]).map(x=>[x.finished_good,x.required_qty,x.available_qty,x.suggested_production_qty]);
+					frappe.msgprint({title:"Customer Virtual FG Availability",message:frappe.utils.make_table(rows,["Finished Good","Required","Available","Balance to Produce"]),wide:true});
+				}});
+			}, "Virtual Stock");
+			frm.add_custom_button("Transfer Undispatched FG", () => frappe.new_doc("Virtual FG Transfer", {source_job: frm.doc.name}), "Virtual Stock");
+			frm.add_custom_button("Reserve for This Job", () => frappe.new_doc("Virtual FG Reservation", {target_job: frm.doc.name}), "Virtual Stock");
+		}
 		const canPrintPackingLabels = [
 			"System Manager",
 			"Elemental Packaging User",

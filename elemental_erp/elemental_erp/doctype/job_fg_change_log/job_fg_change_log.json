@@ -1,0 +1,24 @@
+{
+ "doctype":"DocType","name":"Job FG Change Log","module":"Elemental ERP","autoname":"naming_series:","engine":"InnoDB","track_changes":1,
+ "fields":[
+  {"fieldname":"naming_series","label":"Series","fieldtype":"Select","options":"FGCH-.YYYY.-.#####","default":"FGCH-.YYYY.-.#####","reqd":1,"read_only":1},
+  {"fieldname":"job","label":"Job","fieldtype":"Link","options":"Job","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"job_fg_row","label":"Job FG Row","fieldtype":"Data","read_only":1},
+  {"fieldname":"customer","label":"Customer","fieldtype":"Link","options":"Customer","read_only":1,"in_standard_filter":1},
+  {"fieldname":"finished_good","label":"Finished Good","fieldtype":"Link","options":"Finished Good","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"original_qty","label":"Original Qty","fieldtype":"Float","read_only":1,"in_list_view":1},
+  {"fieldname":"new_qty","label":"New Qty","fieldtype":"Float","read_only":1,"in_list_view":1},
+  {"fieldname":"change_qty","label":"Change (+/-)","fieldtype":"Float","read_only":1,"in_list_view":1},
+  {"fieldname":"change_type","label":"Change Type","fieldtype":"Select","options":"Added\nIncreased\nReduced","read_only":1,"in_standard_filter":1},
+  {"fieldname":"reason","label":"Reason","fieldtype":"Small Text","read_only":1},
+  {"fieldname":"changed_by","label":"Changed By","fieldtype":"Link","options":"User","read_only":1,"in_standard_filter":1},
+  {"fieldname":"changed_on","label":"Changed On","fieldtype":"Datetime","read_only":1,"in_list_view":1,"in_standard_filter":1}
+ ],
+ "permissions":[
+  {"role":"System Manager","read":1,"report":1,"export":1},
+  {"role":"Elemental Packaging User","read":1,"report":1},
+  {"role":"Elemental Packaging HOD","read":1,"report":1,"export":1},
+  {"role":"Elemental Sales HOD","read":1,"report":1,"export":1},
+  {"role":"Elemental Costing HOD","read":1,"report":1,"export":1}
+ ],"sort_field":"changed_on","sort_order":"DESC"
+}

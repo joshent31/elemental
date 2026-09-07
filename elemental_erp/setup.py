@@ -105,3 +105,21 @@ def backfill_fg_subpart_process_checks():
 		values["process_flow"] = " → ".join(processes)
 		values["processes"] = "\n".join(processes)
 		frappe.db.set_value("FG Subpart", row.name, values, update_modified=False)
+
+
+def backfill_job_fg_planning_quantities():
+	"""Initialize revision/planning fields for Jobs created before this feature."""
+	import frappe
+
+	if not frappe.db.has_column("Job FG Item", "original_job_qty"):
+		return
+	frappe.db.sql("""
+		UPDATE `tabJob FG Item`
+		SET original_job_qty = COALESCE(NULLIF(original_job_qty, 0), job_qty),
+			production_qty = GREATEST(COALESCE(job_qty, 0) - COALESCE(virtual_stock_qty, 0), 0),
+			indented_production_qty = CASE
+				WHEN COALESCE(indent_raised, 0)=1 AND COALESCE(indented_production_qty, 0)=0
+				THEN GREATEST(COALESCE(job_qty, 0) - COALESCE(virtual_stock_qty, 0), 0)
+				ELSE COALESCE(indented_production_qty, 0)
+			END
+	""")

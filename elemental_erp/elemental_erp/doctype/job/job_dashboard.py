@@ -8,6 +8,8 @@ def get_data():
 		"non_standard_fieldnames": {
 			"Purchase Order": "elemental_job",
 			"Sales Invoice": "elemental_job",
+			"Virtual FG Transfer": "source_job",
+			"Virtual FG Reservation": "target_job",
 		},
 		"transactions": [
 			{
@@ -37,8 +39,9 @@ def get_data():
 			},
 			{
 				"label": _("Packaging & Dispatch"),
-				"items": ["Packaging Entry", "Packing Box", "Dispatch Entry"],
+				"items": ["Packaging Entry", "Packing Box", "Dispatch Entry", "Virtual FG Transfer", "Virtual FG Reservation"],
 			},
+			{"label": _("Audit"), "items": ["Job FG Change Log"]},
 			{
 				"label": _("Sales & Billing"),
 				"items": ["Elemental Quotation", "Sales Invoice"],

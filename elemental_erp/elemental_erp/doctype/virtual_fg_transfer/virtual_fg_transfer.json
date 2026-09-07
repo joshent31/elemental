@@ -1,0 +1,26 @@
+{
+ "doctype":"DocType","name":"Virtual FG Transfer","module":"Elemental ERP","autoname":"naming_series:","is_submittable":1,"engine":"InnoDB","track_changes":1,
+ "fields":[
+  {"fieldname":"naming_series","label":"Series","fieldtype":"Select","options":"VFT-.YYYY.-.#####","default":"VFT-.YYYY.-.#####","reqd":1,"read_only":1},
+  {"fieldname":"source_job","label":"Original / Source Job","fieldtype":"Link","options":"Job","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"customer","label":"Customer","fieldtype":"Link","options":"Customer","read_only":1,"in_standard_filter":1},
+  {"fieldname":"finished_good","label":"Finished Good","fieldtype":"Link","options":"Finished Good","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"erpnext_item","label":"ERPNext Stock Item","fieldtype":"Link","options":"Item","read_only":1},
+  {"fieldname":"qty","label":"Transfer Qty","fieldtype":"Float","reqd":1,"in_list_view":1},
+  {"fieldname":"intended_location","label":"Intended Branch / Location","fieldtype":"Data","reqd":1,"in_list_view":1},
+  {"fieldname":"reason","label":"Reason","fieldtype":"Small Text","reqd":1},
+  {"fieldname":"section_stock","label":"ERPNext Stock Movement","fieldtype":"Section Break"},
+  {"fieldname":"company","label":"Company","fieldtype":"Link","options":"Company","read_only":1},
+  {"fieldname":"source_warehouse","label":"Source Finished Goods Warehouse","fieldtype":"Link","options":"Warehouse","reqd":1},
+  {"fieldname":"virtual_warehouse","label":"Virtual Finished Goods Warehouse","fieldtype":"Link","options":"Warehouse","read_only":1},
+  {"fieldname":"stock_entry","label":"Stock Entry","fieldtype":"Link","options":"Stock Entry","read_only":1},
+  {"fieldname":"status","label":"Status","fieldtype":"Select","options":"Draft\nAvailable\nPartly Reserved\nReserved\nPartly Utilized\nUtilized\nCancelled","default":"Draft","read_only":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"approved_by","label":"Approved By","fieldtype":"Link","options":"User","read_only":1},
+  {"fieldname":"approved_on","label":"Approved On","fieldtype":"Datetime","read_only":1}
+ ],
+ "permissions":[
+  {"role":"System Manager","read":1,"write":1,"create":1,"submit":1,"cancel":1,"amend":1,"report":1,"print":1,"export":1},
+  {"role":"Elemental Packaging User","read":1,"write":1,"create":1,"report":1,"print":1},
+  {"role":"Elemental Packaging HOD","read":1,"write":1,"create":1,"submit":1,"cancel":1,"amend":1,"report":1,"print":1,"export":1}
+ ],"sort_field":"modified","sort_order":"DESC"
+}

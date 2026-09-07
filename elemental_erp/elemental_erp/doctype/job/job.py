@@ -5,6 +5,9 @@ TERMINAL_STATUSES = ("Closed", "Cancelled")
 
 
 class Job(Document):
+	def before_save(self):
+		self._prepare_fg_change_audit()
+
 	def validate(self):
 		self._block_edits_if_closed()
 		self._validate_fg_rows()
@@ -34,6 +37,7 @@ class Job(Document):
 		# AND any FG the customer adds later, mid-Job. Idempotent: rows
 		# already flagged trackers_generated are skipped every time.
 		generate_trackers_for_new_fg_rows(self)
+		self._record_fg_change_audit()
 
 		# one Data Entry Task per Job (not per FG) — created once, on
 		# whichever save first has fg_items, and left alone after that
@@ -82,14 +86,78 @@ class Job(Document):
 				stored = frappe.db.get_value(
 					"Job FG Item", row.name, ["finished_good", "job_qty"], as_dict=True
 				)
-				if stored and (
-					stored.finished_good != row.finished_good
-					or float(stored.job_qty or 0) != float(row.job_qty or 0)
-				):
+				if stored and stored.finished_good != row.finished_good:
 					frappe.throw(
-						"Finished Good and Job Qty cannot be changed after trackers are generated "
-						f"for row {row.idx}. Add a new Finished Good instead."
+						"Finished Good cannot be replaced after trackers are generated. "
+						"Revise its quantity or add another Finished Good."
 					)
+
+	def _prepare_fg_change_audit(self):
+		"""Capture revisions before the parent/children are written."""
+		self._fg_changes = []
+		stored_rows = {}
+		if not self.is_new():
+			stored_rows = {
+				r.name: r for r in frappe.get_all(
+					"Job FG Item", {"parent": self.name, "parenttype": "Job"},
+					["name", "finished_good", "job_qty", "original_job_qty"],
+					limit_page_length=0,
+				)
+			}
+		for row in self.fg_items:
+			old = stored_rows.get(row.name)
+			old_qty = float(old.job_qty or 0) if old else 0.0
+			new_qty = float(row.job_qty or 0)
+			if not row.original_job_qty:
+				row.original_job_qty = float(old.original_job_qty or old_qty) if old else new_qty
+			if abs(new_qty - old_qty) > 1e-9:
+				if old and not (self.fg_change_reason or "").strip():
+					frappe.throw("Enter FG Change Reason before changing a Finished Good quantity.")
+				self._validate_reduced_tracker_quantity(row.finished_good, new_qty)
+				self._fg_changes.append((row, old_qty, new_qty, "Added" if not old else "Increased" if new_qty > old_qty else "Reduced"))
+		# Removed rows are not allowed because their production history would be orphaned.
+		current_names = {r.name for r in self.fg_items if r.name}
+		removed = [r for name, r in stored_rows.items() if name not in current_names]
+		if removed:
+			frappe.throw("Finished Good rows cannot be deleted. Set a valid reduced quantity and provide a reason.")
+
+	def _validate_reduced_tracker_quantity(self, finished_good, new_qty):
+		if self.is_new():
+			return
+		fg = frappe.get_doc("Finished Good", finished_good)
+		multipliers = {sp.get("part_code"): float(sp.get("qty_per_fg") or 1) for sp in fg.subparts}
+		multipliers.setdefault(fg.fg_code, 1.0)
+		for tracker in frappe.get_all("QR Code Master", {"job": self.name, "finished_good": finished_good}, ["name", "subpart_code", "completed_qty"]):
+			allowed = new_qty * multipliers.get(tracker.subpart_code, 1.0)
+			if float(tracker.completed_qty or 0) > allowed:
+				frappe.throw(f"Cannot reduce {finished_good}: tracker {tracker.name} already completed {tracker.completed_qty}, above revised requirement {allowed}.")
+		committed = float(frappe.db.sql("""SELECT COALESCE(SUM(qty),0) FROM `tabVirtual FG Transfer`
+			WHERE source_job=%s AND finished_good=%s AND docstatus=1""", (self.name, finished_good))[0][0] or 0)
+		packed = float(frappe.db.sql("""SELECT COALESCE(SUM(c.qty),0) FROM `tabPacking Box Content` c
+			JOIN `tabPacking Box` b ON b.name=c.parent WHERE b.job=%s AND c.finished_good=%s
+			AND b.status NOT IN ('Cancelled','Label Created')""", (self.name, finished_good))[0][0] or 0)
+		if new_qty + 1e-9 < committed + packed:
+			frappe.throw(f"Cannot reduce {finished_good} below {committed + packed}; that quantity is already in virtual stock or packed.")
+
+	def _record_fg_change_audit(self):
+		for row, old_qty, new_qty, change_type in getattr(self, "_fg_changes", []):
+			frappe.get_doc({
+				"doctype": "Job FG Change Log", "job": self.name,
+				"job_fg_row": row.name, "customer": self.customer,
+				"finished_good": row.finished_good, "original_qty": old_qty,
+				"new_qty": new_qty, "change_qty": new_qty - old_qty,
+				"change_type": change_type, "reason": self.fg_change_reason or "Initial Job entry",
+				"changed_by": frappe.session.user, "changed_on": frappe.utils.now_datetime(),
+			}).insert(ignore_permissions=True)
+			_resize_fg_trackers(self.name, row.finished_good, new_qty)
+			row.virtual_stock_qty = get_reserved_virtual_qty(self.name, row.finished_good)
+			row.production_qty = max(new_qty - float(row.virtual_stock_qty or 0), 0)
+			frappe.db.set_value("Job FG Item", row.name, {
+				"original_job_qty": row.original_job_qty, "virtual_stock_qty": row.virtual_stock_qty,
+				"production_qty": row.production_qty,
+			}, update_modified=False)
+		if getattr(self, "_fg_changes", None):
+			frappe.db.set_value("Job", self.name, "fg_change_reason", "", update_modified=False)
 
 
 def ensure_job_qr(job):
@@ -202,6 +270,30 @@ def generate_data_entry_task_for_job(doc):
 	frappe.get_doc({"doctype": "Data Entry Task", "job": doc.name, "status": "Pending"}).insert(
 		ignore_permissions=True
 	)
+
+
+def get_reserved_virtual_qty(job, finished_good):
+	return float(frappe.db.sql("""
+		SELECT COALESCE(SUM(reserved_qty), 0)
+		FROM `tabVirtual FG Reservation`
+		WHERE target_job=%s AND finished_good=%s AND docstatus=1
+		  AND status != 'Cancelled'
+	""", (job, finished_good))[0][0] or 0)
+
+
+def _resize_fg_trackers(job, finished_good, job_qty):
+	"""Resize only quantities; identities and completed history remain untouched."""
+	fg = frappe.get_doc("Finished Good", finished_good)
+	multipliers = {sp.get("part_code"): float(sp.get("qty_per_fg") or 1) for sp in fg.subparts}
+	multipliers.setdefault(fg.fg_code, 1.0)
+	for tracker in frappe.get_all("QR Code Master", {"job": job, "finished_good": finished_good}, ["name", "subpart_code"]):
+		total = job_qty * multipliers.get(tracker.subpart_code, 1.0)
+		frappe.db.set_value("QR Code Master", tracker.name, "total_qty", total, update_modified=False)
+	for label in frappe.get_all("Job Subpart Label", {"job": job, "finished_good": finished_good}, ["name", "subpart_code"]):
+		qty_per_fg = multipliers.get(label.subpart_code, 1.0)
+		frappe.db.set_value("Job Subpart Label", label.name, {
+			"job_qty": job_qty, "qty_per_fg": qty_per_fg, "total_qty": job_qty * qty_per_fg,
+		}, update_modified=False)
 
 
 def cancel_related_records(job_name):

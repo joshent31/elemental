@@ -329,6 +329,12 @@
             "icon": "chart-bar",
             "link_count": -1
         },
+        {"hidden":0,"is_query_report":0,"label":"Virtual FG Transfer","link_count":0,"link_to":"Virtual FG Transfer","link_type":"DocType","onboard":1,"type":"Link"},
+        {"hidden":0,"is_query_report":0,"label":"Virtual FG Reservation","link_count":0,"link_to":"Virtual FG Reservation","link_type":"DocType","onboard":1,"type":"Link"},
+        {"hidden":0,"is_query_report":0,"label":"Elemental Stock Settings","link_count":0,"link_to":"Elemental Stock Settings","link_type":"DocType","onboard":1,"type":"Link"},
+        {"hidden":0,"is_query_report":0,"label":"Job FG Change Log","link_count":0,"link_to":"Job FG Change Log","link_type":"DocType","onboard":1,"type":"Link"},
+        {"hidden":0,"is_query_report":1,"label":"FG Change Audit","link_count":0,"link_to":"FG Change Audit","link_type":"Report","onboard":1,"type":"Link"},
+        {"hidden":0,"is_query_report":1,"label":"Virtual FG Stock","link_count":0,"link_to":"Virtual FG Stock","link_type":"Report","onboard":1,"type":"Link"},
         {
             "hidden": 0,
             "is_query_report": 1,

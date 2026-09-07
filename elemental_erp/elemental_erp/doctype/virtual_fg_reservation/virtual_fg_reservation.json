@@ -1,0 +1,24 @@
+{
+ "doctype":"DocType","name":"Virtual FG Reservation","module":"Elemental ERP","autoname":"naming_series:","is_submittable":1,"engine":"InnoDB","track_changes":1,
+ "fields":[
+  {"fieldname":"naming_series","label":"Series","fieldtype":"Select","options":"VFR-.YYYY.-.#####","default":"VFR-.YYYY.-.#####","reqd":1,"read_only":1},
+  {"fieldname":"virtual_transfer","label":"Virtual FG Lot","fieldtype":"Link","options":"Virtual FG Transfer","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"source_job","label":"Source Job","fieldtype":"Link","options":"Job","read_only":1},
+  {"fieldname":"target_job","label":"New / Target Job","fieldtype":"Link","options":"Job","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"customer","label":"Customer","fieldtype":"Link","options":"Customer","read_only":1,"in_standard_filter":1},
+  {"fieldname":"finished_good","label":"Finished Good","fieldtype":"Link","options":"Finished Good","read_only":1,"in_list_view":1},
+  {"fieldname":"reserved_qty","label":"Reserved Qty","fieldtype":"Float","reqd":1,"in_list_view":1},
+  {"fieldname":"utilized_qty","label":"Utilized Qty","fieldtype":"Float","read_only":1,"default":"0","in_list_view":1},
+  {"fieldname":"target_warehouse","label":"Target Warehouse","fieldtype":"Link","options":"Warehouse"},
+  {"fieldname":"stock_entry","label":"Utilization Stock Entry","fieldtype":"Link","options":"Stock Entry","read_only":1},
+  {"fieldname":"status","label":"Status","fieldtype":"Select","options":"Draft\nReserved\nPartly Utilized\nUtilized\nCancelled","default":"Draft","read_only":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"reason","label":"Allocation Reason","fieldtype":"Small Text","reqd":1},
+  {"fieldname":"approved_by","label":"Approved By","fieldtype":"Link","options":"User","read_only":1},
+  {"fieldname":"approved_on","label":"Approved On","fieldtype":"Datetime","read_only":1}
+ ],
+ "permissions":[
+  {"role":"System Manager","read":1,"write":1,"create":1,"submit":1,"cancel":1,"amend":1,"report":1,"print":1,"export":1},
+  {"role":"Elemental Packaging User","read":1,"write":1,"create":1,"report":1,"print":1},
+  {"role":"Elemental Packaging HOD","read":1,"write":1,"create":1,"submit":1,"cancel":1,"amend":1,"report":1,"print":1,"export":1}
+ ],"sort_field":"modified","sort_order":"DESC"
+}

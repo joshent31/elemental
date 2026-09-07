@@ -21,7 +21,15 @@ after_migrate = [
 	"elemental_erp.setup.backfill_job_qr_codes",
 	"elemental_erp.setup.backfill_fg_subpart_process_checks",
 	"elemental_erp.setup.sync_job_subpart_labels",
+	"elemental_erp.setup.backfill_job_fg_planning_quantities",
 ]
+
+scheduler_events = {
+	"daily": [
+		"elemental_erp.utils.fg_change_management.send_daily_fg_change_digest",
+		"elemental_erp.utils.fg_change_management.send_virtual_stock_ageing_alerts",
+	]
+}
 
 # Fixtures — exported so `bench get-app` installs already ship Notifications
 # and are safe to re-export any custom Property Setters etc. later
@@ -56,6 +64,9 @@ doc_events = {
 		"after_insert": "elemental_erp.utils.purchase_order.mark_material_indents_in_purchase",
 		"on_cancel": "elemental_erp.utils.purchase_order.refresh_material_indent_purchase_status",
 		"on_trash": "elemental_erp.utils.purchase_order.refresh_material_indent_purchase_status",
+	},
+	"Stock Entry": {
+		"on_cancel": "elemental_erp.utils.fg_change_management.sync_cancelled_stock_entry",
 	},
 }
 
@@ -94,4 +105,6 @@ doctype_js = {
 	"Salary Slip": "public/js/salary_slip.js",
 	"Leave Application": "public/js/leave_application.js",
 	"Purchase Order": "public/js/purchase_order.js",
+	"Virtual FG Transfer": "public/js/virtual_fg_transfer.js",
+	"Virtual FG Reservation": "public/js/virtual_fg_reservation.js",
 }

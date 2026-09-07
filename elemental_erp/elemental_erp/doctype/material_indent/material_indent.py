@@ -75,8 +75,11 @@ class MaterialIndent(Document):
 		job_doc = frappe.get_doc("Job", self.job)
 		changed = False
 		for row in job_doc.fg_items:
-			if row.finished_good in fg_codes and not row.indent_raised:
+			if row.finished_good in fg_codes:
 				row.indent_raised = 1
+				row.indented_production_qty = max(
+					float(row.job_qty or 0) - float(row.virtual_stock_qty or 0), 0
+				)
 				changed = True
 		if changed:
 			job_doc.save(ignore_permissions=True)
@@ -136,4 +139,5 @@ class MaterialIndent(Document):
 		for row in job_doc.fg_items:
 			if row.finished_good in fg_codes and row.finished_good not in covered_elsewhere:
 				row.indent_raised = 0
+				row.indented_production_qty = 0
 		job_doc.save(ignore_permissions=True)

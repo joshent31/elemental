@@ -1117,3 +1117,65 @@ bench run-tests --app elemental_erp
 | **OT Calculation Engine** | ✅ | Request vs actual, Sunday/Holiday OT, 15h Slip cap, adjusted cash settlement |
 | **Department OT Request** | ✅ | Supervisor daily request, HR approval/rejection, checkout reconciliation |
 | **Test Suite** | ✅ | Focused regression checks plus Frappe bench tests |
+
+---
+
+## 27. Finished Good Revisions and Customer Virtual Stock
+
+### 27.1 Controlled Finished Good quantity changes
+
+Jobs remain editable for genuine customer revisions, including adding a new Finished Good or increasing/reducing an existing quantity. Enter **FG Change Reason** before saving a revision. The system:
+
+- keeps the first quantity in `Original Qty` and the current requirement in `Job Qty`;
+- writes an immutable **Job FG Change Log** row for every addition, increase and reduction;
+- records Job, customer, FG, old quantity, new quantity, signed net change, user, timestamp and reason;
+- updates untouched QR tracker totals without changing their identities or completed history;
+- refuses a reduction below an already completed tracker quantity and refuses deletion of an FG row;
+- calculates `Balance to Produce = Job Qty - Virtual Stock Allocated`; and
+- provides the **FG Change Audit** report with date, Job, customer and FG filters plus a chart.
+
+The daily scheduler sends the previous day's final net change per Job/FG to email addresses belonging to all active employees except Employee Category **Worker**. Individual edits remain visible in the audit report even though the email consolidates multiple same-day changes. Configure an outgoing Email Account and keep the scheduler enabled.
+
+### 27.2 Real ERPNext virtual-stock accounting
+
+Virtual stock is physical stock and therefore uses standard ERPNext Warehouses and submitted **Stock Entry / Material Transfer** documents; it is not a memo-only balance.
+
+1. In **Elemental Stock Settings**, select the Company, a dedicated Virtual Finished Goods Warehouse, optional default target warehouse and ageing threshold.
+2. Map every Finished Good to its real stock Item through **Linked ERPNext Item**.
+3. Packaging User creates a **Virtual FG Transfer** against the original Job, FG, quantity, intended location, source warehouse and reason.
+4. Packaging HOD submits it. Submission creates and submits the ERPNext Material Transfer from the source warehouse into the configured virtual warehouse.
+5. The system prevents quantities above the original Job's unpacked, undispatched balance and blocks cancellation while a submitted reservation exists.
+
+Virtual inventory is isolated in the Elemental lot ledger by customer, FG, source Job and intended location. Standard ERPNext maintains the accounting stock balance; **Virtual FG Stock** provides the customer/job allocation view and Available, Reserved and Utilized quantities.
+
+### 27.3 Reuse on a later Job
+
+For a later order from the same customer:
+
+1. Check **Virtual FG Stock** or call the availability action using the new Job's customer and FG.
+2. Create a **Virtual FG Reservation** for the source lot and target Job. Cross-customer allocation, duplicate over-allocation, negative quantities and allocation to a Job without that FG are rejected.
+3. Packaging HOD submits the reservation. The target Job row immediately shows Virtual Stock Allocated and only the remaining Balance to Produce flows to planning.
+4. From the submitted reservation choose **Move to Target Warehouse**. This creates a second submitted ERPNext Material Transfer out of the virtual warehouse and records the utilization against the source and target Jobs.
+5. Newly produced quantity and utilized virtual quantity can then enter the normal QC, packaging and final dispatch flow for the target Job.
+
+Cancelling a utilization Stock Entry restores the reservation state. Cancelling the original virtual transfer first requires its reservations to be cancelled. This prevents double allocation and preserves references to both Stock Entries.
+
+### 27.4 Roles, approvals and alerts
+
+- **Elemental Packaging User** can prepare transfers and reservations.
+- **Elemental Packaging HOD** (or System Manager) submits/approves them and can execute warehouse utilization.
+- Active non-Worker employees receive the daily FG-change digest and virtual-stock ageing alert.
+- `Unused Stock Alert After (Days)` in Elemental Stock Settings controls the ageing threshold.
+- No ATS name, dependency or integration is used anywhere in this workflow.
+
+### 27.5 Deployment checklist
+
+After pulling this version run:
+
+```bash
+bench --site <site-name> migrate
+bench --site <site-name> clear-cache
+bench restart
+```
+
+Then configure **Elemental Stock Settings**, confirm every involved ERPNext Item is a stock item with the correct UOM, ensure sufficient source-warehouse quantity, and test one transfer/reservation/utilization chain in a non-production Job before operational rollout.
