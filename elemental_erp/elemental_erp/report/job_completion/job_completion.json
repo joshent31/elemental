@@ -1,0 +1,21 @@
+{
+ "doctype": "Report",
+ "name": "Job Completion",
+ "report_name": "Job Completion",
+ "report_type": "Script Report",
+ "module": "Elemental ERP",
+ "is_standard": "Yes",
+ "ref_doctype": "Job",
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Elemental Production User"},
+  {"role": "Elemental Production HOD"},
+  {"role": "Elemental Packaging User"},
+  {"role": "Elemental Packaging HOD"},
+  {"role": "Elemental QC HOD"},
+  {"role": "Elemental Dispatch HOD"},
+  {"role": "Elemental Costing User"},
+  {"role": "Elemental Costing HOD"},
+  {"role": "Elemental Sales HOD"}
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "doctype": "Report",
+ "name": "Job FG Department Tracker",
+ "report_name": "Job FG Department Tracker",
+ "report_type": "Script Report",
+ "module": "Elemental ERP",
+ "is_standard": "Yes",
+ "ref_doctype": "QR Code Master",
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Elemental Production User"},
+  {"role": "Elemental Production HOD"},
+  {"role": "Elemental Packaging User"},
+  {"role": "Elemental Packaging HOD"},
+  {"role": "Elemental QC User"},
+  {"role": "Elemental QC HOD"},
+  {"role": "Elemental Dispatch User"},
+  {"role": "Elemental Dispatch HOD"},
+  {"role": "Elemental Costing User"},
+  {"role": "Elemental Costing HOD"}
+ ]
+}

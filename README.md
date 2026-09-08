@@ -1201,3 +1201,21 @@ When **Enable Elemental Day-End Attendance** is selected and the settings are sa
 HR can use **Run for Today** from Elemental Attendance Settings for an immediate controlled run. The scheduler is idempotent and will not process the same date twice unless HR explicitly uses the manual force action.
 
 When the Elemental option is cleared and the settings are saved, only the Shift Types remembered when it was enabled are restored to HRMS Auto Attendance. The usual HRMS/manual workflow then resumes. Attendance feeds standard ERPNext payroll exactly like manually or HRMS-generated Attendance; the Worker-only OT rules remain separate and unchanged.
+
+---
+
+## 29. Job Production Tracking Reports
+
+Two traceability reports are available from the **Elemental Fixtures** workspace. Both support JAN–DEC month, year, Job and customer filtering and export through the standard Frappe report controls.
+
+### Job FG Department Tracker
+
+This is the live Job → Finished Good → subpart/process view. Required, completed and pending quantities come from **QR Code Master**. The lying department comes from the latest non-cancelled **Department Transfer**: a received transfer lies with the destination department, while an open transfer is displayed as `From → To`. If a QR has not yet been transferred, its configured process is displayed as the current operational location. The report includes movement status, tracker status, last movement time, summary totals and a chart of pending quantity by department.
+
+### Job Completion
+
+This gives one row per Job. **Production Completion %** is calculated from actual QR tracker quantities:
+
+`sum(completed process quantity, capped at required quantity) ÷ sum(required process quantity) × 100`
+
+The same calculation is shown separately for Metal, Wood, Electrical, Powdercoating, Paint, US Assembly and Packing. The report also shows FG count, due date, days remaining, total process quantities, overdue count and a completion chart. Processes not required for a Job show zero and do not dilute the overall completion percentage.
