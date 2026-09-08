@@ -1,15 +1,107 @@
 import frappe
-from frappe.utils import now_datetime, nowdate, time_diff_in_hours
+from frappe.utils import get_datetime, getdate, now_datetime, nowdate, time_diff_in_hours
 
 from elemental_erp.utils.qr_generator import generate_qr_image
 
 
 def process_attendance_after_checkin(checkin):
-	"""Leave Attendance exclusively to HRMS; Elemental only records Checkins."""
-	shift = checkin.get("shift")
-	if shift and frappe.db.get_value("Shift Type", shift, "enable_auto_attendance"):
-		return None, "HRMS Shift Auto Attendance"
-	return None, "HRMS Configuration Required"
+	"""Gate scans only create Checkins; the selected engine processes Attendance."""
+	if frappe.db.get_single_value("Elemental Attendance Settings", "enable_elemental_day_end_attendance"):
+		return None, "Elemental Day-End Attendance"
+	return None, "Standard HRMS / Manual Attendance"
+
+
+def _is_non_working_day(employee, attendance_date):
+	if getdate(attendance_date).weekday() == 6:  # Sunday is the organisation-wide week off.
+		return True
+	holiday_list, company = frappe.db.get_value("Employee", employee, ["holiday_list", "company"])
+	holiday_list = holiday_list or frappe.db.get_value("Company", company, "default_holiday_list")
+	return bool(holiday_list and frappe.db.exists("Holiday", {"parent": holiday_list, "holiday_date": attendance_date}))
+
+
+def _has_approved_leave(employee, attendance_date):
+	return bool(frappe.db.exists("Leave Application", {
+		"employee": employee, "docstatus": 1, "status": "Approved",
+		"from_date": ["<=", attendance_date], "to_date": [">=", attendance_date],
+	}))
+
+
+def _has_approved_wfh(employee, attendance_date):
+	return bool(frappe.db.exists("Work from Home Request", {
+		"employee": employee, "status": "Approved",
+		"from_date": ["<=", attendance_date], "to_date": [">=", attendance_date],
+	}))
+
+
+def build_day_end_attendance(employee, attendance_date, settings=None):
+	"""Create one Present/Absent record from the first IN and final later OUT."""
+	settings = settings or frappe.get_single("Elemental Attendance Settings")
+	if _is_non_working_day(employee, attendance_date) or _has_approved_leave(employee, attendance_date):
+		return "Skipped", None
+	existing = frappe.db.get_value("Attendance", {
+		"employee": employee, "attendance_date": attendance_date, "docstatus": ["<", 2]
+	}, "name")
+	if existing:
+		return "Existing", existing
+	is_wfh = _has_approved_wfh(employee, attendance_date)
+	checkins = frappe.get_all("Employee Checkin", {
+		"employee": employee,
+		"time": ["between", [f"{attendance_date} 00:00:00", f"{attendance_date} 23:59:59"]],
+	}, ["log_type", "time"], order_by="time asc", limit_page_length=0)
+	in_times = [get_datetime(row.time) for row in checkins if row.log_type == "IN"]
+	out_times = [get_datetime(row.time) for row in checkins if row.log_type == "OUT"]
+	first_in = min(in_times) if in_times else None
+	valid_outs = [value for value in out_times if first_in and value > first_in]
+	last_out = max(valid_outs) if valid_outs else None
+	present = is_wfh or bool(first_in and (last_out or not settings.require_out_scan))
+	working_hours = round(time_diff_in_hours(last_out, first_in), 2) if first_in and last_out else 0
+	company = frappe.db.get_value("Employee", employee, "company")
+	doc = frappe.get_doc({
+		"doctype":"Attendance", "employee":employee, "attendance_date":attendance_date,
+		"company":company, "status":"Present" if present else "Absent",
+		"in_time":first_in, "out_time":last_out, "working_hours":working_hours,
+	})
+	if is_wfh:
+		doc.work_from_home = 1
+	doc.insert(ignore_permissions=True)
+	if settings.auto_submit_attendance:
+		doc.submit()
+	return doc.status, doc.name
+
+
+@frappe.whitelist()
+def run_day_end_attendance(attendance_date=None, force=False):
+	settings = frappe.get_single("Elemental Attendance Settings")
+	if not settings.enable_elemental_day_end_attendance:
+		return {"enabled":False, "message":"Elemental Day-End Attendance is disabled; standard HRMS/manual flow is unchanged."}
+	attendance_date = getdate(attendance_date or nowdate())
+	if settings.last_processed_date == attendance_date and not frappe.utils.cint(force):
+		return {"enabled":True, "already_processed":True, "date":attendance_date}
+	counts = {"Present":0, "Absent":0, "Existing":0, "Skipped":0, "Errors":0}
+	employees = frappe.get_all("Employee", {
+		"status":"Active", "date_of_joining":["<=", attendance_date],
+	}, ["name", "relieving_date"], limit_page_length=0)
+	for employee in employees:
+		if employee.relieving_date and getdate(employee.relieving_date) < attendance_date:
+			continue
+		try:
+			result, _name = build_day_end_attendance(employee.name, attendance_date, settings)
+			counts[result] = counts.get(result, 0) + 1
+		except Exception:
+			counts["Errors"] += 1
+			frappe.log_error(frappe.get_traceback(), f"Day-end attendance: {employee.name} / {attendance_date}")
+	summary = ", ".join(f"{key}: {value}" for key, value in counts.items())
+	frappe.db.set_single_value("Elemental Attendance Settings", "last_processed_date", attendance_date)
+	frappe.db.set_single_value("Elemental Attendance Settings", "last_run_summary", summary)
+	return {"enabled":True, "date":attendance_date, "counts":counts, "summary":summary}
+
+
+def scheduled_day_end_attendance():
+	settings = frappe.get_single("Elemental Attendance Settings")
+	if not settings.enable_elemental_day_end_attendance:
+		return
+	if now_datetime().hour >= int(settings.day_end_hour or 23):
+		run_day_end_attendance()
 
 
 def generate_employee_qr(doc, method=None):

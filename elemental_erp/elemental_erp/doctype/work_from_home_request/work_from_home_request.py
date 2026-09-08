@@ -105,11 +105,13 @@ def _create_wfh_attendance(wfh_doc):
     end_date = getdate(wfh_doc.to_date)
 
     while current_date <= end_date:
-        # If weekly-off days are excluded later, skip Sunday only (weekday 6).
-        # Saturday is a normal working day for Elemental.
-        # if current_date.weekday() == 6:
-        #     current_date = add_days(current_date, 1)
-        #     continue
+        # Use the Employee's mapped Holiday List (company default only when
+        # the Employee has none). Sunday remains the organisation-wide week off.
+        from elemental_erp.employee_gate import _is_non_working_day
+        if _is_non_working_day(wfh_doc.employee, current_date):
+            dates_marked.append(f"{current_date} (skipped, holiday/week off)")
+            current_date = add_days(current_date, 1)
+            continue
 
         # Check if Attendance already exists for this date
         existing = frappe.db.get_value(

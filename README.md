@@ -1179,3 +1179,25 @@ bench restart
 ```
 
 Then configure **Elemental Stock Settings**, confirm every involved ERPNext Item is a stock item with the correct UOM, ensure sufficient source-warehouse quantity, and test one transfer/reservation/utilization chain in a non-production Job before operational rollout.
+
+---
+
+## 28. Optional Elemental Day-End Attendance
+
+**Elemental Attendance Settings** allows HR to choose between the existing standard HRMS/manual attendance flow and an Elemental day-end engine. It is disabled by default, so installing or migrating this feature does not change existing payroll or attendance behavior.
+
+When **Enable Elemental Day-End Attendance** is selected and the settings are saved:
+
+- Shift Types that currently have HRMS Auto Attendance enabled are remembered and temporarily disabled, preventing both engines from creating Attendance for the same employee/date.
+- The hourly scheduler runs the Elemental engine once after the configured 24-hour Day-End Processing Hour (default `23`).
+- All active Staff and Worker employees whose joining/relieving dates cover the day are evaluated.
+- The first valid `IN` and final `OUT` after that IN become `in_time`, `out_time` and `working_hours`.
+- With **Require OUT Scan for Present** enabled, a complete IN/OUT pair is Present; no scan, OUT-only or IN without OUT is Absent. Disable this option only if HR intentionally accepts IN-only days as Present.
+- Attendance is submitted automatically when **Submit Attendance Automatically** is selected; otherwise records remain Draft for HR review.
+- Existing non-cancelled Attendance is never overwritten. Sundays, configured holidays and approved Leave Applications are skipped. Holiday lookup uses the Holiday List mapped on that Employee, falling back to the Company's Default Holiday List only when the Employee has no list.
+- Approved WFH is checked directly by employee and date. It is marked Present with the WFH flag even if the earlier WFH approval integration failed to create Attendance. WFH itself now skips the employee's holidays and Sundays.
+- Errors for one employee are logged without preventing other employees from being processed. The settings show the last processed date and counts.
+
+HR can use **Run for Today** from Elemental Attendance Settings for an immediate controlled run. The scheduler is idempotent and will not process the same date twice unless HR explicitly uses the manual force action.
+
+When the Elemental option is cleared and the settings are saved, only the Shift Types remembered when it was enabled are restored to HRMS Auto Attendance. The usual HRMS/manual workflow then resumes. Attendance feeds standard ERPNext payroll exactly like manually or HRMS-generated Attendance; the Worker-only OT rules remain separate and unchanged.

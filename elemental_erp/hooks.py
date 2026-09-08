@@ -25,6 +25,7 @@ after_migrate = [
 ]
 
 scheduler_events = {
+	"hourly": ["elemental_erp.employee_gate.scheduled_day_end_attendance"],
 	"daily": [
 		"elemental_erp.utils.fg_change_management.send_daily_fg_change_digest",
 		"elemental_erp.utils.fg_change_management.send_virtual_stock_ageing_alerts",
@@ -105,6 +106,7 @@ doctype_js = {
 	"Salary Slip": "public/js/salary_slip.js",
 	"Leave Application": "public/js/leave_application.js",
 	"Purchase Order": "public/js/purchase_order.js",
+	"Elemental Attendance Settings": "public/js/elemental_attendance_settings.js",
 	"Virtual FG Transfer": "public/js/virtual_fg_transfer.js",
 	"Virtual FG Reservation": "public/js/virtual_fg_reservation.js",
 }

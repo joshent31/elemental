@@ -1,0 +1,17 @@
+{
+ "doctype":"DocType","name":"Elemental Attendance Settings","module":"Elemental ERP","issingle":1,"autoname":"Prompt","engine":"InnoDB",
+ "fields":[
+  {"fieldname":"enable_elemental_day_end_attendance","label":"Enable Elemental Day-End Attendance","fieldtype":"Check","default":"0","description":"When enabled, Elemental creates daily Attendance and disables HRMS Shift Type auto-attendance. When disabled, remembered Shift Types are restored."},
+  {"fieldname":"day_end_hour","label":"Day-End Processing Hour (24-hour)","fieldtype":"Int","default":"23","depends_on":"enable_elemental_day_end_attendance","description":"Default 23 means the hourly scheduler processes attendance after 23:00 site time."},
+  {"fieldname":"require_out_scan","label":"Require OUT Scan for Present","fieldtype":"Check","default":"1","depends_on":"enable_elemental_day_end_attendance","description":"If enabled, an IN without a later OUT is marked Absent for HR review."},
+  {"fieldname":"auto_submit_attendance","label":"Submit Attendance Automatically","fieldtype":"Check","default":"1","depends_on":"enable_elemental_day_end_attendance"},
+  {"fieldname":"last_processed_date","label":"Last Processed Date","fieldtype":"Date","read_only":1},
+  {"fieldname":"last_run_summary","label":"Last Run Summary","fieldtype":"Small Text","read_only":1},
+  {"fieldname":"disabled_shift_types_json","label":"Temporarily Disabled Shift Types","fieldtype":"Code","options":"JSON","read_only":1,"hidden":1,"default":"[]"}
+ ],
+ "permissions":[
+  {"role":"System Manager","read":1,"write":1,"create":1},
+  {"role":"HR Manager","read":1,"write":1},
+  {"role":"Elemental HR Gate HOD","read":1,"write":1}
+ ]
+}
