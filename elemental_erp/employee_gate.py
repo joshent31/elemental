@@ -113,7 +113,13 @@ def generate_employee_qr(doc, method=None):
 
 	qr_value = frappe.generate_hash(length=12).upper()
 	scan_url = frappe.utils.get_url(f"/elemental-gate-scan?qr={qr_value}")
-	file_url = generate_qr_image(qr_value, scan_url, "Employee", doc.name)
+	file_url = generate_qr_image(
+		qr_value,
+		scan_url,
+		"Employee",
+		doc.name,
+		label=f"Employee ID: {doc.name}",
+	)
 
 	frappe.db.set_value(
 		"Employee", doc.name,

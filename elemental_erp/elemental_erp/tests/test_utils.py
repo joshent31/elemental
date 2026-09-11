@@ -75,3 +75,17 @@ class TestQRGenerator(unittest.TestCase):
                 )
                 self.assertEqual(result, "/files/TEST123.png")
                 mock_make.assert_called_once_with("https://example.com/qr/TEST123")
+
+    def test_generate_qr_image_can_add_caption(self):
+        """A caption is added outside the QR payload area."""
+        from elemental_erp.utils.qr_generator import generate_qr_image
+
+        mock_file_doc = MagicMock(file_url="/files/EMP-001.png")
+        with patch("elemental_erp.utils.qr_generator.save_file", return_value=mock_file_doc) as save:
+            result = generate_qr_image(
+                "ABC123", "https://example.com/gate?qr=ABC123",
+                "Employee", "EMP-001", label="Employee ID: EMP-001"
+            )
+
+        self.assertEqual(result, "/files/EMP-001.png")
+        self.assertTrue(save.call_args.kwargs["content"].startswith(b"\x89PNG"))
