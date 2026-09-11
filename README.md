@@ -844,6 +844,9 @@ it does not make every Saturday a weekly off.
 
 Staff can take **one Saturday off per month** — paid, Saturday only, and valid only within that calendar month.
 
+This feature is optional. In **Elemental Attendance Settings**, check **Enable Monthly Saturday Off** to plug
+it in, or clear the checkbox to plug it out and return Saturday leave handling to normal HRMS configuration.
+
 | Setting | Value |
 |---------|-------|
 | Leave Type Name | Saturday Off |
@@ -864,6 +867,9 @@ Staff can take **one Saturday off per month** — paid, Saturday only, and valid
 > **Leave Policy configuration:** Do not add Saturday Off to an HRMS Leave Policy. Leave Policy Assignment
 > manages annual leaves such as Sick Leave and Casual Leave, while Elemental creates Saturday Off separately
 > each month. Migration removes an existing Saturday Off policy row to prevent overlapping allocations.
+
+When switched off, Elemental cancels only unused current/future monthly allocations that it created. Used
+allocations remain for audit history, and HR may include Saturday Off in a normal Leave Policy.
 
 ### Validation
 

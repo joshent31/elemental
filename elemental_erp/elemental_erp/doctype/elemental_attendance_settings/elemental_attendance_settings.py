@@ -24,3 +24,15 @@ class ElementalAttendanceSettings(Document):
 				if frappe.db.exists("Shift Type", shift_type):
 					frappe.db.set_value("Shift Type", shift_type, "enable_auto_attendance", 1, update_modified=False)
 			self.db_set("disabled_shift_types_json", "[]", update_modified=False)
+
+		from elemental_erp.utils.saturday_off import (
+			disable_monthly_saturday_off,
+			ensure_monthly_saturday_off_allocations,
+			remove_saturday_off_from_leave_policies,
+		)
+
+		if self.enable_monthly_saturday_off:
+			remove_saturday_off_from_leave_policies()
+			ensure_monthly_saturday_off_allocations()
+		else:
+			disable_monthly_saturday_off()

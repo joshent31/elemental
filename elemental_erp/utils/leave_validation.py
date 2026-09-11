@@ -20,6 +20,11 @@ def validate_leave_application(doc, method):
     if not doc.leave_type or not doc.from_date:
         return
 
+    if doc.leave_type == "Saturday Off":
+        from elemental_erp.utils.saturday_off import is_monthly_saturday_off_enabled
+        if not is_monthly_saturday_off_enabled():
+            return
+
     allowed_weekday = LEAVE_TYPE_WEEKDAY_RESTRICTIONS.get(doc.leave_type)
     if allowed_weekday is None:
         return  # No restriction for this leave type

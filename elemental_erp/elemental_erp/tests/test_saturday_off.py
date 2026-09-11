@@ -35,3 +35,16 @@ class TestSaturdayOff(unittest.TestCase):
 		self.assertIn("validate_leave_policy", source)
 		self.assertIn("remove_saturday_off_from_leave_policies", hooks)
 		self.assertIn('"Leave Policy"', hooks)
+
+	def test_feature_has_plug_in_plug_out_setting(self):
+		settings = json.loads((
+			ROOT / "elemental_erp" / "doctype" / "elemental_attendance_settings"
+			/ "elemental_attendance_settings.json"
+		).read_text(encoding="utf-8"))
+		fields = {row["fieldname"]: row for row in settings["fields"]}
+		self.assertEqual(fields["enable_monthly_saturday_off"]["default"], "1")
+		source = (ROOT / "utils" / "saturday_off.py").read_text(encoding="utf-8")
+		validation = (ROOT / "utils" / "leave_validation.py").read_text(encoding="utf-8")
+		self.assertIn("is_monthly_saturday_off_enabled", source)
+		self.assertIn("disable_monthly_saturday_off", source)
+		self.assertIn("is_monthly_saturday_off_enabled", validation)

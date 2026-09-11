@@ -7,7 +7,9 @@
   {"fieldname":"auto_submit_attendance","label":"Submit Attendance Automatically","fieldtype":"Check","default":"1","depends_on":"enable_elemental_day_end_attendance"},
   {"fieldname":"last_processed_date","label":"Last Processed Date","fieldtype":"Date","read_only":1},
   {"fieldname":"last_run_summary","label":"Last Run Summary","fieldtype":"Small Text","read_only":1},
-  {"fieldname":"disabled_shift_types_json","label":"Temporarily Disabled Shift Types","fieldtype":"Code","options":"JSON","read_only":1,"hidden":1,"default":"[]"}
+  {"fieldname":"disabled_shift_types_json","label":"Temporarily Disabled Shift Types","fieldtype":"Code","options":"JSON","read_only":1,"hidden":1,"default":"[]"},
+  {"fieldname":"saturday_off_section","label":"Saturday Off","fieldtype":"Section Break"},
+  {"fieldname":"enable_monthly_saturday_off","label":"Enable Monthly Saturday Off","fieldtype":"Check","default":"1","description":"Plug in: automatically allocate one paid Saturday Off per month to Staff and restrict it to Saturdays. Plug out: stop Elemental allocation and allow normal HRMS Leave Policy configuration."}
  ],
  "permissions":[
   {"role":"System Manager","read":1,"write":1,"create":1},

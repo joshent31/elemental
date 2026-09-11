@@ -9,6 +9,14 @@ from frappe.utils import getdate, nowdate
 LEAVE_TYPE = "Saturday Off"
 
 
+def is_monthly_saturday_off_enabled():
+	"""Default to enabled during first migration and on older installations."""
+	if not frappe.db.exists("DocType", "Elemental Attendance Settings"):
+		return True
+	value = frappe.db.get_single_value("Elemental Attendance Settings", "enable_monthly_saturday_off")
+	return True if value is None else bool(int(value))
+
+
 def _month_bounds(reference_date=None):
 	date = getdate(reference_date or nowdate())
 	return date.replace(day=1), date.replace(day=calendar.monthrange(date.year, date.month)[1])
@@ -38,6 +46,8 @@ def remove_saturday_off_from_leave_policies():
 	Including Saturday Off overlaps the month-bound allocation and blocks the
 	assignment. Employee allocations and applications are not deleted here.
 	"""
+	if not is_monthly_saturday_off_enabled():
+		return 0
 	rows = frappe.get_all(
 		"Leave Policy Detail",
 		filters={"leave_type": LEAVE_TYPE},
@@ -56,6 +66,8 @@ def remove_saturday_off_from_leave_policies():
 
 def validate_leave_policy(doc, method=None):
 	"""Prevent future annual-policy overlap with monthly Saturday Off."""
+	if not is_monthly_saturday_off_enabled():
+		return
 	if any(row.leave_type == LEAVE_TYPE for row in doc.leave_policy_details or []):
 		frappe.throw(
 			'Please remove "Saturday Off" from this Leave Policy. Elemental allocates '
@@ -70,8 +82,8 @@ def ensure_monthly_saturday_off_allocations(reference_date=None):
 	approved/submitted leave usage. Used allocations are preserved and logged for HR
 	review so historical leave is never silently changed.
 	"""
-	if not frappe.db.exists("Leave Type", LEAVE_TYPE):
-		return {"created": 0, "existing": 0, "needs_review": 0}
+	if not is_monthly_saturday_off_enabled() or not frappe.db.exists("Leave Type", LEAVE_TYPE):
+		return {"enabled": False, "created": 0, "existing": 0, "needs_review": 0}
 
 	month_start, month_end = _month_bounds(reference_date)
 	employees = frappe.db.sql(
@@ -124,6 +136,34 @@ def ensure_monthly_saturday_off_allocations(reference_date=None):
 			_remove_unused_allocation(row.name, row.docstatus)
 		_create_monthly_allocation(employee.name, month_start, month_end)
 		result["created"] += 1
+	return result
+
+
+def disable_monthly_saturday_off(reference_date=None):
+	"""Cancel unused Elemental allocations for this month and the future.
+
+	Used allocations are preserved for audit/history. Annual policy allocations
+	are not touched because their description does not identify them as Elemental.
+	"""
+	month_start, _month_end = _month_bounds(reference_date)
+	rows = frappe.get_all(
+		"Leave Allocation",
+		filters={
+			"leave_type": LEAVE_TYPE,
+			"docstatus": ["<", 2],
+			"to_date": [">=", month_start],
+			"description": ["like", "One Saturday Off for this calendar month%"],
+		},
+		fields=["name", "employee", "from_date", "to_date", "docstatus"],
+		limit_page_length=0,
+	)
+	result = {"cancelled": 0, "preserved": 0}
+	for row in rows:
+		if _can_replace(row.employee, getdate(row.from_date), getdate(row.to_date)):
+			_remove_unused_allocation(row.name, row.docstatus)
+			result["cancelled"] += 1
+		else:
+			result["preserved"] += 1
 	return result
 
 
