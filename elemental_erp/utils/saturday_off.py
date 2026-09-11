@@ -31,6 +31,38 @@ def configure_saturday_off_leave():
 	)
 
 
+def remove_saturday_off_from_leave_policies():
+	"""Remove the monthly Elemental leave from annual HRMS policies.
+
+	Leave Policy Assignment creates an annual allocation for every policy row.
+	Including Saturday Off overlaps the month-bound allocation and blocks the
+	assignment. Employee allocations and applications are not deleted here.
+	"""
+	rows = frappe.get_all(
+		"Leave Policy Detail",
+		filters={"leave_type": LEAVE_TYPE},
+		fields=["name", "parent"],
+		limit_page_length=0,
+	)
+	for row in rows:
+		frappe.db.delete("Leave Policy Detail", {"name": row.name})
+	if rows:
+		frappe.logger("elemental_erp").info(
+			"Removed Saturday Off from %s Leave Policy row(s); it is allocated monthly by Elemental.",
+			len(rows),
+		)
+	return len(rows)
+
+
+def validate_leave_policy(doc, method=None):
+	"""Prevent future annual-policy overlap with monthly Saturday Off."""
+	if any(row.leave_type == LEAVE_TYPE for row in doc.leave_policy_details or []):
+		frappe.throw(
+			'Please remove "Saturday Off" from this Leave Policy. Elemental allocates '
+			"one Saturday Off separately every month; adding it here creates an overlapping allocation."
+		)
+
+
 def ensure_monthly_saturday_off_allocations(reference_date=None):
 	"""Create exactly one month-bound allocation for every eligible Staff employee.
 

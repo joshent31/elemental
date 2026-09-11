@@ -23,6 +23,7 @@ after_migrate = [
 	"elemental_erp.setup.sync_job_subpart_labels",
 	"elemental_erp.setup.backfill_job_fg_planning_quantities",
 	"elemental_erp.utils.saturday_off.configure_saturday_off_leave",
+	"elemental_erp.utils.saturday_off.remove_saturday_off_from_leave_policies",
 	"elemental_erp.utils.saturday_off.ensure_monthly_saturday_off_allocations",
 ]
 
@@ -60,6 +61,9 @@ doc_events = {
 	},
 	"Leave Application": {
 		"validate": "elemental_erp.utils.leave_validation.validate_leave_application",
+	},
+	"Leave Policy": {
+		"validate": "elemental_erp.utils.saturday_off.validate_leave_policy",
 	},
 	"Salary Slip": {
 		"before_validate": "elemental_erp.utils.salary_package.apply_employee_salary_package",

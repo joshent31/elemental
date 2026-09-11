@@ -26,3 +26,12 @@ class TestSaturdayOff(unittest.TestCase):
 		self.assertIn('elemental_erp.utils.saturday_off.ensure_monthly_saturday_off_allocations', hooks)
 		self.assertIn('must be a single-day leave application', validation)
 		self.assertIn('available only for Staff employees', validation)
+
+	def test_leave_policy_overlap_is_removed_and_blocked(self):
+		source = (ROOT / "utils" / "saturday_off.py").read_text(encoding="utf-8")
+		hooks = (ROOT / "hooks.py").read_text(encoding="utf-8")
+		self.assertIn("remove_saturday_off_from_leave_policies", source)
+		self.assertIn('frappe.db.delete("Leave Policy Detail"', source)
+		self.assertIn("validate_leave_policy", source)
+		self.assertIn("remove_saturday_off_from_leave_policies", hooks)
+		self.assertIn('"Leave Policy"', hooks)

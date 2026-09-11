@@ -861,6 +861,10 @@ Staff can take **one Saturday off per month** — paid, Saturday only, and valid
 4. **HR approves:** Standard Leave Application workflow
 5. **Month end:** The allocation ends and unused leave expires; it never accumulates into the next month
 
+> **Leave Policy configuration:** Do not add Saturday Off to an HRMS Leave Policy. Leave Policy Assignment
+> manages annual leaves such as Sick Leave and Casual Leave, while Elemental creates Saturday Off separately
+> each month. Migration removes an existing Saturday Off policy row to prevent overlapping allocations.
+
 ### Validation
 
 - **Server-side:** Blocks save if date is not a Saturday
@@ -875,7 +879,7 @@ Staff can take **one Saturday off per month** — paid, Saturday only, and valid
 |--------|-----------|-------|
 | Present | **PAID** | Gate scan |
 | Work from Home | **PAID** | WFH Request approved |
-| Saturday Off | **PAID** | 1/month, earned |
+| Saturday Off | **PAID** | 1/month, separately allocated |
 | Complimentary Leave | **PAID** | Leave balance |
 | Half Day | **PAID** | 0.5 from leave balance |
 | Holiday (PH) | **PAID** | Govt Holiday |
@@ -1110,7 +1114,7 @@ bench run-tests --app elemental_erp
 | **Worker OT Summary (Govt)** | ✅ | Government compliance, ≤15 hrs |
 | **Work from Home Request** | ✅ | Apply/approve/reject, Attendance sync |
 | **WFH Summary Report** | ✅ | Employee × Month matrix |
-| **Saturday Off Leave Type** | ✅ | Paid, 1/month, earned, Saturday only |
+| **Saturday Off Leave Type** | ✅ | Paid, 1/month, separately allocated, Saturday only |
 | **Client Scripts** | ✅ | Production/Packaging/Dispatch/WFH/SL |
 | **PO Initiation** | ✅ | Supplier dropdown, rate/MOQ auto-fill, editable PO Qty, excess-stock tracking |
 | **Salary Slip OT** | ✅ | HR-approved payable OT only; maximum 15 hours at 2× |
