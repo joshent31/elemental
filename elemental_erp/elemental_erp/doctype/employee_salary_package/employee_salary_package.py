@@ -31,8 +31,9 @@ def _is_automatic_component(name):
 
 
 def _component_sort_key(row):
-	name = (row.salary_component or row.get("name") or "").strip().lower()
-	treatment = row.treatment or row.get("type")
+	getter = row.get
+	name = (getter("salary_component") or getter("name") or "").strip().lower()
+	treatment = getter("treatment") or getter("type")
 	group = 0 if treatment == "Earning" else 1000 if treatment == "Deduction" else 2000
 	return (COMPONENT_ORDER.get(name, group + 100), name)
 

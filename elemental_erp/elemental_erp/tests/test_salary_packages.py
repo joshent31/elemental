@@ -100,6 +100,8 @@ class TestSalaryPackages(unittest.TestCase):
 		self.assertIn("get_salary_component_catalogue", package)
 		self.assertIn("_calculate_statutory_preview", package)
 		self.assertIn("_component_sort_key", package)
+		self.assertIn('getter("salary_component")', package)
+		self.assertNotIn("row.salary_component or row.get", package)
 
 	def test_worker_ot_uses_effective_package_gross_with_rollout_fallback(self):
 		overtime = (APP_ROOT / "utils" / "worker_overtime.py").read_text(encoding="utf-8")
