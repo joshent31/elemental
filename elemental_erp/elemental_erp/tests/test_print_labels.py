@@ -7,6 +7,7 @@ from pathlib import Path
 
 APP_ROOT = Path(__file__).resolve().parents[2]
 EMPLOYEE_FORMAT = APP_ROOT / "elemental_erp" / "print_format" / "employee_id_badge" / "employee_id_badge.json"
+EMPLOYEE_CARD_FORMAT = APP_ROOT / "elemental_erp" / "print_format" / "employee_id_card_front_and_back" / "employee_id_card_front_and_back.json"
 EMPLOYEE_GATE = APP_ROOT / "employee_gate.py"
 EMPLOYEE_CLIENT = APP_ROOT / "public" / "js" / "employee.js"
 PACKING_FORMAT = APP_ROOT / "elemental_erp" / "print_format" / "packing_box_label" / "packing_box_label.json"
@@ -87,6 +88,16 @@ class TestEmployeeBadge(unittest.TestCase):
 		qr_position = html.index("doc.employee_qr_image")
 		code_position = html.index("Employee Code: {{ doc.name }}")
 		self.assertGreater(code_position, qr_position)
+
+	def test_front_and_back_employee_card_contains_required_details(self):
+		card = json.loads(EMPLOYEE_CARD_FORMAT.read_text(encoding="utf-8"))
+		html = card["html"]
+		self.assertEqual(card["doc_type"], "Employee")
+		for expected in (
+			"doc.employee_qr_image", "doc.employee_name", "doc.name",
+			"doc.blood_group", "employee_address", "id-front", "id-back",
+		):
+			self.assertIn(expected, html)
 
 
 class TestPackingBoxLabels(unittest.TestCase):
