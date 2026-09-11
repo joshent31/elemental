@@ -4,6 +4,15 @@ from frappe.utils import flt, getdate
 
 
 PACKAGE_TREATMENTS = ("Earning", "Deduction", "Employer Contribution")
+AUTOMATIC_COMPONENT_ABBRS = {"PF", "EPF", "ESI", "ESIC", "PT"}
+
+
+def _component_abbr(name):
+	return (frappe.db.get_value("Salary Component", name, "salary_component_abbr") or "").strip().upper()
+
+
+def _is_automatic_component(name):
+	return _component_abbr(name) in AUTOMATIC_COMPONENT_ABBRS
 
 
 class EmployeeSalaryPackage(Document):
@@ -62,6 +71,16 @@ class EmployeeSalaryPackage(Document):
 				frappe.throw(f"Salary Component {row.salary_component} does not exist.")
 			if row.treatment != "Employer Contribution" and component_type != row.treatment:
 				frappe.throw(f"{row.salary_component} is a {component_type}, not a {row.treatment}.")
+			row.automatic_calculation = int(_is_automatic_component(row.salary_component))
+			# Existing packages pre-date the Use checkbox. A non-zero amount keeps
+			# those approved rows enabled after migration.
+			if not row.enabled and (flt(row.monthly_amount) or flt(row.annual_amount)):
+				row.enabled = 1
+			if not row.enabled or row.automatic_calculation:
+				row.monthly_amount = 0
+				row.annual_amount = 0
+				if not row.enabled:
+					continue
 			if row.amount_basis == "Annual":
 				row.annual_amount = flt(row.annual_amount, 2)
 				row.monthly_amount = flt(row.annual_amount / 12, 6)
@@ -73,9 +92,12 @@ class EmployeeSalaryPackage(Document):
 				frappe.throw(f"Amounts cannot be negative for {row.salary_component}.")
 
 	def _calculate_totals(self):
+		self._calculate_statutory_preview()
 		monthly = {treatment: 0 for treatment in PACKAGE_TREATMENTS}
 		annual_ctc = 0
 		for row in self.components:
+			if not row.enabled:
+				continue
 			monthly[row.treatment] += flt(row.monthly_amount)
 			if row.treatment in ("Earning", "Employer Contribution"):
 				annual_ctc += flt(row.annual_amount)
@@ -86,6 +108,32 @@ class EmployeeSalaryPackage(Document):
 		self.monthly_ctc = flt(self.monthly_earnings + self.monthly_employer_contribution, 2)
 		self.annual_ctc = flt(annual_ctc, 2)
 
+	def _calculate_statutory_preview(self):
+		"""Show full-month statutory estimates; Salary Slip recalculates payable values."""
+		earnings = [row for row in self.components if row.enabled and row.treatment == "Earning"]
+		gross = sum(flt(row.monthly_amount) for row in earnings)
+		pf_wages = 0
+		for row in earnings:
+			abbr = _component_abbr(row.salary_component)
+			name = (row.salary_component or "").strip().lower()
+			if name == "basic" or abbr == "BASIC":
+				pf_wages += flt(row.monthly_amount)
+			elif name in ("da", "dearness allowance") or abbr == "DA":
+				pf_wages += flt(row.monthly_amount)
+		for row in self.components:
+			if not row.enabled or row.treatment != "Deduction" or not row.automatic_calculation:
+				continue
+			abbr = _component_abbr(row.salary_component)
+			if abbr in ("PF", "EPF"):
+				row.monthly_amount = flt(min(pf_wages, 15000) * 0.12, 2)
+				row.annual_amount = flt(row.monthly_amount * 12, 2)
+			elif abbr in ("ESI", "ESIC"):
+				row.monthly_amount = flt(gross * 0.0075, 2)
+				row.annual_amount = flt(row.monthly_amount * 12, 2)
+			elif abbr == "PT":
+				row.monthly_amount = 200 if gross >= 25000 else 0
+				row.annual_amount = 2500 if gross >= 25000 else 0
+
 
 def get_effective_package(employee, payroll_date):
 	return frappe.db.get_value(
@@ -94,3 +142,24 @@ def get_effective_package(employee, payroll_date):
 		"name",
 		order_by="effective_from desc, creation desc",
 	)
+
+
+@frappe.whitelist()
+def get_salary_component_catalogue():
+	"""Return active earning/deduction masters for the package checkbox grid."""
+	rows = frappe.get_all(
+		"Salary Component",
+		filters={"disabled": 0},
+		fields=["name", "type", "salary_component_abbr"],
+		order_by="type asc, name asc",
+		limit_page_length=0,
+	)
+	return [
+		{
+			"salary_component": row.name,
+			"treatment": row.type,
+			"automatic_calculation": int((row.salary_component_abbr or "").strip().upper() in AUTOMATIC_COMPONENT_ABBRS),
+		}
+		for row in rows
+		if row.type in ("Earning", "Deduction")
+	]

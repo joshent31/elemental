@@ -1081,6 +1081,24 @@ automatic bulk conversion merely from installing or migrating the app.
 
 ---
 
+## Employee Salary Package statutory calculations
+
+New packages load every active Salary Component into a checkbox grid. HR enables only the applicable rows,
+and enters amounts only for fixed earnings/deductions. The component master supplies Earning/Deduction type.
+PF, ESIC and Karnataka PT rows are automatic when enabled:
+
+| Deduction | Package preview | Salary Slip payable calculation |
+|---|---|---|
+| Employee PF | `min(Basic + DA, 15,000) × 12%` | Uses payment-day-prorated Basic + DA; maximum ₹1,800 |
+| Employee ESIC | Eligible monthly earnings × 0.75% | Uses total eligible payable earnings after payment-day proration |
+| Karnataka PT | ₹200 when earnings ≥ ₹25,000 | ₹200 monthly, ₹300 in February; zero below ₹25,000 |
+
+Eligibility remains employee-specific: HR enables the relevant statutory component in that Employee Salary
+Package. ERPNext still owns Salary Slip payment days, payroll entry, accounting and submission. Elemental
+only supplies the approved package values and recalculated statutory deduction amounts.
+
+---
+
 ## 26. Test Suite
 
 The current focused regression command runs the report and transaction checks covering naming, workspace links,

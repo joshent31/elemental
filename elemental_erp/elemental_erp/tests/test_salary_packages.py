@@ -24,6 +24,9 @@ class TestSalaryPackages(unittest.TestCase):
 
 		component = self.load_doctype("salary_package_component")
 		component_fields = {row.get("fieldname"): row for row in component["fields"]}
+		self.assertIn("enabled", component_fields)
+		self.assertIn("automatic_calculation", component_fields)
+		self.assertEqual(component_fields["salary_component"]["read_only"], 1)
 		self.assertEqual(component["istable"], 1)
 		self.assertIn("Employer Contribution", component_fields["treatment"]["options"])
 		self.assertIn("Annual", component_fields["amount_basis"]["options"])
@@ -68,6 +71,22 @@ class TestSalaryPackages(unittest.TestCase):
 		self.assertIn('row.amount_basis === "Annual"', client)
 		self.assertIn('flt(row.annual_amount) / 12', client)
 		self.assertIn('totals.Earning - totals.Deduction', client)
+		self.assertIn("load_salary_component_catalogue", client)
+		self.assertIn('row.enabled = 0', client)
+
+	def test_statutory_deductions_use_payable_wages(self):
+		integration = (APP_ROOT / "utils" / "salary_package.py").read_text(encoding="utf-8")
+		package = (DOCTYPE_ROOT / "employee_salary_package" / "employee_salary_package.py").read_text(encoding="utf-8")
+		for expected in (
+			"min(pf_wages, 15000) * 0.12",
+			"payable_gross * 0.0075",
+			"payable_gross >= 25000",
+			"300 if int(month) == 2 else 200",
+			"_payment_day_ratio",
+		):
+			self.assertIn(expected, integration)
+		self.assertIn("get_salary_component_catalogue", package)
+		self.assertIn("_calculate_statutory_preview", package)
 
 	def test_worker_ot_uses_effective_package_gross_with_rollout_fallback(self):
 		overtime = (APP_ROOT / "utils" / "worker_overtime.py").read_text(encoding="utf-8")
