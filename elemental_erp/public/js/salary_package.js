@@ -27,6 +27,34 @@ function calculate_package_preview(frm) {
 	frm.set_value("annual_ctc", annualCtc);
 }
 
+function sort_salary_components(frm) {
+	const priority = {
+		"basic": 10,
+		"house rent allowance": 20,
+		"hra": 20,
+		"dearness allowance": 30,
+		"da": 30,
+		"provident fund": 1010,
+		"pf": 1010,
+		"epf": 1010,
+		"esic": 1020,
+		"esi": 1020,
+		"professional tax": 1030,
+		"pt": 1030,
+		"income tax": 1040,
+	};
+	const rank = (row) => {
+		const name = (row.salary_component || "").trim().toLowerCase();
+		const group = row.treatment === "Earning" ? 0 : row.treatment === "Deduction" ? 1000 : 2000;
+		return [priority[name] === undefined ? group + 100 : priority[name], name];
+	};
+	(frm.doc.components || []).sort((a, b) => {
+		const left = rank(a), right = rank(b);
+		return left[0] - right[0] || left[1].localeCompare(right[1]);
+	});
+	(frm.doc.components || []).forEach((row, index) => { row.idx = index + 1; });
+}
+
 function load_salary_component_catalogue(frm) {
 	return frappe.call({
 		method: "elemental_erp.elemental_erp.doctype.employee_salary_package.employee_salary_package.get_salary_component_catalogue",
@@ -43,6 +71,7 @@ function load_salary_component_catalogue(frm) {
 				row.automatic_calculation = component.automatic_calculation;
 				row.amount_basis = "Monthly";
 			});
+			sort_salary_components(frm);
 			frm.refresh_field("components");
 		},
 	});

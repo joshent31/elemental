@@ -75,6 +75,9 @@ class TestSalaryPackages(unittest.TestCase):
 		self.assertIn('row.enabled = 0', client)
 		self.assertIn('salary_component(frm, cdt, cdn)', client)
 		self.assertIn('"salary_component_abbr"', client)
+		self.assertIn("sort_salary_components", client)
+		self.assertIn('"basic": 10', client)
+		self.assertIn('"provident fund": 1010', client)
 
 	def test_esic_component_is_shipped_and_active(self):
 		components = json.loads((APP_ROOT / "fixtures" / "salary_component.json").read_text(encoding="utf-8"))
@@ -96,6 +99,7 @@ class TestSalaryPackages(unittest.TestCase):
 			self.assertIn(expected, integration)
 		self.assertIn("get_salary_component_catalogue", package)
 		self.assertIn("_calculate_statutory_preview", package)
+		self.assertIn("_component_sort_key", package)
 
 	def test_worker_ot_uses_effective_package_gross_with_rollout_fallback(self):
 		overtime = (APP_ROOT / "utils" / "worker_overtime.py").read_text(encoding="utf-8")

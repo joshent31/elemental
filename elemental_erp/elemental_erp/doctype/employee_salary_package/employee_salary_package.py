@@ -5,6 +5,21 @@ from frappe.utils import flt, getdate
 
 PACKAGE_TREATMENTS = ("Earning", "Deduction", "Employer Contribution")
 AUTOMATIC_COMPONENT_ABBRS = {"PF", "EPF", "ESI", "ESIC", "PT"}
+COMPONENT_ORDER = {
+	"basic": 10,
+	"house rent allowance": 20,
+	"hra": 20,
+	"dearness allowance": 30,
+	"da": 30,
+	"provident fund": 1010,
+	"pf": 1010,
+	"epf": 1010,
+	"esic": 1020,
+	"esi": 1020,
+	"professional tax": 1030,
+	"pt": 1030,
+	"income tax": 1040,
+}
 
 
 def _component_abbr(name):
@@ -13,6 +28,13 @@ def _component_abbr(name):
 
 def _is_automatic_component(name):
 	return _component_abbr(name) in AUTOMATIC_COMPONENT_ABBRS
+
+
+def _component_sort_key(row):
+	name = (row.salary_component or row.get("name") or "").strip().lower()
+	treatment = row.treatment or row.get("type")
+	group = 0 if treatment == "Earning" else 1000 if treatment == "Deduction" else 2000
+	return (COMPONENT_ORDER.get(name, group + 100), name)
 
 
 class EmployeeSalaryPackage(Document):
@@ -91,6 +113,9 @@ class EmployeeSalaryPackage(Document):
 				row.annual_amount = flt(row.monthly_amount * 12, 2)
 			if row.monthly_amount < 0 or row.annual_amount < 0:
 				frappe.throw(f"Amounts cannot be negative for {row.salary_component}.")
+		self.components.sort(key=_component_sort_key)
+		for index, row in enumerate(self.components, 1):
+			row.idx = index
 
 	def _calculate_totals(self):
 		self._calculate_statutory_preview()
@@ -155,7 +180,7 @@ def get_salary_component_catalogue():
 		order_by="type asc, name asc",
 		limit_page_length=0,
 	)
-	return [
+	result = [
 		{
 			"salary_component": row.name,
 			"treatment": row.type,
@@ -164,3 +189,4 @@ def get_salary_component_catalogue():
 		for row in rows
 		if row.type in ("Earning", "Deduction")
 	]
+	return sorted(result, key=_component_sort_key)
