@@ -842,12 +842,12 @@ marked as **Present** for each WFH date.
 Saturday remains a normal working day. This optional leave type is an approved-leave exception;
 it does not make every Saturday a weekly off.
 
-Staff can take **one Saturday off per month** — paid, earned monthly, Saturday only.
+Staff can take **one Saturday off per month** — paid, Saturday only, and valid only within that calendar month.
 
 | Setting | Value |
 |---------|-------|
 | Leave Type Name | Saturday Off |
-| Earned Leave | Yes (monthly) |
+| Earned Leave | No — Elemental creates a separate monthly allocation |
 | Max Leaves Allowed | 1 |
 | Carry Forward | No (use it or lose it) |
 | Max Continuous Days | 1 |
@@ -855,11 +855,11 @@ Staff can take **one Saturday off per month** — paid, earned monthly, Saturday
 
 ### How It Works
 
-1. **1st of month:** HRMS auto-allocates 1 Saturday Off
+1. **Start of month:** Elemental creates a submitted allocation of exactly 1 Saturday Off for that month
 2. **Employee applies:** Leave Application → Select "Saturday Off" → Pick a Saturday
 3. **Validation:** System blocks if not a Saturday
 4. **HR approves:** Standard Leave Application workflow
-5. **Month end:** Unused leave expires
+5. **Month end:** The allocation ends and unused leave expires; it never accumulates into the next month
 
 ### Validation
 

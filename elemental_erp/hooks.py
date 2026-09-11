@@ -22,11 +22,14 @@ after_migrate = [
 	"elemental_erp.setup.backfill_fg_subpart_process_checks",
 	"elemental_erp.setup.sync_job_subpart_labels",
 	"elemental_erp.setup.backfill_job_fg_planning_quantities",
+	"elemental_erp.utils.saturday_off.configure_saturday_off_leave",
+	"elemental_erp.utils.saturday_off.ensure_monthly_saturday_off_allocations",
 ]
 
 scheduler_events = {
 	"hourly": ["elemental_erp.employee_gate.scheduled_day_end_attendance"],
 	"daily": [
+		"elemental_erp.utils.saturday_off.ensure_monthly_saturday_off_allocations",
 		"elemental_erp.utils.fg_change_management.send_daily_fg_change_digest",
 		"elemental_erp.utils.fg_change_management.send_virtual_stock_ageing_alerts",
 	]

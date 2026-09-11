@@ -42,3 +42,11 @@ def validate_leave_application(doc, method):
                 f'"{doc.leave_type}" can only be applied on <b>{day_name}s</b>. '
                 f"To Date is {to_date.strftime('%A')}."
             )
+
+    if doc.leave_type == "Saturday Off" and doc.to_date and getdate(doc.to_date) != from_date:
+        frappe.throw('"Saturday Off" must be a single-day leave application.')
+
+    if doc.leave_type == "Saturday Off":
+        category = frappe.db.get_value("Employee", doc.employee, "employee_category")
+        if category != "Staff":
+            frappe.throw('"Saturday Off" is available only for Staff employees.')
