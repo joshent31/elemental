@@ -62,6 +62,21 @@ frappe.ui.form.on("Employee Salary Package", {
 });
 
 frappe.ui.form.on("Salary Package Component", {
+	salary_component(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.salary_component) return;
+		frappe.db.get_value(
+			"Salary Component",
+			row.salary_component,
+			["type", "salary_component_abbr"],
+			(r) => {
+				if (!r) return;
+				const abbr = (r.salary_component_abbr || "").trim().toUpperCase();
+				frappe.model.set_value(cdt, cdn, "treatment", r.type);
+				frappe.model.set_value(cdt, cdn, "automatic_calculation", ["PF", "EPF", "ESI", "ESIC", "PT"].includes(abbr) ? 1 : 0);
+			}
+		);
+	},
 	form_render(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 		const grid_row = frm.fields_dict.components.grid.grid_rows_by_docname[cdn];

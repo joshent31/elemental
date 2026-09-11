@@ -26,7 +26,7 @@ class TestSalaryPackages(unittest.TestCase):
 		component_fields = {row.get("fieldname"): row for row in component["fields"]}
 		self.assertIn("enabled", component_fields)
 		self.assertIn("automatic_calculation", component_fields)
-		self.assertEqual(component_fields["salary_component"]["read_only"], 1)
+		self.assertFalse(component_fields["salary_component"].get("read_only", 0))
 		self.assertEqual(component["istable"], 1)
 		self.assertIn("Employer Contribution", component_fields["treatment"]["options"])
 		self.assertIn("Annual", component_fields["amount_basis"]["options"])
@@ -73,6 +73,15 @@ class TestSalaryPackages(unittest.TestCase):
 		self.assertIn('totals.Earning - totals.Deduction', client)
 		self.assertIn("load_salary_component_catalogue", client)
 		self.assertIn('row.enabled = 0', client)
+		self.assertIn('salary_component(frm, cdt, cdn)', client)
+		self.assertIn('"salary_component_abbr"', client)
+
+	def test_esic_component_is_shipped_and_active(self):
+		components = json.loads((APP_ROOT / "fixtures" / "salary_component.json").read_text(encoding="utf-8"))
+		esic = next(row for row in components if row["name"] == "ESIC")
+		self.assertEqual(esic["type"], "Deduction")
+		self.assertEqual(esic["salary_component_abbr"], "ESIC")
+		self.assertEqual(esic["disabled"], 0)
 
 	def test_statutory_deductions_use_payable_wages(self):
 		integration = (APP_ROOT / "utils" / "salary_package.py").read_text(encoding="utf-8")

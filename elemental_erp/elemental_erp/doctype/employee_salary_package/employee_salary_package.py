@@ -60,15 +60,16 @@ class EmployeeSalaryPackage(Document):
 		for row in self.components:
 			row.employee = None
 			row.salary_package = None
+			component_type = frappe.db.get_value("Salary Component", row.salary_component, "type")
+			if not component_type:
+				frappe.throw(f"Salary Component {row.salary_component} does not exist.")
+			row.treatment = row.treatment or component_type
 			key = (row.salary_component, row.treatment)
 			if key in seen:
 				frappe.throw(f"Component {row.salary_component} is repeated under {row.treatment}.")
 			seen.add(key)
 			if row.treatment not in PACKAGE_TREATMENTS:
 				frappe.throw(f"Select a valid treatment for {row.salary_component}.")
-			component_type = frappe.db.get_value("Salary Component", row.salary_component, "type")
-			if not component_type:
-				frappe.throw(f"Salary Component {row.salary_component} does not exist.")
 			if row.treatment != "Employer Contribution" and component_type != row.treatment:
 				frappe.throw(f"{row.salary_component} is a {component_type}, not a {row.treatment}.")
 			row.automatic_calculation = int(_is_automatic_component(row.salary_component))

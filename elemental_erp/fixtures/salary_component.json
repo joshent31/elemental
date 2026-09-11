@@ -17,5 +17,22 @@
   "employee_field_name": "employee",
   "salary_component_abbr": "OT",
   "description": "Overtime for Workers: min(Total OT, 15 hrs) × Hourly Rate × 2. Hourly Rate = Monthly Salary / Days in Month / 8. Government cap: 15 hrs/month."
+ },
+ {
+  "doctype": "Salary Component",
+  "name": "ESIC",
+  "salary_component": "ESIC",
+  "type": "Deduction",
+  "disabled": 0,
+  "amount_field": "amount",
+  "amount_based_on_formula": 0,
+  "statistical_component": 0,
+  "depends_on_payment_days": 0,
+  "round_to_the_nearest_integer": 0,
+  "remove_if_zero_valued": 0,
+  "module": "Payroll",
+  "employee_field_name": "employee",
+  "salary_component_abbr": "ESIC",
+  "description": "Employee ESIC contribution. Elemental calculates 0.75% of eligible payable earnings when this component is enabled in the Employee Salary Package."
  }
 ]
