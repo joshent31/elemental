@@ -104,6 +104,14 @@ def scheduled_day_end_attendance():
 		run_day_end_attendance()
 
 
+def clear_copied_employee_qr(doc, method=None):
+	"""A duplicated Employee inherits custom QR fields from its source record.
+	Clear them before insertion so the new employee cannot reuse another
+	employee's gate identity and after_insert can generate a fresh QR."""
+	doc.employee_qr_value = None
+	doc.employee_qr_image = None
+
+
 def generate_employee_qr(doc, method=None):
 	"""hooked on Employee.after_insert. Every Employee gets a unique QR the
 	moment they're created \u2014 print it onto their ID badge. Scanning it at

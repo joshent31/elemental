@@ -1,4 +1,14 @@
 frappe.ui.form.on("Employee", {
+	onload(frm) {
+		// Frappe's Duplicate action copies read-only custom fields. Clear the
+		// source employee's gate identity immediately on the unsaved form; the
+		// server generates a new QR after this Employee is inserted.
+		if (frm.is_new() && (frm.doc.employee_qr_value || frm.doc.employee_qr_image)) {
+			frm.set_value("employee_qr_value", "");
+			frm.set_value("employee_qr_image", "");
+		}
+	},
+
 	refresh(frm) {
 		if (frm.is_new() || !(frappe.user.has_role("HR Manager") || frappe.user.has_role("System Manager"))) return;
 

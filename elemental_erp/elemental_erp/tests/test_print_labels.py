@@ -7,6 +7,8 @@ from pathlib import Path
 
 APP_ROOT = Path(__file__).resolve().parents[2]
 EMPLOYEE_FORMAT = APP_ROOT / "elemental_erp" / "print_format" / "employee_id_badge" / "employee_id_badge.json"
+EMPLOYEE_GATE = APP_ROOT / "employee_gate.py"
+EMPLOYEE_CLIENT = APP_ROOT / "public" / "js" / "employee.js"
 PACKING_FORMAT = APP_ROOT / "elemental_erp" / "print_format" / "packing_box_label" / "packing_box_label.json"
 PACKING_BULK_TEMPLATE = APP_ROOT / "templates" / "print_formats" / "packing_box_labels.html"
 JOB_TRAVELLER_FORMAT = (
@@ -52,6 +54,14 @@ WORKER_ATTENDANCE_REPORT = (
 
 
 class TestEmployeeBadge(unittest.TestCase):
+	def test_duplicate_employee_qr_is_cleared_before_insert(self):
+		hooks = HOOKS_SOURCE.read_text(encoding="utf-8")
+		server = EMPLOYEE_GATE.read_text(encoding="utf-8")
+		client = EMPLOYEE_CLIENT.read_text(encoding="utf-8")
+		self.assertIn('"before_insert": "elemental_erp.employee_gate.clear_copied_employee_qr"', hooks)
+		self.assertIn("doc.employee_qr_value = None", server)
+		self.assertIn('frm.set_value("employee_qr_value", "")', client)
+
 	def test_server_currency_uses_frappe_15_formatter(self):
 		for source in (API_SOURCE, WORKER_ATTENDANCE_REPORT):
 			with self.subTest(source=source.name):

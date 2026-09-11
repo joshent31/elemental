@@ -55,6 +55,7 @@ doc_events = {
 		"after_insert": "elemental_erp.elemental_erp.doctype.qr_scan_log.qr_scan_log.apply_scan_to_qr_master",
 	},
 	"Employee": {
+		"before_insert": "elemental_erp.employee_gate.clear_copied_employee_qr",
 		"after_insert": "elemental_erp.employee_gate.generate_employee_qr",
 	},
 	"Leave Application": {
