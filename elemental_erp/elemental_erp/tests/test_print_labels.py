@@ -51,6 +51,9 @@ WORKER_ATTENDANCE_REPORT = (
 	/ "worker_attendance_report"
 	/ "worker_attendance_report.py"
 )
+JOB_CONTROLLER = APP_ROOT / "elemental_erp" / "doctype" / "job" / "job.py"
+FINISHED_GOOD_CONTROLLER = APP_ROOT / "elemental_erp" / "doctype" / "finished_good" / "finished_good.py"
+WORKSTATION_CONTROLLER = APP_ROOT / "elemental_erp" / "doctype" / "production_workstation" / "production_workstation.py"
 
 
 class TestEmployeeBadge(unittest.TestCase):
@@ -61,6 +64,16 @@ class TestEmployeeBadge(unittest.TestCase):
 		self.assertIn('"before_insert": "elemental_erp.employee_gate.clear_copied_employee_qr"', hooks)
 		self.assertIn("doc.employee_qr_value = None", server)
 		self.assertIn('frm.set_value("employee_qr_value", "")', client)
+
+	def test_duplicated_master_identifiers_are_regenerated(self):
+		job = JOB_CONTROLLER.read_text(encoding="utf-8")
+		finished_good = FINISHED_GOOD_CONTROLLER.read_text(encoding="utf-8")
+		workstation = WORKSTATION_CONTROLLER.read_text(encoding="utf-8")
+		self.assertIn("self.job_qr_value = None", job)
+		self.assertIn("self.fg_code = None", finished_good)
+		self.assertIn("row.part_code = None", finished_good)
+		self.assertIn("self.workstation_code = None", workstation)
+		self.assertIn("self.qr_value = None", workstation)
 
 	def test_server_currency_uses_frappe_15_formatter(self):
 		for source in (API_SOURCE, WORKER_ATTENDANCE_REPORT):

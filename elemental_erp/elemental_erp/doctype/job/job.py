@@ -5,6 +5,14 @@ TERMINAL_STATUSES = ("Closed", "Cancelled")
 
 
 class Job(Document):
+	def before_insert(self):
+		# Duplicate copies read-only QR fields from the source Job. A new Job
+		# must establish its own scan identity in on_update.
+		if self.job_qr_value and frappe.db.exists("Job", {"job_qr_value": self.job_qr_value}):
+			self.job_qr_value = None
+			self.job_scan_url = None
+			self.job_qr_image = None
+
 	def before_save(self):
 		self._prepare_fg_change_audit()
 

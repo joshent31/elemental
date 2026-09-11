@@ -43,6 +43,8 @@ def generate_part_code():
 
 class FinishedGood(Document):
 	def before_validate(self):
+		if self.is_new() and self.fg_code and frappe.db.exists("Finished Good", self.fg_code):
+			self.fg_code = None
 		if not (self.fg_code or "").strip():
 			self.fg_code = make_autoname(self.naming_series or "FG-.#####")
 
@@ -50,6 +52,8 @@ class FinishedGood(Document):
 		# generates this as soon as Add Row is clicked; this is the authoritative
 		# fallback for imports, API inserts, and slow/offline clients.
 		for row in self.subparts or []:
+			if row.get("part_code") and frappe.db.exists("FG Subpart", {"part_code": row.part_code}):
+				row.part_code = None
 			if not (row.get("part_code") or "").strip():
 				row.part_code = generate_part_code()
 

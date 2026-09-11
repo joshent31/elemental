@@ -5,6 +5,16 @@ from frappe.model.naming import make_autoname
 
 class ProductionWorkstation(Document):
 	def before_validate(self):
+		if self.is_new() and self.workstation_code and frappe.db.exists(
+			"Production Workstation", {"workstation_code": self.workstation_code}
+		):
+			self.workstation_code = None
+		if self.is_new() and self.qr_value and frappe.db.exists(
+			"Production Workstation", {"qr_value": self.qr_value}
+		):
+			self.qr_value = None
+			self.scan_url = None
+			self.qr_image = None
 		if not (self.workstation_code or "").strip():
 			self.workstation_code = make_autoname(self.naming_series or "WS-.#####")
 
