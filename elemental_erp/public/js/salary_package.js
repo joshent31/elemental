@@ -12,7 +12,6 @@ function calculate_package_preview(frm) {
 	if (frm.doctype !== "Employee Salary Package") return;
 	const totals = { Earning: 0, Deduction: 0, "Employer Contribution": 0 };
 	(frm.doc.components || []).forEach((row) => {
-		if (!row.enabled) return;
 		totals[row.treatment] = flt(totals[row.treatment]) + flt(row.monthly_amount);
 	});
 	frm.set_value("monthly_earnings", totals.Earning);
@@ -22,7 +21,6 @@ function calculate_package_preview(frm) {
 	frm.set_value("monthly_ctc", totals.Earning + totals["Employer Contribution"]);
 	const annualCtc = (frm.doc.components || [])
 		.filter((row) => ["Earning", "Employer Contribution"].includes(row.treatment))
-		.filter((row) => row.enabled)
 		.reduce((total, row) => total + flt(row.annual_amount), 0);
 	frm.set_value("annual_ctc", annualCtc);
 }
@@ -65,7 +63,6 @@ function load_salary_component_catalogue(frm) {
 			(r.message || []).forEach((component) => {
 				if (existing.has(component.salary_component)) return;
 				const row = frm.add_child("components");
-				row.enabled = 0;
 				row.salary_component = component.salary_component;
 				row.treatment = component.treatment;
 				row.automatic_calculation = component.automatic_calculation;
@@ -114,14 +111,6 @@ frappe.ui.form.on("Salary Package Component", {
 			grid_row.toggle_editable("annual_amount", !row.automatic_calculation);
 			grid_row.toggle_editable("amount_basis", !row.automatic_calculation);
 		}
-	},
-	enabled(frm, cdt, cdn) {
-		const row = locals[cdt][cdn];
-		if (!row.enabled) {
-			frappe.model.set_value(cdt, cdn, "monthly_amount", 0);
-			frappe.model.set_value(cdt, cdn, "annual_amount", 0);
-		}
-		calculate_package_preview(frm);
 	},
 	monthly_amount(frm, cdt, cdn) {
 		if (locals[cdt][cdn].amount_basis !== "Annual") update_salary_package_row(frm, cdt, cdn, "monthly_amount");

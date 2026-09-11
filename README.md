@@ -1083,9 +1083,10 @@ automatic bulk conversion merely from installing or migrating the app.
 
 ## Employee Salary Package statutory calculations
 
-New packages load every active Salary Component into a checkbox grid. HR enables only the applicable rows,
-and enters amounts only for fixed earnings/deductions. The component master supplies Earning/Deduction type.
-PF, ESIC and Karnataka PT rows are automatic when enabled:
+New packages load every active Salary Component into a grid. HR deletes rows that do not apply and enters
+amounts only for the remaining fixed earnings/deductions. The component master supplies Earning/Deduction
+type. Refresh Salary Components restores any missing active component rows. PF, ESIC and Karnataka PT rows
+are automatic whenever they remain in the package:
 
 | Deduction | Package preview | Salary Slip payable calculation |
 |---|---|---|
@@ -1093,8 +1094,8 @@ PF, ESIC and Karnataka PT rows are automatic when enabled:
 | Employee ESIC | Eligible monthly earnings × 0.75% | Uses total eligible payable earnings after payment-day proration |
 | Karnataka PT | ₹200 when earnings ≥ ₹25,000 | ₹200 monthly, ₹300 in February; zero below ₹25,000 |
 
-Eligibility remains employee-specific: HR enables the relevant statutory component in that Employee Salary
-Package. ERPNext still owns Salary Slip payment days, payroll entry, accounting and submission. Elemental
+Eligibility remains employee-specific: HR keeps the relevant statutory row or deletes it from that Employee
+Salary Package. ERPNext still owns Salary Slip payment days, payroll entry, accounting and submission. Elemental
 only supplies the approved package values and recalculated statutory deduction amounts.
 
 ---

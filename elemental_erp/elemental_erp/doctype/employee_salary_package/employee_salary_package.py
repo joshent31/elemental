@@ -96,15 +96,9 @@ class EmployeeSalaryPackage(Document):
 			if row.treatment != "Employer Contribution" and component_type != row.treatment:
 				frappe.throw(f"{row.salary_component} is a {component_type}, not a {row.treatment}.")
 			row.automatic_calculation = int(_is_automatic_component(row.salary_component))
-			# Existing packages pre-date the Use checkbox. A non-zero amount keeps
-			# those approved rows enabled after migration.
-			if not row.enabled and (flt(row.monthly_amount) or flt(row.annual_amount)):
-				row.enabled = 1
-			if not row.enabled or row.automatic_calculation:
+			if row.automatic_calculation:
 				row.monthly_amount = 0
 				row.annual_amount = 0
-				if not row.enabled:
-					continue
 			if row.amount_basis == "Annual":
 				row.annual_amount = flt(row.annual_amount, 2)
 				row.monthly_amount = flt(row.annual_amount / 12, 6)
@@ -123,8 +117,6 @@ class EmployeeSalaryPackage(Document):
 		monthly = {treatment: 0 for treatment in PACKAGE_TREATMENTS}
 		annual_ctc = 0
 		for row in self.components:
-			if not row.enabled:
-				continue
 			monthly[row.treatment] += flt(row.monthly_amount)
 			if row.treatment in ("Earning", "Employer Contribution"):
 				annual_ctc += flt(row.annual_amount)
@@ -137,7 +129,7 @@ class EmployeeSalaryPackage(Document):
 
 	def _calculate_statutory_preview(self):
 		"""Show full-month statutory estimates; Salary Slip recalculates payable values."""
-		earnings = [row for row in self.components if row.enabled and row.treatment == "Earning"]
+		earnings = [row for row in self.components if row.treatment == "Earning"]
 		gross = sum(flt(row.monthly_amount) for row in earnings)
 		pf_wages = 0
 		for row in earnings:
@@ -148,7 +140,7 @@ class EmployeeSalaryPackage(Document):
 			elif name in ("da", "dearness allowance") or abbr == "DA":
 				pf_wages += flt(row.monthly_amount)
 		for row in self.components:
-			if not row.enabled or row.treatment != "Deduction" or not row.automatic_calculation:
+			if row.treatment != "Deduction" or not row.automatic_calculation:
 				continue
 			abbr = _component_abbr(row.salary_component)
 			if abbr in ("PF", "EPF"):

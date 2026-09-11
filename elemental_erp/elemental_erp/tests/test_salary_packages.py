@@ -24,7 +24,7 @@ class TestSalaryPackages(unittest.TestCase):
 
 		component = self.load_doctype("salary_package_component")
 		component_fields = {row.get("fieldname"): row for row in component["fields"]}
-		self.assertIn("enabled", component_fields)
+		self.assertNotIn("enabled", component_fields)
 		self.assertIn("automatic_calculation", component_fields)
 		self.assertFalse(component_fields["salary_component"].get("read_only", 0))
 		self.assertEqual(component["istable"], 1)
@@ -72,7 +72,7 @@ class TestSalaryPackages(unittest.TestCase):
 		self.assertIn('flt(row.annual_amount) / 12', client)
 		self.assertIn('totals.Earning - totals.Deduction', client)
 		self.assertIn("load_salary_component_catalogue", client)
-		self.assertIn('row.enabled = 0', client)
+		self.assertNotIn('row.enabled = 0', client)
 		self.assertIn('salary_component(frm, cdt, cdn)', client)
 		self.assertIn('"salary_component_abbr"', client)
 		self.assertIn("sort_salary_components", client)

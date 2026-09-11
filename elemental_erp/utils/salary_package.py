@@ -37,17 +37,12 @@ def apply_employee_salary_package(doc, method=None):
 	for treatment, table_field in (("Earning", "earnings"), ("Deduction", "deductions")):
 		for component in (
 			row for row in package.components
-			if row.treatment == treatment and _row_enabled(row) and not _is_statutory(row.salary_component)
+			if row.treatment == treatment and not _is_statutory(row.salary_component)
 		):
 			_set_component_amount(doc, table_field, component.salary_component, component.monthly_amount)
 
 	_apply_worker_ot(doc)
 	_apply_statutory_deductions(doc, package)
-
-
-def _row_enabled(row):
-	"""Keep approved pre-checkbox package rows working after migration."""
-	return bool(row.get("enabled") or flt(row.get("monthly_amount")) or flt(row.get("annual_amount")))
 
 
 def _component_defaults(component_name):
@@ -92,7 +87,7 @@ def _payable_package_earnings(doc, package):
 	ratio = _payment_day_ratio(doc)
 	amounts = {}
 	for row in package.components:
-		if row.treatment != "Earning" or not _row_enabled(row) or _is_statutory(row.salary_component):
+		if row.treatment != "Earning" or _is_statutory(row.salary_component):
 			continue
 		defaults = _component_defaults(row.salary_component)
 		amount = flt(row.monthly_amount)
@@ -133,13 +128,12 @@ def _apply_statutory_deductions(doc, package):
 		if abbr not in STATUTORY_ABBRS:
 			continue
 		amount = 0
-		if _row_enabled(component):
-			if abbr in ("PF", "EPF"):
-				amount = amounts["PF"]
-			elif abbr in ("ESI", "ESIC"):
-				amount = amounts["ESIC"]
-			elif abbr == "PT":
-				amount = amounts["PT"]
+		if abbr in ("PF", "EPF"):
+			amount = amounts["PF"]
+		elif abbr in ("ESI", "ESIC"):
+			amount = amounts["ESIC"]
+		elif abbr == "PT":
+			amount = amounts["PT"]
 		_set_component_amount(doc, "deductions", component.salary_component, amount, depends_on_payment_days=False)
 
 
