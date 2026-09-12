@@ -1248,3 +1248,26 @@ This gives one row per Job. **Production Completion %** is calculated from actua
 `sum(completed process quantity, capped at required quantity) ÷ sum(required process quantity) × 100`
 
 The same calculation is shown separately for Metal, Wood, Electrical, Powdercoating, Paint, US Assembly and Packing. The report also shows FG count, due date, days remaining, total process quantities, overdue count and a completion chart. Processes not required for a Job show zero and do not dilute the overall completion percentage.
+
+---
+
+## 30. Costing Raw-Material Conversion in Finished Goods
+
+The Costing team maintains the raw-material requirement directly in **Finished Good → Raw Material BOM**. Each row can identify the component, sub-component, material type, optional production subpart and ERPNext raw-material Item. This is the same BOM used by Material Indent; it is not a separate estimate that must be entered again.
+
+Configure each raw-material **Item** once using:
+
+- **FG Consumption Basis**: Manual, Pieces, Length, Area or Volume.
+- **FG Conversion Divisor**: the number of base dimensional units represented by one stock UOM. Dimensions in the Finished Good are entered in millimetres. Typical values are `1` for Nos, `1000` for metres, `304.8` for running feet, `1000000` for square metres, `92903.04` for square feet and `1000000000` for cubic metres.
+
+In the Finished Good BOM, enter Length, Width, Height and PCS as required by the selected Item rule. The system calculates **Total Qty / FG** as follows:
+
+- Pieces: `PCS ÷ conversion divisor`
+- Length: `Length × PCS ÷ conversion divisor`
+- Area: `Length × Width × PCS ÷ conversion divisor`
+- Volume: `Length × Width × Height × PCS ÷ conversion divisor`
+- Manual: Costing enters Total Qty / FG directly.
+
+Example: a panel measuring 1500 × 600 mm has `900000 mm²`. With square feet as the stock UOM and divisor `92903.04`, the requirement is `9.687519 Sq Ft` per FG. A 4200 mm edge band with running-foot divisor `304.8` requires `13.779528 Rft` per FG.
+
+The browser recalculates immediately while Costing edits the row, and the server recalculates again on save so imports and API updates follow the same rule. The existing material flow then multiplies Total Qty / FG by the Job FG quantity, considers stock/excess quantities, and sends only the procurement balance into Material Indent and PO Initiation.

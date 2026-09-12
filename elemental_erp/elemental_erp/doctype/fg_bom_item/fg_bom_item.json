@@ -7,10 +7,22 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "fields": [
-  {"fieldname": "subpart_code", "label": "For Subpart (optional)", "fieldtype": "Data", "in_list_view": 1, "columns": 2,
+  {"fieldname": "component", "label": "Component", "fieldtype": "Data", "in_list_view": 1, "columns": 1},
+  {"fieldname": "sub_component", "label": "Sub-Component", "fieldtype": "Data", "in_list_view": 1, "columns": 1},
+  {"fieldname": "material_type", "label": "Type", "fieldtype": "Select", "options": "Structure\nFinish\nHardware\nConsumable\nOther", "in_list_view": 1, "columns": 1},
+  {"fieldname": "subpart_code", "label": "For Subpart (optional)", "fieldtype": "Data",
    "description": "Leave blank if this raw material applies to the FG as a whole rather than one subpart"},
   {"fieldname": "raw_material", "label": "Raw Material (Item)", "fieldtype": "Link", "options": "Item", "reqd": 1, "in_list_view": 1, "columns": 3},
-  {"fieldname": "qty_per_fg", "label": "Qty per 1 FG", "fieldtype": "Float", "reqd": 1, "in_list_view": 1, "columns": 2},
-  {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "fetch_from": "raw_material.stock_uom", "in_list_view": 1, "columns": 2}
+  {"fieldname": "length_mm", "label": "Length (mm)", "fieldtype": "Float", "in_list_view": 1, "columns": 1},
+  {"fieldname": "width_mm", "label": "Width (mm)", "fieldtype": "Float", "in_list_view": 1, "columns": 1},
+  {"fieldname": "height_mm", "label": "Height (mm)", "fieldtype": "Float", "columns": 1},
+  {"fieldname": "pieces", "label": "PCS", "fieldtype": "Float", "default": "1", "in_list_view": 1, "columns": 1},
+  {"fieldname": "calculation_basis", "label": "Calculation", "fieldtype": "Data", "read_only": 1,
+   "description": "Copied from the selected Item's FG Consumption Basis"},
+  {"fieldname": "conversion_factor", "label": "Conversion Divisor", "fieldtype": "Float", "read_only": 1,
+   "description": "Base dimensional units represented by one stock UOM"},
+  {"fieldname": "qty_per_fg", "label": "Total Qty / FG", "fieldtype": "Float", "reqd": 1, "in_list_view": 1, "columns": 2,
+   "description": "Automatically calculated from dimensions and the Item conversion master; editable only for Manual items"},
+  {"fieldname": "uom", "label": "UOM", "fieldtype": "Link", "options": "UOM", "fetch_from": "raw_material.stock_uom", "in_list_view": 1, "columns": 1}
  ]
 }

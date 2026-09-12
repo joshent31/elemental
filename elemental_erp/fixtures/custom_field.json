@@ -198,6 +198,31 @@
  },
  {
   "doctype": "Custom Field",
+  "name": "Item-elemental_fg_consumption_basis",
+  "dt": "Item",
+  "fieldname": "elemental_fg_consumption_basis",
+  "label": "FG Consumption Basis",
+  "fieldtype": "Select",
+  "options": "Manual\nPieces\nLength\nArea\nVolume",
+  "default": "Manual",
+  "insert_after": "stock_uom",
+  "description": "Controls Finished Good raw-material quantity calculation. Dimensions are entered in millimetres.",
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Item-elemental_fg_conversion_factor",
+  "dt": "Item",
+  "fieldname": "elemental_fg_conversion_factor",
+  "label": "FG Conversion Divisor",
+  "fieldtype": "Float",
+  "default": "1",
+  "insert_after": "elemental_fg_consumption_basis",
+  "description": "Base units per stock UOM: Pieces=1; metre=1000 mm; running foot=304.8 mm; square metre=1000000 mm²; square foot=92903.04 mm²; cubic metre=1000000000 mm³.",
+  "module": "Elemental ERP"
+ },
+ {
+  "doctype": "Custom Field",
   "name": "Item-section_suppliers_elemental",
   "dt": "Item",
   "fieldname": "section_suppliers_elemental",

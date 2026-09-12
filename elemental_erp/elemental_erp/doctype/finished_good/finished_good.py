@@ -14,6 +14,28 @@ PROCESS_FIELDS = (
 )
 
 
+def calculate_material_qty(basis, conversion_factor, length=0, width=0, height=0, pieces=1):
+	"""Convert millimetre-based FG measurements into the Item's stock UOM."""
+	basis = (basis or "Manual").strip()
+	factor = float(conversion_factor or 0)
+	pieces = float(pieces or 0)
+	measurements = {
+		"Pieces": pieces,
+		"Length": float(length or 0) * pieces,
+		"Area": float(length or 0) * float(width or 0) * pieces,
+		"Volume": float(length or 0) * float(width or 0) * float(height or 0) * pieces,
+	}
+	if basis == "Manual":
+		return None
+	if basis not in measurements:
+		frappe.throw(f"Unsupported FG Consumption Basis: {basis}")
+	if factor <= 0:
+		frappe.throw("FG Conversion Divisor must be greater than zero on the raw-material Item.")
+	if measurements[basis] <= 0:
+		frappe.throw(f"Enter all measurements required for {basis} calculation and a PCS value greater than zero.")
+	return round(measurements[basis] / factor, 6)
+
+
 def selected_processes(row, migrate_legacy=True):
 	"""Return checked processes in production order and migrate old pill values."""
 	selected = [label for fieldname, label in PROCESS_FIELDS if int(row.get(fieldname) or 0)]
@@ -58,6 +80,24 @@ class FinishedGood(Document):
 				row.part_code = generate_part_code()
 
 	def validate(self):
+		for row in self.bom_items or []:
+			item = frappe.db.get_value(
+				"Item", row.raw_material,
+				["stock_uom", "elemental_fg_consumption_basis", "elemental_fg_conversion_factor"],
+				as_dict=True,
+			) or {}
+			row.uom = item.get("stock_uom") or row.uom
+			row.calculation_basis = item.get("elemental_fg_consumption_basis") or "Manual"
+			row.conversion_factor = float(item.get("elemental_fg_conversion_factor") or 1)
+			calculated = calculate_material_qty(
+				row.calculation_basis, row.conversion_factor, row.length_mm,
+				row.width_mm, row.height_mm, row.pieces,
+			)
+			if calculated is not None:
+				row.qty_per_fg = calculated
+			if float(row.qty_per_fg or 0) <= 0:
+				frappe.throw(f"Raw material {row.raw_material}: Total Qty / FG must be greater than zero.")
+
 		if not self.subparts:
 			frappe.msgprint(
 				"No subparts added — QR tracking will be generated at the Finished-Good level only.",

@@ -105,5 +105,38 @@ class TestFinishedGoodProcessFlow(unittest.TestCase):
 		self.assertIn("process.process_name", html)
 
 
+class TestFinishedGoodMaterialConversion(unittest.TestCase):
+	@staticmethod
+	def calculate(*args, **kwargs):
+		frappe = types.ModuleType("frappe")
+		frappe.throw = lambda message: (_ for _ in ()).throw(ValueError(message))
+		frappe.whitelist = lambda: (lambda function: function)
+		model = types.ModuleType("frappe.model")
+		model.__path__ = []
+		document = types.ModuleType("frappe.model.document")
+		document.Document = object
+		naming = types.ModuleType("frappe.model.naming")
+		naming.make_autoname = lambda _series: "PART-00001"
+		modules = {"frappe": frappe, "frappe.model": model, "frappe.model.document": document, "frappe.model.naming": naming}
+		import importlib.util
+		spec = importlib.util.spec_from_file_location("test_finished_good_material", FINISHED_GOOD)
+		module = importlib.util.module_from_spec(spec)
+		with patch.dict(sys.modules, modules):
+			spec.loader.exec_module(module)
+		return module.calculate_material_qty(*args, **kwargs)
+
+	def test_area_converts_square_millimetres_to_square_feet(self):
+		self.assertAlmostEqual(self.calculate("Area", 92903.04, 1500, 600, pieces=1), 9.687519)
+
+	def test_length_converts_millimetres_to_running_feet(self):
+		self.assertAlmostEqual(self.calculate("Length", 304.8, 4200, pieces=1), 13.779528)
+
+	def test_volume_includes_all_dimensions_and_pieces(self):
+		self.assertEqual(self.calculate("Volume", 1_000_000_000, 1000, 1000, 1000, pieces=2), 2)
+
+	def test_manual_does_not_replace_entered_quantity(self):
+		self.assertIsNone(self.calculate("Manual", 1, 100, 100, pieces=1))
+
+
 if __name__ == "__main__":
 	unittest.main()
