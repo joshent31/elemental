@@ -5,6 +5,7 @@
  "custom":0,
  "autoname":"naming_series:",
  "is_submittable":1,
+ "allow_import":1,
  "engine":"InnoDB",
  "track_changes":1,
  "fields":[

@@ -18,6 +18,7 @@ class TestSalaryPackages(unittest.TestCase):
 		package = self.load_doctype("employee_salary_package")
 		fields = {row.get("fieldname"): row for row in package["fields"]}
 		self.assertEqual(package["is_submittable"], 1)
+		self.assertEqual(package["allow_import"], 1)
 		self.assertEqual(fields["components"]["options"], "Salary Package Component")
 		self.assertIn("effective_from", fields)
 		self.assertIn("annual_ctc", fields)
@@ -30,6 +31,12 @@ class TestSalaryPackages(unittest.TestCase):
 		self.assertEqual(component["istable"], 1)
 		self.assertIn("Employer Contribution", component_fields["treatment"]["options"])
 		self.assertIn("Annual", component_fields["amount_basis"]["options"])
+
+	def test_import_permissions_are_backed_by_importable_doctypes(self):
+		for folder in ("employee_salary_package", "annual_salary_revision"):
+			doctype = self.load_doctype(folder)
+			self.assertEqual(doctype.get("allow_import"), 1)
+			self.assertTrue(any(row.get("import") for row in doctype["permissions"]))
 
 	def test_annual_revision_generates_one_package_per_employee(self):
 		revision = self.load_doctype("annual_salary_revision")
@@ -79,12 +86,21 @@ class TestSalaryPackages(unittest.TestCase):
 		self.assertIn('"basic": 10', client)
 		self.assertIn('"provident fund": 1010', client)
 
-	def test_esic_component_is_shipped_and_active(self):
+	def test_core_salary_components_are_shipped_and_active(self):
 		components = json.loads((APP_ROOT / "fixtures" / "salary_component.json").read_text(encoding="utf-8"))
-		esic = next(row for row in components if row["name"] == "ESIC")
-		self.assertEqual(esic["type"], "Deduction")
-		self.assertEqual(esic["salary_component_abbr"], "ESIC")
-		self.assertEqual(esic["disabled"], 0)
+		by_name = {row["name"]: row for row in components}
+		for name in (
+			"Basic", "House Rent Allowance", "Dearness Allowance", "Other Allowance",
+			"Arrear", "Leave Encashment", "Overtime", "Provident Fund", "ESIC",
+			"Professional Tax", "Income Tax",
+		):
+			self.assertIn(name, by_name)
+			self.assertEqual(by_name[name]["disabled"], 0)
+			self.assertEqual(by_name[name]["module"], "Payroll")
+		self.assertEqual(by_name["Basic"]["salary_component_abbr"], "BASIC")
+		self.assertEqual(by_name["Provident Fund"]["salary_component_abbr"], "PF")
+		self.assertEqual(by_name["Professional Tax"]["salary_component_abbr"], "PT")
+		self.assertEqual(by_name["ESIC"]["salary_component_abbr"], "ESIC")
 
 	def test_statutory_deductions_use_payable_wages(self):
 		integration = (APP_ROOT / "utils" / "salary_package.py").read_text(encoding="utf-8")
