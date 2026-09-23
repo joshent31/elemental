@@ -4,6 +4,7 @@ from frappe.utils import flt, getdate
 from elemental_erp.elemental_erp.doctype.employee_salary_package.employee_salary_package import get_effective_package
 
 STATUTORY_ABBRS = {"PF", "EPF", "ESI", "ESIC", "PT"}
+ELEMENTAL_STRUCTURE_PREFIX = "Elemental Salary Package"
 
 
 def apply_employee_salary_package(doc, method=None):
@@ -18,13 +19,6 @@ def apply_employee_salary_package(doc, method=None):
 		return
 	if not frappe.db.get_value("Employee", doc.employee, "use_elemental_salary_package"):
 		return
-	# Salary Slip.validate() only loads the assigned Salary Structure when both
-	# component tables are empty. Load it first, then overlay the approved
-	# employee-specific amounts; otherwise adding our first row would cause the
-	# standard structure load to be skipped on manually-created slips.
-	if not (doc.get("earnings") or doc.get("deductions")) and hasattr(doc, "get_emp_and_working_day_details"):
-		doc.get_emp_and_working_day_details()
-
 	package_name = get_effective_package(doc.employee, doc.end_date or doc.start_date)
 	if not package_name:
 		frappe.throw(
@@ -33,6 +27,13 @@ def apply_employee_salary_package(doc, method=None):
 		)
 	package = frappe.get_doc("Employee Salary Package", package_name)
 	doc.elemental_salary_package = package.name
+	ensure_salary_structure_assignment(package)
+
+	# Salary Slip.validate() loads attendance, leave and payment-day details from
+	# the assigned Salary Structure. The assignment is auto-created for package
+	# employees, so Payroll Entry and manual slips can use the standard flow.
+	if not (doc.get("earnings") or doc.get("deductions")) and hasattr(doc, "get_emp_and_working_day_details"):
+		doc.get_emp_and_working_day_details()
 
 	for treatment, table_field in (("Earning", "earnings"), ("Deduction", "deductions")):
 		for component in (
@@ -152,3 +153,81 @@ def _apply_worker_ot(doc):
 	# Structure. Ensure it exists so bulk Payroll Entry works without the
 	# manual form button.
 	_set_component_amount(doc, "earnings", "Overtime", ot["ot_amount"])
+
+
+def ensure_salary_structure_assignment(package):
+	"""Create the ERPNext assignment needed for Payroll Entry compatibility."""
+	if isinstance(package, str):
+		package = frappe.get_doc("Employee Salary Package", package)
+	if not package.employee or not package.effective_from:
+		return
+	if not frappe.db.get_value("Employee", package.employee, "use_elemental_salary_package"):
+		frappe.db.set_value("Employee", package.employee, "use_elemental_salary_package", 1, update_modified=False)
+
+	existing = frappe.db.get_value(
+		"Salary Structure Assignment",
+		{
+			"employee": package.employee,
+			"from_date": ["<=", getdate(package.effective_from)],
+			"docstatus": 1,
+		},
+		"name",
+		order_by="from_date desc, creation desc",
+	)
+	if existing:
+		return existing
+
+	company = package.company or frappe.db.get_value("Employee", package.employee, "company")
+	currency = package.currency or frappe.db.get_value("Company", company, "default_currency") or "INR"
+	structure = _ensure_elemental_salary_structure(company, currency)
+	assignment = frappe.new_doc("Salary Structure Assignment")
+	assignment.employee = package.employee
+	assignment.company = company
+	assignment.salary_structure = structure
+	assignment.from_date = getdate(package.effective_from)
+	assignment.currency = currency
+	assignment.base = flt(package.monthly_earnings)
+	assignment.insert(ignore_permissions=True, ignore_mandatory=True)
+	assignment.submit()
+	return assignment.name
+
+
+def _ensure_elemental_salary_structure(company, currency):
+	name = f"{ELEMENTAL_STRUCTURE_PREFIX} - {company}"
+	if frappe.db.exists("Salary Structure", name):
+		return name
+
+	structure = frappe.new_doc("Salary Structure")
+	structure.salary_structure_name = name
+	structure.company = company
+	structure.currency = currency
+	structure.payroll_frequency = "Monthly"
+	structure.is_active = "Yes"
+	earning = frappe.db.exists("Salary Component", "Basic") or frappe.db.get_value(
+		"Salary Component", {"type": "Earning", "disabled": 0}, "name", order_by="name asc"
+	)
+	if earning:
+		structure.append("earnings", {"salary_component": earning, "amount": 0})
+	structure.insert(ignore_permissions=True, ignore_mandatory=True)
+	if getattr(structure, "docstatus", 0) == 0 and hasattr(structure, "submit"):
+		structure.submit()
+	return structure.name
+
+
+def backfill_salary_structure_assignments():
+	"""Ensure old submitted packages can run Payroll Entry after deployment."""
+	if not frappe.db.exists("DocType", "Employee Salary Package"):
+		return
+	for package in frappe.get_all(
+		"Employee Salary Package",
+		filters={"docstatus": 1},
+		fields=["name"],
+		limit_page_length=0,
+	):
+		try:
+			ensure_salary_structure_assignment(package.name)
+		except Exception:
+			frappe.log_error(
+				frappe.get_traceback(),
+				f"Elemental salary structure assignment failed for {package.name}",
+			)

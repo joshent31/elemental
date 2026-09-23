@@ -25,6 +25,7 @@ after_migrate = [
 	"elemental_erp.utils.saturday_off.configure_saturday_off_leave",
 	"elemental_erp.utils.saturday_off.remove_saturday_off_from_leave_policies",
 	"elemental_erp.utils.saturday_off.ensure_monthly_saturday_off_allocations",
+	"elemental_erp.utils.salary_package.backfill_salary_structure_assignments",
 ]
 
 scheduler_events = {

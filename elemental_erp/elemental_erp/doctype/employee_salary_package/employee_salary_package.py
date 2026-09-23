@@ -53,6 +53,9 @@ class EmployeeSalaryPackage(Document):
 
 	def on_submit(self):
 		frappe.db.set_value("Employee", self.employee, "use_elemental_salary_package", 1, update_modified=False)
+		from elemental_erp.utils.salary_package import ensure_salary_structure_assignment
+
+		ensure_salary_structure_assignment(self)
 
 	def before_cancel(self):
 		slip = frappe.db.get_value("Salary Slip", {"elemental_salary_package": self.name, "docstatus": ["!=", 2]}, "name")

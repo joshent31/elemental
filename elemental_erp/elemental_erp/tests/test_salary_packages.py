@@ -54,9 +54,23 @@ class TestSalaryPackages(unittest.TestCase):
 		integration = (APP_ROOT / "utils" / "salary_package.py").read_text(encoding="utf-8")
 		self.assertIn('"use_elemental_salary_package"', integration)
 		self.assertIn('doc.elemental_salary_package = package.name', integration)
+		self.assertLess(
+			integration.index("ensure_salary_structure_assignment(package)"),
+			integration.index("doc.get_emp_and_working_day_details()"),
+		)
 		self.assertIn("doc.get_emp_and_working_day_details()", integration)
 		self.assertIn('_set_component_amount(doc, "earnings", "Overtime"', integration)
 		self.assertNotIn('frappe.new_doc("Salary Slip")', integration)
+
+	def test_package_auto_creates_payroll_assignment(self):
+		package = (DOCTYPE_ROOT / "employee_salary_package" / "employee_salary_package.py").read_text(encoding="utf-8")
+		integration = (APP_ROOT / "utils" / "salary_package.py").read_text(encoding="utf-8")
+		hooks = (APP_ROOT / "hooks.py").read_text(encoding="utf-8")
+		self.assertIn("ensure_salary_structure_assignment(self)", package)
+		self.assertIn('frappe.new_doc("Salary Structure")', integration)
+		self.assertIn('frappe.new_doc("Salary Structure Assignment")', integration)
+		self.assertIn('assignment.submit()', integration)
+		self.assertIn("backfill_salary_structure_assignments", hooks)
 
 	def test_salary_history_cannot_be_cancelled_after_submitted_payroll(self):
 		package = (DOCTYPE_ROOT / "employee_salary_package" / "employee_salary_package.py").read_text(encoding="utf-8")
