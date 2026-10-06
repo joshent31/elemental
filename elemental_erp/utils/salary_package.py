@@ -247,7 +247,6 @@ def _ensure_elemental_salary_structure(company, currency):
 		return name
 
 	structure = frappe.new_doc("Salary Structure")
-	structure.salary_structure_name = name
 	structure.company = company
 	structure.currency = currency
 	structure.payroll_frequency = "Monthly"
@@ -257,7 +256,9 @@ def _ensure_elemental_salary_structure(company, currency):
 	)
 	if earning:
 		structure.append("earnings", {"salary_component": earning, "amount": 0})
-	structure.insert(ignore_permissions=True, ignore_mandatory=True)
+	# HRMS Salary Structure uses Prompt naming. Its name must be supplied to
+	# insert; salary_structure_name is not a field and cannot name the document.
+	structure.insert(ignore_permissions=True, ignore_mandatory=True, set_name=name)
 	if getattr(structure, "docstatus", 0) == 0 and hasattr(structure, "submit"):
 		structure.submit()
 	return structure.name

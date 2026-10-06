@@ -43,6 +43,24 @@ class TestPayrollAssignmentIntegration(unittest.TestCase):
 			self.ensure(self.package, "Payroll Payable - EF")
 		self.frappe.db.set_value.assert_not_called()
 
+	def test_prompt_named_structure_receives_explicit_insert_name(self):
+		tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
+		function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_ensure_elemental_salary_structure")
+		namespace = {"frappe": self.frappe, "ELEMENTAL_STRUCTURE_PREFIX": "Elemental Salary Package"}
+		exec(compile(ast.Module(body=[function], type_ignores=[]), str(SOURCE), "exec"), namespace)
+		ensure_structure = namespace[function.name]
+		self.frappe.db.exists.side_effect = [False, "Basic"]
+		structure = Mock(docstatus=0)
+		structure.name = "Elemental Salary Package - EF"
+		self.frappe.new_doc.return_value = structure
+		self.assertEqual(ensure_structure("EF", "INR"), "Elemental Salary Package - EF")
+		structure.insert.assert_called_once_with(ignore_permissions=True, ignore_mandatory=True, set_name="Elemental Salary Package - EF")
+		structure.submit.assert_called_once_with()
+		self.frappe.db.exists.side_effect = None
+		self.frappe.db.exists.return_value = True
+		self.assertEqual(ensure_structure("EF", "INR"), "Elemental Salary Package - EF")
+		self.assertEqual(structure.insert.call_count, 1)
+
 
 if __name__ == "__main__":
 	unittest.main()
