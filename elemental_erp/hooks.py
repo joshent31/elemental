@@ -6,6 +6,12 @@ app_email = "dev@elemental.com"
 app_license = "mit"
 required_apps = ["erpnext"]
 
+# HRMS still selects employees and generates slips; prepare package assignments
+# immediately before its normal employee-selection method runs.
+override_doctype_class = {
+	"Payroll Entry": "elemental_erp.utils.payroll_entry.ElementalPayrollEntry",
+}
+
 # Install the Work from Home list-query compatibility wrapper through Frappe's
 # request lifecycle. Import-time side effects in hooks.py are not reliable when
 # Frappe reads cached hook metadata.

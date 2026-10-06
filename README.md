@@ -1081,6 +1081,29 @@ automatic bulk conversion merely from installing or migrating the app.
 
 ---
 
+## Payroll Entry: standard HRMS and Employee Salary Packages
+
+Both payroll options use the standard HRMS Payroll Entry and Salary Slip workflow.
+Employees using standard Salary Structure Assignments continue through HRMS selection.
+For employees opted into a submitted Employee Salary Package, clicking **Get Employees**
+automatically ensures a submitted Salary Structure Assignment before HRMS selects employees.
+Manual assignment creation is not required for the package workflow.
+
+HRMS requires the assignment's Payroll Payable Account to match the Payroll Entry.
+Elemental fills a blank account only on its generated assignments, using the selected
+Payroll Entry account. Existing nonblank accounts and standard HRMS assignments are
+preserved. If an Elemental assignment has a different account, HR receives a message
+to select the matching account or amend the assignment. HRMS still checks company,
+currency, employment dates, payroll frequency and existing Salary Slips.
+
+Salary Packages contain monthly amounts and currently support **Monthly** payroll.
+Use standard HRMS assignments for other frequencies or timesheet payroll. Packages
+must be submitted and effective by the payroll end date. Draft packages are not used.
+
+After deployment, run `bench --site efpl-4.local migrate`, clear the site cache and
+restart Bench. Reopen Payroll Entry and click **Get Employees**. Review draft slips
+before submission, including attendance/payment days, package amounts and deductions.
+
 ## Employee Salary Package statutory calculations
 
 New packages load every active Salary Component into a grid. HR deletes rows that do not apply and enters

@@ -50,7 +50,7 @@ class TestSalaryPackages(unittest.TestCase):
 	def test_payroll_entry_is_not_overridden_and_package_is_opt_in(self):
 		hooks = (APP_ROOT / "hooks.py").read_text(encoding="utf-8")
 		self.assertIn('"before_validate": "elemental_erp.utils.salary_package.apply_employee_salary_package"', hooks)
-		self.assertNotIn("override_doctype_class", hooks)
+		self.assertIn('"Payroll Entry": "elemental_erp.utils.payroll_entry.ElementalPayrollEntry"', hooks)
 		integration = (APP_ROOT / "utils" / "salary_package.py").read_text(encoding="utf-8")
 		self.assertIn('"use_elemental_salary_package"', integration)
 		self.assertIn('doc.elemental_salary_package = package.name', integration)
